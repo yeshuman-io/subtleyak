@@ -224,6 +224,26 @@
           "nullable": false,
           "mappedType": "text"
         },
+        "startYear": {
+          "name": "startYear",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "default": "2000",
+          "mappedType": "integer"
+        },
+        "endYear": {
+          "name": "endYear",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "default": "2001",
+          "mappedType": "integer"
+        },
         "created_at": {
           "name": "created_at",
           "type": "timestamptz",
