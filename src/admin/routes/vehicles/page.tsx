@@ -18,14 +18,17 @@ const columns = [
     columnHelper.accessor("id", {
         header: "ID",
     }),
-    columnHelper.accessor("make", {
+    columnHelper.accessor("make.name", {
         header: "Make",
     }),
-    columnHelper.accessor("model", {
+    columnHelper.accessor("model.name", {
         header: "Model",
     }),
-    columnHelper.accessor("make", {
-        header: "Make",
+    columnHelper.accessor("startYear", {
+        header: "Start Year",
+    }),
+    columnHelper.accessor("endYear", {
+        header: "End Year",
     })
 ]
 

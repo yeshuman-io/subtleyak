@@ -13,9 +13,9 @@ module.exports = defineConfig({
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     }
   },
-  modules: {
-    vehicles: {
+  modules: [
+    {
       resolve: "./src/modules/vehicles"
     }
-  }
+  ]
 })

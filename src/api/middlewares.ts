@@ -1,34 +1,32 @@
 import { 
     defineMiddlewares,
     validateAndTransformQuery,
-  } from "@medusajs/framework/http"
-  import { createFindParams } from "@medusajs/medusa/api/utils/validators"
-  // other imports...
+} from "@medusajs/framework/http"
+import { createFindParams } from "@medusajs/medusa/api/utils/validators"
+
   
-  export const GetVehiclesSchema = createFindParams()
+export const GetVehiclesSchema = createFindParams()
   
-  export default defineMiddlewares({
+export default defineMiddlewares({
     routes: [
-      // ...
-      {
-        matcher: "/admin/vehicles",
-        method: "GET",
-        middlewares: [
-          validateAndTransformQuery(
-            GetVehiclesSchema,
-            {
-              defaults: [
-                "id",
-                "startYear",
-                "endYear",
-                "vehicle_make.*",
-                // TODO: fetch vehicle_model
-              ],
-              isList: true,
-            }
-          ),
-        ],
-      },
-  
+        {
+            matcher: "/admin/vehicles",
+            method: "GET",
+            middlewares: [
+                validateAndTransformQuery(
+                    GetVehiclesSchema,
+                    {
+                        defaults: [
+                            "id",
+                            "startYear",
+                            "endYear",
+                            "make.*",
+                            "model.*",	
+                        ],
+                        isList: true,
+                    }
+                ),
+            ],
+        },
     ],
-  })
+})
