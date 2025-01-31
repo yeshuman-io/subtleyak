@@ -3,7 +3,7 @@ import {
     MedusaResponse,
 } from "@medusajs/framework/http"
 
-import vehicles from "src/modules/vehicles"
+import vehicles from "../../../modules/vehicles"
   
 export const GET = async (
     req: MedusaRequest,
