@@ -1,6 +1,7 @@
+import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-
-import vehicles from "../../../modules/vehicles";
+import { createVehicleWorkflow } from "../../../workflows/create-vehicle";
+import { PostAdminCreateVehicle } from "./validators";
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
@@ -19,4 +20,17 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     limit: take,
     offset: skip,
   });
+};
+
+type PostAdminCreateVehicleType = z.infer<typeof PostAdminCreateVehicle>;
+
+export const POST = async (
+  req: MedusaRequest<PostAdminCreateVehicleType>,
+  res: MedusaResponse
+) => {
+  const { result } = await createVehicleWorkflow(req.scope).run({
+    input: req.validatedBody,
+  });
+
+  res.json({ vehicle: result });
 };

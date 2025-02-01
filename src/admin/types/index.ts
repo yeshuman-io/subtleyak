@@ -5,12 +5,26 @@ export type VehicleMake = {
   models?: VehicleModel[]
 }
 
+export type VehicleMakeResponse = {
+  vehicle_makes: VehicleMake[]
+  count: number
+  limit: number
+  offset: number
+}
+
 export type VehicleModel = {
   id: string
   name: string
   make_id: string
   make?: VehicleMake
   vehicles?: Vehicle[]
+}
+
+export type VehicleModelResponse = {
+  vehicle_models: VehicleModel[]
+  count: number
+  limit: number
+  offset: number
 }
 
 export type Vehicle = {

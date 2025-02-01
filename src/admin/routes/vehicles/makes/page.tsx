@@ -1,5 +1,4 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
-import { RocketLaunch } from "@medusajs/icons";
 import {
   Container,
   Heading,
@@ -9,31 +8,25 @@ import {
   useDataTable,
 } from "@medusajs/ui";
 import { useQuery } from "@tanstack/react-query";
-import { sdk } from "../../lib/sdk";
+import { sdk } from "../../../lib/sdk";
 import { useMemo, useState } from "react";
-import { Vehicle, VehicleResponse } from "../../types";
+import { VehicleMake, VehicleMakeResponse } from "../../../types";
 
-const columnHelper = createDataTableColumnHelper<Vehicle>();
+const columnHelper = createDataTableColumnHelper<VehicleMake>();
 
 const columns = [
   columnHelper.accessor("id", {
     header: "ID",
   }),
-  columnHelper.accessor("make.name", {
+  columnHelper.accessor("name", {
     header: "Make",
   }),
-  columnHelper.accessor("model.name", {
-    header: "Model",
-  }),
-  columnHelper.accessor("start_year", {
-    header: "Start Year",
-  }),
-  columnHelper.accessor("end_year", {
-    header: "End Year",
+  columnHelper.accessor("models", {
+    header: "Models",
   }),
 ];
 
-const VehiclesPage = () => {
+const VehicleMakesPage = () => {
   const limit = 25;
   const [pagination, setPagination] = useState<DataTablePaginationState>({
     pageSize: limit,
@@ -43,20 +36,20 @@ const VehiclesPage = () => {
     return pagination.pageIndex * limit;
   }, [pagination]);
 
-  const { data, isLoading } = useQuery<VehicleResponse>({
+  const { data, isLoading } = useQuery<VehicleMakeResponse>({
     queryFn: () =>
-      sdk.client.fetch("/admin/vehicles", {
+      sdk.client.fetch("/admin/vehicles/makes", {
         query: {
           limit,
           offset,
         },
       }),
-    queryKey: [["vehicles", limit, offset]],
+    queryKey: [["vehicle_makes", limit, offset]],
   });
 
   const table = useDataTable({
     columns,
-    data: data?.vehicles || [],
+    data: data?.vehicle_makes || [],
     getRowId: (row) => row.id,
     rowCount: data?.count || 0,
     isLoading,
@@ -70,7 +63,7 @@ const VehiclesPage = () => {
     <Container className="divide-y p-0">
       <DataTable instance={table}>
         <DataTable.Toolbar className="flex flex-col items-start justify-between gap-2 md:flex-row md:items-center">
-          <Heading>Vehicles</Heading>
+          <Heading>Vehicle Makes</Heading>
         </DataTable.Toolbar>
         <DataTable.Table />
         <DataTable.Pagination />
@@ -80,8 +73,7 @@ const VehiclesPage = () => {
 };
 
 export const config = defineRouteConfig({
-  label: "Vehicles",
-  icon: RocketLaunch,
+  label: "Vehicle Makes"
 });
 
-export default VehiclesPage;
+export default VehicleMakesPage;

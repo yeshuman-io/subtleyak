@@ -7,10 +7,10 @@ const Vehicle = model.define("vehicle", {
     id: model.id().primaryKey(),
     make: model.belongsTo(() => VehicleMake),
     model: model.belongsTo(() => VehicleModel),
-    startYear: model
+    start_year: model
         .number()
         .default(2000),
-    endYear: model
+    end_year: model
         .number()
         .default(2001)
 })

@@ -2,7 +2,7 @@ import VehiclesModuleService from "./service";
 import { Module } from "@medusajs/framework/utils";
 
 // Single module for all vehicle-related models
-export const VEHICLES_MODULE = "vehiclesModuleService";
+export const VEHICLES_MODULE = "vehicles";
 
 // Export the vehicle service that handles all models
 export default Module(VEHICLES_MODULE, {

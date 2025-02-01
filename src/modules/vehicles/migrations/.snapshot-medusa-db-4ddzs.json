@@ -224,8 +224,8 @@
           "nullable": false,
           "mappedType": "text"
         },
-        "startYear": {
-          "name": "startYear",
+        "start_year": {
+          "name": "start_year",
           "type": "integer",
           "unsigned": false,
           "autoincrement": false,
@@ -234,8 +234,8 @@
           "default": "2000",
           "mappedType": "integer"
         },
-        "endYear": {
-          "name": "endYear",
+        "end_year": {
+          "name": "end_year",
           "type": "integer",
           "unsigned": false,
           "autoincrement": false,
