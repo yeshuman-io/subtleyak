@@ -27,6 +27,7 @@ const VehicleMakesPage = () => {
       endpoint="/admin/vehicles/makes"
       columns={columns}
       queryKey="vehicle_makes"
+      dataKey="vehicle_makes"
       actions={[
         {
           type: "button",

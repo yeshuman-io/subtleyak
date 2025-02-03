@@ -14,8 +14,9 @@ type DataTablePageProps<T> = {
   title: string;
   subtitle: string;
   endpoint: string;
-  columns: ReturnType<typeof createDataTableColumnHelper<T>>[];
+  columns: ReturnType<typeof createDataTableColumnHelper<T>>[] | any[];
   queryKey: string;
+  dataKey: string;
   actions?: Array<{
     type: "button";
     props: any;
@@ -31,6 +32,7 @@ export function DataTablePage<T extends { id: string }>({
   endpoint,
   columns,
   queryKey,
+  dataKey,
   actions = [],
 }: DataTablePageProps<T>) {
   const limit = 25;
@@ -56,7 +58,7 @@ export function DataTablePage<T extends { id: string }>({
 
   const table = useDataTable({
     columns,
-    data: data?.data || [],
+    data: data?.[dataKey] || [],
     getRowId: (row) => row.id,
     rowCount: data?.count || 0,
     isLoading,
