@@ -1,7 +1,8 @@
 import { z } from "zod";
 
 export const PostAdminCreateVehicle = z.object({
-  name: z.string().min(1),
-  makeId: z.string().min(1),
-  modelId: z.string().min(1),
+  make_id: z.string().min(1),
+  model_id: z.string().min(1),
+  start_year: z.number().min(1),
+  end_year: z.number().min(1),
 });

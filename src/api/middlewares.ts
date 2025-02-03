@@ -23,6 +23,26 @@ export default defineMiddlewares({
       ],
     },
     {
+      matcher: "/admin/vehicles/makes",
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetVehiclesSchema, {
+          defaults: ["id", "name", "models.*"],
+          isList: true,
+        }),
+      ],
+    },
+    {
+      matcher: "/admin/vehicles/models",
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetVehiclesSchema, {
+          defaults: ["id", "name", "make.*"],
+          isList: true,
+        }),
+      ],
+    },
+    {
       matcher: "/admin/vehicles",
       method: "POST",
       middlewares: [validateAndTransformBody(PostAdminCreateVehicle)],
@@ -30,7 +50,7 @@ export default defineMiddlewares({
     {
       matcher: "/admin/vehicles/makes",
       method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminCreateVehicleMake)],
+      middlewares: [validateAndTransformBody(() => PostAdminCreateVehicleMake)],
     },
     {
       matcher: "/admin/vehicles/models",

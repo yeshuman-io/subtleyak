@@ -9,7 +9,7 @@ import VehiclesModuleService from "../modules/vehicles/service";
 
 export type CreateVehicleModelStepInput = {
   name: string;
-  makeId: string;
+  make_id: string;
 };
 
 export const createVehicleModelStep = createStep(
@@ -32,7 +32,7 @@ export const createVehicleModelStep = createStep(
 
 type CreateVehicleModelWorkflowInput = {
   name: string;
-  makeId: string;
+  make_id: string;
 };
 
 export const createVehicleModelWorkflow = createWorkflow(
