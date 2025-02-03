@@ -6,7 +6,10 @@ import {
 import { createFindParams } from "@medusajs/medusa/api/utils/validators";
 import { PostAdminCreateVehicle } from "./admin/vehicles/validators";
 import { PostAdminCreateVehicleMake } from "./admin/vehicles/makes/validators";
-import { PostAdminCreateVehicleModel } from "./admin/vehicles/models/validators";
+import {
+  PostAdminCreateVehicleModel,
+  PutAdminUpdateVehicleModel,
+} from "./admin/vehicles/models/validators";
 
 export const GetVehiclesSchema = createFindParams();
 
@@ -42,6 +45,7 @@ export default defineMiddlewares({
         }),
       ],
     },
+    // POST
     {
       matcher: "/admin/vehicles",
       method: "POST",
@@ -50,12 +54,23 @@ export default defineMiddlewares({
     {
       matcher: "/admin/vehicles/makes",
       method: "POST",
-      middlewares: [validateAndTransformBody(() => PostAdminCreateVehicleMake)],
+      middlewares: [validateAndTransformBody(PostAdminCreateVehicleMake)],
     },
     {
       matcher: "/admin/vehicles/models",
       method: "POST",
       middlewares: [validateAndTransformBody(PostAdminCreateVehicleModel)],
     },
+    // PUT
+    {
+      matcher: "/admin/vehicles/models/:id",
+      method: "PUT",
+      middlewares: [validateAndTransformBody(PutAdminUpdateVehicleModel)],
+    }//,
+    // {
+    //   matcher: "/admin/vehicles/makes/:id",
+    //   method: "PUT",
+    //   middlewares: [validateAndTransformBody(PutAdminUpdateVehicleMake)],
+    // },
   ],
 });

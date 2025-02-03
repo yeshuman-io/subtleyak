@@ -1,1 +1,0 @@
-export { VehicleMakeCreate as Component } from "./vehicle-make-create" 

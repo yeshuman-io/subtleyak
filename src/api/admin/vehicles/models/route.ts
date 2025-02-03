@@ -1,7 +1,8 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { createVehicleModelWorkflow } from "../../../../workflows/create-vehicle-model";
-import { PostAdminCreateVehicleModel } from "./validators";
+import { updateVehicleModelWorkflow } from "../../../../workflows/update-vehicle-model";
+import { PostAdminCreateVehicleModel, PutAdminUpdateVehicleModel } from "./validators";
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
@@ -36,4 +37,27 @@ export const POST = async (
   });
 
   res.json({ vehicleModel: result });
+};
+
+type PutAdminUpdateVehicleModelType = z.infer<
+  typeof PutAdminUpdateVehicleModel
+>;
+
+export const PUT = async (
+  req: MedusaRequest<PutAdminUpdateVehicleModelType>,
+  res: MedusaResponse
+) => {
+  console.log('PUT REQUEST:', {
+    params: req.params,
+    body: req.validatedBody
+  });
+
+  const { result } = await updateVehicleModelWorkflow(req.scope).run({
+    input: {
+      id: req.params.id,
+      ...req.validatedBody,
+    },
+  });
+
+  res.json({ vehicle_model: result });
 };

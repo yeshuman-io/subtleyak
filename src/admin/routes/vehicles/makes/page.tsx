@@ -4,25 +4,51 @@ import { VehicleMake } from "../../../types";
 import { DataTablePage } from "../../../components/data-table-page";
 import { VehicleMakeCreate } from "./create/vehicle-make-create";
 import { useState } from "react";
+import { ActionMenu } from "../../../components/action-menu";
+import { Pencil } from "@medusajs/icons";
+import { Drawer } from "@medusajs/ui";
+import { VehicleMakeEdit } from "./edit/vehicle-make-edit";
 
 const columnHelper = createDataTableColumnHelper<VehicleMake>();
 
-const columns = [
-  columnHelper.accessor("id", {
-    header: "ID",
-  }),
-  columnHelper.accessor("name", {
-    header: "Make",
-    enableSorting: true,
-  }),
-  columnHelper.accessor("models", {
-    header: "Models",
-    enableSorting: true,
-  }),
-];
-
 const VehicleMakesPage = () => {
   const [showCreate, setShowCreate] = useState(false);
+  const [editingMake, setEditingMake] = useState<VehicleMake | null>(null);
+
+  const columns = [
+    columnHelper.accessor("id", {
+      header: "ID",
+    }),
+    columnHelper.accessor("name", {
+      header: "Make",
+      enableSorting: true,
+    }),
+    columnHelper.accessor("models", {
+      header: "Models",
+      enableSorting: true,
+    }),
+    columnHelper.accessor("actions", {
+      header: "",
+      cell: ({ row }) => {
+        const make = row.original;
+        return (
+          <ActionMenu
+            groups={[
+              {
+                actions: [
+                  {
+                    label: "Edit",
+                    icon: <Pencil />,
+                    onClick: () => setEditingMake(make),
+                  },
+                ],
+              },
+            ]}
+          />
+        );
+      },
+    }),
+  ];
 
   return (
     <>
@@ -67,6 +93,14 @@ const VehicleMakesPage = () => {
         <FocusModal open={showCreate} onOpenChange={setShowCreate}>
           <VehicleMakeCreate onClose={() => setShowCreate(false)} />
         </FocusModal>
+      )}
+      {editingMake && (
+        <Drawer open onOpenChange={() => setEditingMake(null)}>
+          <VehicleMakeEdit 
+            make={editingMake} 
+            onClose={() => setEditingMake(null)} 
+          />
+        </Drawer>
       )}
     </>
   );
