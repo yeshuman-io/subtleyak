@@ -14,16 +14,27 @@ import {
 import { PostAdminCreateVehicleMake } from "../../../../../api/admin/vehicles/makes/validators"
 import { sdk } from "../../../../lib/sdk"
 import { useNavigate } from "react-router-dom"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { InputField } from "../../../../components/form/input-field"
+import { FormLayout } from "../../../../components/form/form-layout"
+import { ModalForm } from "../../../../components/form/modal-form"
 
 // We can reuse our existing validator schema
 const schema = PostAdminCreateVehicleMake;
+type CreateVehicleMakeFormData = zod.infer<typeof schema>;
 
-export const VehicleMakeCreate = ({ onClose }: { onClose: () => void }) => {
+type VehicleMakeCreateProps = {
+  onClose: () => void;
+};
+
+export function VehicleMakeCreate({ onClose }: VehicleMakeCreateProps) {
   const navigate = useNavigate()
-  const form = useForm<zod.infer<typeof schema>>({
+
+  const form = useForm<CreateVehicleMakeFormData>({
     defaultValues: {
       name: "",
     },
+    resolver: zodResolver(schema),
   });
 
   const handleSubmit = form.handleSubmit(async (data) => {
@@ -42,50 +53,20 @@ export const VehicleMakeCreate = ({ onClose }: { onClose: () => void }) => {
   });
 
   return (
-    <FocusModal.Content>
-      <FormProvider {...form}>
-        <form onSubmit={handleSubmit} className="flex h-full flex-col overflow-hidden">
-          <FocusModal.Header>
-            <FocusModal.Title>
-              Create Vehicle Make
-            </FocusModal.Title>
-            <div className="flex items-center justify-end gap-x-2">
-              <FocusModal.Close asChild>
-                <Button size="small" variant="secondary">
-                  Cancel
-                </Button>
-              </FocusModal.Close>
-              <Button type="submit" size="small">
-                Save
-              </Button>
-            </div>
-          </FocusModal.Header>
-          <FocusModal.Body>
-            <div className="flex flex-1 flex-col items-center overflow-y-auto">
-              <div className="mx-auto flex w-full max-w-[720px] flex-col gap-y-8 px-2 py-16">
-                <div className="grid grid-cols-2 gap-4">
-                  <Controller
-                    control={form.control}
-                    name="name"
-                    render={({ field }) => {
-                      return (
-                        <div className="flex flex-col space-y-2">
-                          <div className="flex items-center gap-x-1">
-                            <Label size="small" weight="plus">
-                              Name
-                            </Label>
-                          </div>
-                          <Input {...field} />
-                        </div>
-                      )
-                    }}
-                  />
-                </div>
-              </div>
-            </div>
-          </FocusModal.Body>
-        </form>
-      </FormProvider>
-    </FocusModal.Content>
+    <FormProvider {...form}>
+      <ModalForm
+        title="Create Vehicle Make"
+        onSubmit={handleSubmit}
+        onClose={onClose}
+      >
+        <FormLayout>
+          <InputField
+            name="name"
+            control={form.control}
+            label="Make Name"
+          />
+        </FormLayout>
+      </ModalForm>
+    </FormProvider>
   );
-}; 
+} 

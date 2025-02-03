@@ -4,8 +4,21 @@ import { createVehicleModelWorkflow } from "../../../../workflows/create-vehicle
 import { updateVehicleModelWorkflow } from "../../../../workflows/update-vehicle-model";
 import { PostAdminCreateVehicleModel, PutAdminUpdateVehicleModel } from "./validators";
 
-export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
+// Define the query schema
+export const GetAdminVehicleModelsParams = z.object({
+  make_id: z.string().optional(),
+  limit: z.number().optional(),
+  offset: z.number().optional(),
+}).partial();
+
+// Add type for the request with query params
+type GetAdminVehicleModelsRequest = MedusaRequest & {
+  validatedQuery: z.infer<typeof GetAdminVehicleModelsParams>
+};
+
+export const GET = async (req: GetAdminVehicleModelsRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
+  const { make_id } = req.validatedQuery;
 
   const {
     data: vehicle_models,
@@ -13,6 +26,10 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   } = await query.graph({
     entity: "vehicle_model",
     ...req.queryConfig,
+    where: {
+      ...req.queryConfig?.where,
+      ...(make_id && { make_id }),
+    },
   });
 
   res.json({

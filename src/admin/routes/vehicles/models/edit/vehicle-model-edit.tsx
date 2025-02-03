@@ -1,30 +1,34 @@
 import * as zod from "zod";
-import { Drawer, Label, Input, Button, Select } from "@medusajs/ui";
-import { FormProvider, Controller, useForm } from "react-hook-form";
+import { Drawer } from "@medusajs/ui";
+import { FormProvider, useForm } from "react-hook-form";
 import { PostAdminCreateVehicleModel } from "../../../../../api/admin/vehicles/models/validators";
 import { sdk } from "../../../../lib/sdk";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Suspense } from "react";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { SelectField } from "../../../../components/form/select-field";
+import { InputField } from "../../../../components/form/input-field";
+import { FormLayout } from "../../../../components/form/form-layout";
+import { DrawerFormLayout } from "../../../../components/drawer-form-layout";
+import { useDrawer } from "../../../../components/drawer";
 
 const schema = PostAdminCreateVehicleModel;
+type EditVehicleModelFormData = zod.infer<typeof schema>;
 
-const ModelEditForm = ({ 
-  model,
-  onClose,
-  makes,
-  isLoading 
-}: { 
-  model: { id: string; name: string; make_id: string; make?: { name: string } };
-  onClose: () => void;
-  makes: any[];
-  isLoading: boolean;
-}) => {
+type VehicleModelEditProps = {
+  model: {
+    id: string;
+    name: string;
+    make_id: string;
+    make?: { id?: string; name: string };
+  };
+};
+
+function VehicleModelEditForm({ model }: VehicleModelEditProps) {
+  const { close } = useDrawer();
   const navigate = useNavigate();
-  
-  console.log('Initial model:', model); // Debug initial values
-  
-  const form = useForm<zod.infer<typeof schema>>({
+
+  const form = useForm<EditVehicleModelFormData>({
     defaultValues: {
       name: model.name,
       make_id: model.make?.id || model.make_id,
@@ -32,11 +36,16 @@ const ModelEditForm = ({
     values: {
       name: model.name,
       make_id: model.make?.id || model.make_id,
-    }
+    },
+    resolver: zodResolver(schema),
   });
 
-  // Debug form values
-  console.log('Form values:', form.watch());
+  const { data: makesData, isLoading } = useQuery({
+    queryKey: ["vehicle_makes"],
+    queryFn: () => sdk.client.fetch("/admin/vehicles/makes"),
+  });
+
+  const makes = makesData?.vehicle_makes || [];
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
@@ -45,105 +54,48 @@ const ModelEditForm = ({
         body: data,
       });
       
-      onClose();
+      close();
       navigate("/vehicles/models");
     } catch (error) {
       console.error("Failed to update model:", error);
     }
   });
 
+  const selectedMake = makes.find(m => m.id === (model.make?.id || model.make_id));
+
   return (
     <FormProvider {...form}>
-      <form onSubmit={handleSubmit} className="flex flex-1 flex-col overflow-hidden">
-        <Drawer.Header>
-          <Drawer.Title>Edit Vehicle Model</Drawer.Title>
-          <span id="edit-model-description" className="sr-only">
-            Edit vehicle model details
-          </span>
-        </Drawer.Header>
-        <Drawer.Body className="flex max-w-full flex-1 flex-col gap-y-8 overflow-y-auto">
-          <Controller
-            control={form.control}
+      <DrawerFormLayout
+        title="Edit Vehicle Model"
+        description="Edit vehicle model details"
+        onSubmit={handleSubmit}
+      >
+        <FormLayout>
+          <SelectField
             name="make_id"
-            defaultValue={model.make?.id || model.make_id}
-            render={({ field }) => {
-              console.log('Field value:', field.value);
-              return (
-                <div className="flex flex-col space-y-2">
-                  <Label>Make</Label>
-                  <Select 
-                    value={field.value || model.make?.id || model.make_id}
-                    onValueChange={field.onChange}
-                    disabled={isLoading}
-                  >
-                    <Select.Trigger>
-                      <Select.Value>
-                        {makes.find(m => m.id === (field.value || model.make?.id || model.make_id))?.name || "Select a make..."}
-                      </Select.Value>
-                    </Select.Trigger>
-                    <Select.Content>
-                      {makes.map((make) => (
-                        <Select.Item key={make.id} value={make.id}>
-                          {make.name}
-                        </Select.Item>
-                      ))}
-                    </Select.Content>
-                  </Select>
-                </div>
-              );
-            }}
-          />
-          <Controller
             control={form.control}
-            name="name"
-            render={({ field }) => (
-              <div className="flex flex-col space-y-2">
-                <div className="flex items-center gap-x-1">
-                  <Label size="small" weight="plus">
-                    Model Name
-                  </Label>
-                </div>
-                <Input {...field} />
-              </div>
-            )}
+            label="Make"
+            placeholder="Select a make..."
+            options={makes}
+            disabled={isLoading}
+            defaultValue={selectedMake?.name}
           />
-        </Drawer.Body>
-        <Drawer.Footer>
-          <div className="flex items-center justify-end gap-x-2">
-            <Drawer.Close asChild>
-              <Button size="small" variant="secondary">
-                Cancel
-              </Button>
-            </Drawer.Close>
-            <Button size="small" type="submit">
-              Save
-            </Button>
-          </div>
-        </Drawer.Footer>
-      </form>
+          
+          <InputField
+            name="name"
+            control={form.control}
+            label="Model Name"
+          />
+        </FormLayout>
+      </DrawerFormLayout>
     </FormProvider>
   );
-};
+}
 
-export const VehicleModelEdit = ({ model, onClose }) => {
-  const { data: makesData, isLoading } = useQuery({
-    queryKey: ["vehicle_makes"],
-    queryFn: () => sdk.client.fetch("/admin/vehicles/makes"),
-    enabled: true,
-  });
-
-  const makes = makesData?.vehicle_makes || [];
-
+export function VehicleModelEdit(props: VehicleModelEditProps) {
   return (
     <Drawer.Content aria-describedby="edit-model-description">
-      <Suspense fallback={<div>Loading...</div>}>
-        <ModelEditForm 
-          model={model} 
-          onClose={onClose} 
-          makes={makes}
-          isLoading={isLoading}
-        />
-      </Suspense>
+      <VehicleModelEditForm model={props.model} />
     </Drawer.Content>
   );
-}; 
+} 

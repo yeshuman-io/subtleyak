@@ -12,7 +12,7 @@ const columnHelper = createDataTableColumnHelper<VehicleModel>();
 
 const VehicleModelsPage = () => {
   const [showCreate, setShowCreate] = useState(false);
-  const [editingModel, setEditingModel] = useState<VehicleModel | null>(null);
+  const [editingVehicleModel, setEditingVehicleModel] = useState<VehicleModel | null>(null);
 
   const columns = [
     columnHelper.accessor("id", {
@@ -38,7 +38,7 @@ const VehicleModelsPage = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditingModel(model),
+                    onClick: () => setEditingVehicleModel(model),
                   },
                 ],
               },
@@ -93,11 +93,11 @@ const VehicleModelsPage = () => {
           <VehicleModelCreate onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
-      {editingModel && (
-        <Drawer open onOpenChange={() => setEditingModel(null)}>
+      {editingVehicleModel && (
+        <Drawer open onOpenChange={() => setEditingVehicleModel(null)}>
           <VehicleModelEdit 
-            model={editingModel} 
-            onClose={() => setEditingModel(null)} 
+            model={editingVehicleModel} 
+            onClose={() => setEditingVehicleModel(null)} 
           />
         </Drawer>
       )}
