@@ -1,7 +1,9 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
-import { createDataTableColumnHelper } from "@medusajs/ui";
+import { createDataTableColumnHelper, FocusModal } from "@medusajs/ui";
 import { VehicleMake } from "../../../types";
 import { DataTablePage } from "../../../components/data-table-page";
+import { VehicleMakeCreate } from "./create/vehicle-make-create";
+import { useState } from "react";
 
 const columnHelper = createDataTableColumnHelper<VehicleMake>();
 
@@ -20,46 +22,53 @@ const columns = [
 ];
 
 const VehicleMakesPage = () => {
+  const [showCreate, setShowCreate] = useState(false);
+
   return (
-    <DataTablePage<VehicleMake>
-      title="Vehicle Makes"
-      subtitle="Manage your vehicle makes"
-      endpoint="/admin/vehicles/makes"
-      columns={columns}
-      queryKey="vehicle_makes"
-      dataKey="vehicle_makes"
-      actions={[
-        {
-          type: "button",
-          props: {
-            variant: "secondary",
-            size: "small",
-            children: "Export",
-            disabled: true,
+    <>
+      <DataTablePage<VehicleMake>
+        title="Vehicle Makes"
+        subtitle="Manage your vehicle makes"
+        endpoint="/admin/vehicles/makes"
+        columns={columns}
+        queryKey="vehicle_makes"
+        dataKey="vehicle_makes"
+        actions={[
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Export",
+              disabled: true,
+            },
           },
-        },
-        {
-          type: "button",
-          props: {
-            variant: "secondary",
-            size: "small",
-            children: "Import",
-            disabled: true,
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Import",
+              disabled: true,
+            },
           },
-        },
-        {
-          type: "button",
-          props: {
-            variant: "secondary",
-            size: "small",
-            children: "Create",
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Create",
+              onClick: () => setShowCreate(true),
+            },
           },
-          link: {
-            to: "create",
-          },
-        },
-      ]}
-    />
+        ]}
+      />
+      {showCreate && (
+        <FocusModal open={showCreate} onOpenChange={setShowCreate}>
+          <VehicleMakeCreate onClose={() => setShowCreate(false)} />
+        </FocusModal>
+      )}
+    </>
   );
 };
 
