@@ -2,7 +2,7 @@ import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { createVehicleModelWorkflow } from "../../../../workflows/create-vehicle-model";
 import { updateVehicleModelWorkflow } from "../../../../workflows/update-vehicle-model";
-import { PostAdminCreateVehicleModel, PutAdminUpdateVehicleModel } from "./validators";
+import { PostAdminCreateVehicleModel, PatchAdminUpdateVehicleModel } from "./validators";
 
 // Define the query schema
 export const GetAdminVehicleModelsParams = z.object({
@@ -56,15 +56,17 @@ export const POST = async (
   res.json({ vehicleModel: result });
 };
 
-type PutAdminUpdateVehicleModelType = z.infer<
-  typeof PutAdminUpdateVehicleModel
+// Update type name to reflect PATCH operation
+type PatchAdminUpdateVehicleModelType = z.infer<
+  typeof PatchAdminUpdateVehicleModel
 >;
 
-export const PUT = async (
-  req: MedusaRequest<PutAdminUpdateVehicleModelType>,
+// Change PUT to PATCH
+export const PATCH = async (
+  req: MedusaRequest<PatchAdminUpdateVehicleModelType>,
   res: MedusaResponse
 ) => {
-  console.log('PUT REQUEST:', {
+  console.log('PATCH REQUEST:', {
     params: req.params,
     body: req.validatedBody
   });

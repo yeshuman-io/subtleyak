@@ -8,7 +8,7 @@ import { PostAdminCreateVehicle } from "./admin/vehicles/validators";
 import { PostAdminCreateVehicleMake } from "./admin/vehicles/makes/validators";
 import {
   PostAdminCreateVehicleModel,
-  PutAdminUpdateVehicleModel,
+  PatchAdminUpdateVehicleModel,
 } from "./admin/vehicles/models/validators";
 
 export const GetVehiclesSchema = createFindParams();
@@ -64,8 +64,8 @@ export default defineMiddlewares({
     // PUT
     {
       matcher: "/admin/vehicles/models/:id",
-      method: "PUT",
-      middlewares: [validateAndTransformBody(PutAdminUpdateVehicleModel)],
+      method: "PATCH",
+      middlewares: [validateAndTransformBody(PatchAdminUpdateVehicleModel)],
     }//,
     // {
     //   matcher: "/admin/vehicles/makes/:id",

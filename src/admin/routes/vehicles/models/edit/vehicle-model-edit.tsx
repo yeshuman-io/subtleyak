@@ -50,7 +50,7 @@ function VehicleModelEditForm({ model }: VehicleModelEditProps) {
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
       await sdk.client.fetch(`/admin/vehicles/models/${model.id}`, {
-        method: "PUT",
+        method: "PATCH",
         body: data,
       });
       

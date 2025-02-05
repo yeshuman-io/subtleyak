@@ -54,7 +54,7 @@ function VehicleEditForm({ vehicle }: Omit<VehicleEditProps, "onClose">) {
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
       await sdk.client.fetch(`/admin/vehicles/${vehicle.id}`, {
-        method: "PUT",
+        method: "PATCH",
         body: data,
       });
       
