@@ -1,42 +1,38 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { createVehicleModelWorkflow } from "../../../../workflows/create-vehicle-model";
-import { updateVehicleModelWorkflow } from "../../../../workflows/update-vehicle-model";
-import { PostAdminCreateVehicleModel, PatchAdminUpdateVehicleModel } from "./validators";
+import { PostAdminCreateVehicleModel } from "./validators";
 
-// Define the query schema
-export const GetAdminVehicleModelsParams = z.object({
-  make_id: z.string().optional(),
-  limit: z.number().optional(),
-  offset: z.number().optional(),
-}).partial();
-
-// Add type for the request with query params
-type GetAdminVehicleModelsRequest = MedusaRequest & {
-  validatedQuery: z.infer<typeof GetAdminVehicleModelsParams>
+type QueryResponse = {
+  data: any[];
+  metadata: {
+    count: number;
+    take: number;
+    skip: number;
+  };
 };
 
-export const GET = async (req: GetAdminVehicleModelsRequest, res: MedusaResponse) => {
+export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
-  const { make_id } = req.validatedQuery;
 
-  const {
-    data: vehicle_models,
-    metadata: { count, take, skip },
-  } = await query.graph({
+  const queryOptions = {
     entity: "vehicle_model",
     ...req.queryConfig,
-    where: {
-      ...req.queryConfig?.where,
-      ...(make_id && { make_id }),
+    filters: {
+      ...req.queryConfig?.filters,
+      ...(req.query.make_id ? { make_id: req.query.make_id } : {}),
     },
-  });
+  };
+
+  const { data: vehicle_models, metadata } = (await query.graph(
+    queryOptions
+  )) as QueryResponse;
 
   res.json({
     vehicle_models,
-    count,
-    limit: take,
-    offset: skip,
+    count: metadata.count,
+    limit: metadata.take,
+    offset: metadata.skip,
   });
 };
 
@@ -48,35 +44,9 @@ export const POST = async (
   req: MedusaRequest<PostAdminCreateVehicleModelType>,
   res: MedusaResponse
 ) => {
-  console.log(req.validatedBody);
   const { result } = await createVehicleModelWorkflow(req.scope).run({
     input: req.validatedBody,
   });
 
   res.json({ vehicleModel: result });
-};
-
-// Update type name to reflect PATCH operation
-type PatchAdminUpdateVehicleModelType = z.infer<
-  typeof PatchAdminUpdateVehicleModel
->;
-
-// Change PUT to PATCH
-export const PATCH = async (
-  req: MedusaRequest<PatchAdminUpdateVehicleModelType>,
-  res: MedusaResponse
-) => {
-  console.log('PATCH REQUEST:', {
-    params: req.params,
-    body: req.validatedBody
-  });
-
-  const { result } = await updateVehicleModelWorkflow(req.scope).run({
-    input: {
-      id: req.params.id,
-      ...req.validatedBody,
-    },
-  });
-
-  res.json({ vehicle_model: result });
 };

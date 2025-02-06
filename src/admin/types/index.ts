@@ -1,15 +1,10 @@
+import { ShippingProfileType } from "@medusajs/framework/utils"
+
 // Vehicle Types
 export type VehicleMake = {
   id: string
   name: string
   models?: VehicleModel[]
-}
-
-export type VehicleMakeResponse = {
-  vehicle_makes: VehicleMake[]
-  count: number
-  limit: number
-  offset: number
 }
 
 export type VehicleModel = {
@@ -20,13 +15,6 @@ export type VehicleModel = {
   vehicles?: Vehicle[]
 }
 
-export type VehicleModelResponse = {
-  vehicle_models: VehicleModel[]
-  count: number
-  limit: number
-  offset: number
-}
-
 export type Vehicle = {
   id: string
   start_year: number
@@ -35,6 +23,30 @@ export type Vehicle = {
   model_id: string
   make?: VehicleMake
   model?: VehicleModel
+}
+
+// List Response Types
+export type ListVehicleMakesRes = {
+  vehicle_makes: VehicleMake[]
+}
+
+export type ListVehicleModelsRes = {
+  vehicle_models: VehicleModel[]
+}
+
+// Full Response Types (with pagination)
+export type VehicleMakeResponse = {
+  vehicle_makes: VehicleMake[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type VehicleModelResponse = {
+  vehicle_models: VehicleModel[]
+  count: number
+  limit: number
+  offset: number
 }
 
 export type VehicleResponse = {

@@ -1,17 +1,27 @@
+import { z } from "zod";
 import {
   defineMiddlewares,
   validateAndTransformBody,
   validateAndTransformQuery,
 } from "@medusajs/framework/http";
 import { createFindParams } from "@medusajs/medusa/api/utils/validators";
-import { PostAdminCreateVehicle } from "./admin/vehicles/validators";
-import { PostAdminCreateVehicleMake } from "./admin/vehicles/makes/validators";
+import {
+  PostAdminCreateVehicle,
+  PostAdminUpdateVehicle,
+} from "./admin/vehicles/validators";
+import {
+  PostAdminCreateVehicleMake,
+  PostAdminUpdateVehicleMake,
+} from "./admin/vehicles/makes/validators";
 import {
   PostAdminCreateVehicleModel,
-  PatchAdminUpdateVehicleModel,
+  PostAdminUpdateVehicleModel,
 } from "./admin/vehicles/models/validators";
 
 export const GetVehiclesSchema = createFindParams();
+export const GetVehicleModelsSchema = createFindParams().extend({
+  make_id: z.string().optional(),
+});
 
 export default defineMiddlewares({
   routes: [
@@ -39,13 +49,13 @@ export default defineMiddlewares({
       matcher: "/admin/vehicles/models",
       method: "GET",
       middlewares: [
-        validateAndTransformQuery(GetVehiclesSchema, {
+        validateAndTransformQuery(GetVehicleModelsSchema, {
           defaults: ["id", "name", "make.*"],
           isList: true,
         }),
       ],
     },
-    // POST
+    // CREATE
     {
       matcher: "/admin/vehicles",
       method: "POST",
@@ -61,16 +71,21 @@ export default defineMiddlewares({
       method: "POST",
       middlewares: [validateAndTransformBody(PostAdminCreateVehicleModel)],
     },
-    // PUT
+    // UPDATE
+    {
+      matcher: "/admin/vehicles/:id",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostAdminUpdateVehicle)],
+    },
+    {
+      matcher: "/admin/vehicles/makes/:id",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleMake)],
+    },
     {
       matcher: "/admin/vehicles/models/:id",
-      method: "PATCH",
-      middlewares: [validateAndTransformBody(PatchAdminUpdateVehicleModel)],
-    }//,
-    // {
-    //   matcher: "/admin/vehicles/makes/:id",
-    //   method: "PUT",
-    //   middlewares: [validateAndTransformBody(PutAdminUpdateVehicleMake)],
-    // },
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleModel)],
+    },
   ],
 });

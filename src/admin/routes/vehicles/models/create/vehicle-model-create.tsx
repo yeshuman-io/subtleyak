@@ -9,6 +9,7 @@ import { SelectField } from "../../../../components/form/select-field";
 import { InputField } from "../../../../components/form/input-field";
 import { FormLayout } from "../../../../components/form/form-layout";
 import { ModalForm } from "../../../../components/form/modal-form";
+import { ListVehicleMakesRes } from "../../../../types";
 
 const schema = PostAdminCreateVehicleModel;
 type CreateVehicleModelFormData = zod.infer<typeof schema>;
@@ -28,7 +29,7 @@ export function VehicleModelCreate({ onClose }: VehicleModelCreateProps) {
     resolver: zodResolver(schema),
   });
 
-  const { data: makesData } = useQuery({
+  const { data: makesData } = useQuery<ListVehicleMakesRes>({
     queryKey: ["vehicle_makes"],
     queryFn: () => sdk.client.fetch("/admin/vehicles/makes"),
   });

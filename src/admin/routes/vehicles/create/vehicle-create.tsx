@@ -9,6 +9,7 @@ import { SelectField } from "../../../components/form/select-field";
 import { InputField } from "../../../components/form/input-field";
 import { FormLayout } from "../../../components/form/form-layout";
 import { ModalForm } from "../../../components/form/modal-form";
+import { ListVehicleMakesRes, ListVehicleModelsRes } from "../../../types";
 
 const schema = PostAdminCreateVehicle;
 type CreateVehicleFormData = zod.infer<typeof schema>;
@@ -30,14 +31,14 @@ export function VehicleCreate({ onClose }: VehicleCreateProps) {
     resolver: zodResolver(schema),
   });
 
-  const { data: makesData } = useQuery({
+  const { data: makesData } = useQuery<ListVehicleMakesRes>({
     queryKey: ["vehicle_makes"],
     queryFn: () => sdk.client.fetch("/admin/vehicles/makes"),
   });
 
   const makes = makesData?.vehicle_makes || [];
 
-  const { data: modelsData } = useQuery({
+  const { data: modelsData } = useQuery<ListVehicleModelsRes>({
     queryKey: ["vehicle_models", form.watch("make_id")],
     queryFn: () => sdk.client.fetch("/admin/vehicles/models", {
       query: { make_id: form.watch("make_id") },
