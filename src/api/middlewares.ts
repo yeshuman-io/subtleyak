@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   defineMiddlewares,
+  unlessPath,
   validateAndTransformBody,
   validateAndTransformQuery,
 } from "@medusajs/framework/http";
@@ -29,16 +30,7 @@ export const GetVehicleModelsSchema = createFindParams().extend({
 
 export default defineMiddlewares({
   routes: [
-    {
-      matcher: "/admin/vehicles",
-      method: "GET",
-      middlewares: [
-        validateAndTransformQuery(GetVehiclesSchema, {
-          defaults: ["id", "start_year", "end_year", "make.*", "model.*"],
-          isList: true,
-        }),
-      ],
-    },
+    // GET routes - specific first
     {
       matcher: "/admin/vehicles/makes",
       method: "GET",
@@ -69,12 +61,18 @@ export default defineMiddlewares({
         }),
       ],
     },
-    // CREATE
     {
       matcher: "/admin/vehicles",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminCreateVehicle)],
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetVehiclesSchema, {
+          defaults: ["id", "start_year", "end_year", "make.*", "model.*"],
+          isList: true,
+        }),
+      ],
     },
+
+    // CREATE - specific routes first
     {
       matcher: "/admin/vehicles/makes",
       method: "POST",
@@ -90,12 +88,8 @@ export default defineMiddlewares({
       method: "POST",
       middlewares: [validateAndTransformBody(PostAdminCreateVehicleBody)],
     },
-    // UPDATE
-    {
-      matcher: "/admin/vehicles/:id",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminUpdateVehicle)],
-    },
+
+    // UPDATE - specific routes first
     {
       matcher: "/admin/vehicles/makes/:id",
       method: "POST",
@@ -110,6 +104,28 @@ export default defineMiddlewares({
       matcher: "/admin/vehicles/bodies/:id",
       method: "POST",
       middlewares: [validateAndTransformBody(PostAdminUpdateVehicleBody)],
+    },
+
+    // Generic routes last
+    {
+      matcher: "/admin/vehicles",
+      method: "POST",
+      middlewares: [
+        unlessPath(
+          /.*\/(models|makes|bodies)/,
+          validateAndTransformBody(PostAdminCreateVehicle)
+        ),
+      ],
+    },
+    {
+      matcher: "/admin/vehicles/:id",
+      method: "POST",
+      middlewares: [
+        unlessPath(
+          /.*\/(models|makes|bodies)/,
+          validateAndTransformBody(PostAdminUpdateVehicle)
+        ),
+      ],
     },
   ],
 });
