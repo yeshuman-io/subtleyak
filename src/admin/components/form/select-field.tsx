@@ -14,6 +14,7 @@ type SelectFieldProps = {
   options: Option[];
   disabled?: boolean;
   defaultValue?: string;
+  isMulti?: boolean;
 };
 
 export function SelectField({
@@ -24,6 +25,7 @@ export function SelectField({
   options,
   disabled = false,
   defaultValue,
+  isMulti = false,
 }: SelectFieldProps) {
   return (
     <Controller
@@ -41,10 +43,17 @@ export function SelectField({
             onValueChange={onChange}
             disabled={disabled}
             defaultValue={defaultValue}
+            enableSearch={true}
+            size="base"
           >
             <Select.Trigger>
               <Select.Value>
-                {options.find(opt => opt.id === value)?.name || placeholder}
+                {isMulti 
+                  ? Array.isArray(value) 
+                    ? value.map(v => options.find(opt => opt.id === v)?.name).join(", ") || placeholder
+                    : placeholder
+                  : options.find(opt => opt.id === value)?.name || placeholder
+                }
               </Select.Value>
             </Select.Trigger>
             <Select.Content>

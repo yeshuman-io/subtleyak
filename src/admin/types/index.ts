@@ -5,6 +5,9 @@ export type VehicleMake = {
   id: string
   name: string
   models?: VehicleModel[]
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
 }
 
 export type VehicleModel = {
@@ -13,6 +16,17 @@ export type VehicleModel = {
   make_id: string
   make?: VehicleMake
   vehicles?: Vehicle[]
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
+}
+
+export type VehicleBody = {
+  id: string
+  name: string
+  created_at: string
+  updated_at: string
+  deleted_at: string | null
 }
 
 export type Vehicle = {
@@ -28,10 +42,23 @@ export type Vehicle = {
 // List Response Types
 export type ListVehicleMakesRes = {
   vehicle_makes: VehicleMake[]
+  count: number
+  limit: number
+  offset: number
 }
 
 export type ListVehicleModelsRes = {
   vehicle_models: VehicleModel[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListVehicleBodiesRes = {
+  vehicle_bodies: VehicleBody[]
+  count: number
+  limit: number
+  offset: number
 }
 
 // Full Response Types (with pagination)

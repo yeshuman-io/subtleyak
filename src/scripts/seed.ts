@@ -3,6 +3,20 @@ import { faker } from "@faker-js/faker"
 const MAKES_COUNT = 10
 const MODELS_PER_MAKE = 4
 const VEHICLES_PER_MODEL = 3
+const BODY_TYPES_COUNT = 8
+
+type VehicleModel = {
+  id: string;
+  name: string;
+  make_id: string;
+}
+
+type VehicleModelsResponse = {
+  data: VehicleModel[];
+  count: number;
+  limit: number;
+  offset: number;
+}
 
 export default async function seed({ container, options }) {
 
@@ -49,9 +63,12 @@ export default async function seed({ container, options }) {
 
     // Create vehicles with different year ranges
     for (const make of makes) {
-      const makeModels = await vehicleService.listVehicleModels({ 
+      const response = await vehicleService.listVehicleModels({ 
         make_id: make.id 
-      })
+      }) as VehicleModelsResponse
+      console.log("Vehicle models response:", JSON.stringify(response, null, 2))
+      
+      const makeModels = response.data || []
 
       for (const model of makeModels) {
         await Promise.all(
@@ -68,6 +85,28 @@ export default async function seed({ container, options }) {
       }
     }
     console.info(`Created ${MAKES_COUNT * MODELS_PER_MAKE * VEHICLES_PER_MODEL} vehicles`)
+
+    // Get all models to associate with bodies
+    const response = await vehicleService.listVehicleModels({}) as VehicleModelsResponse
+    console.log("All vehicle models response:", JSON.stringify(response, null, 2))
+    
+    const models = response.data || []
+
+    // Create vehicle bodies and associate them with random models
+    const bodies = await Promise.all(
+      Array.from({ length: BODY_TYPES_COUNT }).map(async () => {
+        // Get a random subset of models for this body type
+        const modelCount = faker.number.int({ min: 2, max: 6 })
+        const randomModels = faker.helpers.arrayElements(models, modelCount) as VehicleModel[]
+        
+        return await vehicleService.createVehicleBodies({
+          name: faker.vehicle.type(),
+          models: randomModels.map(model => ({ id: model.id }))
+        })
+      })
+    )
+    console.info(`Created ${bodies.length} vehicle bodies`)
+
   } catch (error) {
     console.error("Failed to seed vehicles data")
     console.error(error)

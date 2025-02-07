@@ -17,6 +17,10 @@ import {
   PostAdminCreateVehicleModel,
   PostAdminUpdateVehicleModel,
 } from "./admin/vehicles/models/validators";
+import {
+  PostAdminCreateVehicleBody,
+  PostAdminUpdateVehicleBody,
+} from "./admin/vehicles/bodies/validators";
 
 export const GetVehiclesSchema = createFindParams();
 export const GetVehicleModelsSchema = createFindParams().extend({
@@ -55,6 +59,16 @@ export default defineMiddlewares({
         }),
       ],
     },
+    {
+      matcher: "/admin/vehicles/bodies",
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetVehiclesSchema, {
+          defaults: ["id", "name"],
+          isList: true,
+        }),
+      ],
+    },
     // CREATE
     {
       matcher: "/admin/vehicles",
@@ -71,6 +85,11 @@ export default defineMiddlewares({
       method: "POST",
       middlewares: [validateAndTransformBody(PostAdminCreateVehicleModel)],
     },
+    {
+      matcher: "/admin/vehicles/bodies",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostAdminCreateVehicleBody)],
+    },
     // UPDATE
     {
       matcher: "/admin/vehicles/:id",
@@ -86,6 +105,11 @@ export default defineMiddlewares({
       matcher: "/admin/vehicles/models/:id",
       method: "POST",
       middlewares: [validateAndTransformBody(PostAdminUpdateVehicleModel)],
+    },
+    {
+      matcher: "/admin/vehicles/bodies/:id",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleBody)],
     },
   ],
 });
