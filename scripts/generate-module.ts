@@ -13,7 +13,14 @@ export const toPascalCase = (str: string) => {
 
 // Helper function to convert kebab-case to snake_case
 function toSnakeCase(str: string): string {
-  return str.replace(/-/g, '_');
+  return str.replace(/-/g, '_').toLowerCase();
+}
+
+// Helper function to convert PascalCase to snake_case
+function pascalToSnakeCase(str: string): string {
+  return str
+    .replace(/([a-z])([A-Z])/g, '$1_$2')
+    .toLowerCase();
 }
 
 type ModelField = {
@@ -162,16 +169,16 @@ export const TEMPLATES = {
       const query = req.scope.resolve("query")
 
       const queryOptions = {
-        entity: "${modelName.toLowerCase()}",
+        entity: "${toSnakeCase(modelName)}",
         ...req.queryConfig,
       }
 
-      const { data: ${modelName.toLowerCase()}_items, metadata } = await query.graph(
+      const { data: ${toSnakeCase(modelName)}_items, metadata } = await query.graph(
         queryOptions
       ) as QueryResponse
 
       res.json({
-        ${modelName.toLowerCase()}_items,
+        ${toSnakeCase(modelName)}_items,
         count: metadata.count,
         limit: metadata.take,
         offset: metadata.skip,
@@ -188,7 +195,7 @@ export const TEMPLATES = {
         input: req.validatedBody,
       })
 
-      res.json({ ${toPascalCase(modelName)}: result })
+      res.json({ ${toSnakeCase(modelName)}: result })
     }
   `,
 
@@ -897,16 +904,16 @@ export async function generateModule(config: ModuleConfig, options: {
   const typesPath = 'admin/types/index.ts';
   if (fs.existsSync(path.join(basePath, typesPath))) {
     const typeDefinitions = models.map(model => `
-      export type ${model.name} = {
+      export type ${toPascalCase(model.name)} = {
         id: string
-        ${model.fields.map(f => `${f.name}: ${f.type}`).join('\n')}
+        ${model.fields.map(f => `${f.name}: ${f.type}`).join('\n  ')}
         created_at: string
         updated_at: string
         deleted_at: string | null
       }
 
-      export type List${model.name}sRes = {
-        ${model.name.toLowerCase()}_items: ${model.name}[]
+      export type List${toPascalCase(model.name)}sRes = {
+        ${toSnakeCase(model.name)}_items: ${toPascalCase(model.name)}[]
         count: number
         limit: number
         offset: number

@@ -45,3 +45,51 @@ export const PostAdminUpdateVehicleSeries = z.object({
   vehicle_id: z.string().optional().min(1),
   model_id: z.string().optional().min(1),
 });
+
+import { z } from "zod";
+
+export const PostAdminCreateVehicleSeries = z.object({
+  start_year: z.number(),
+  end_year: z.number(),
+  vehicle_id: z.string().optional().min(1),
+  model_id: z.string().optional().min(1),
+});
+
+export const PostAdminUpdateVehicleSeries = z.object({
+  start_year: z.number().optional(),
+  end_year: z.number().optional(),
+  vehicle_id: z.string().optional().min(1),
+  model_id: z.string().optional().min(1),
+});
+
+import { z } from "zod";
+
+export const PostAdminCreateVehicleSeries = z.object({
+  start_year: z.number(),
+  end_year: z.number(),
+  vehicle_id: z.string().optional().min(1),
+  model_id: z.string().optional().min(1),
+});
+
+export const PostAdminUpdateVehicleSeries = z.object({
+  start_year: z.number().optional(),
+  end_year: z.number().optional(),
+  vehicle_id: z.string().optional().min(1),
+  model_id: z.string().optional().min(1),
+});
+
+import { z } from "zod";
+
+export const PostAdminCreateVehicleSeries = z.object({
+  start_year: z.number(),
+  end_year: z.number(),
+  vehicle_id: z.string().optional().min(1),
+  model_id: z.string().optional().min(1),
+});
+
+export const PostAdminUpdateVehicleSeries = z.object({
+  start_year: z.number().optional(),
+  end_year: z.number().optional(),
+  vehicle_id: z.string().optional().min(1),
+  model_id: z.string().optional().min(1),
+});
