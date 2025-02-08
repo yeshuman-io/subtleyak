@@ -151,133 +151,138 @@ export const TEMPLATES = {
   },
 
   middleware: (moduleConfig: ModuleConfig) => {
-    const routeImports = moduleConfig.models.map(model => {
-      const routePath = model.parent?.routePrefix || `${moduleConfig.name.toLowerCase()}/${model.plural}`
-      const routeBase = routePath.replace(/\//g, '_')
-      return { base: routeBase, path: routePath }
-    })
+    // Generate route configurations
+    const routes = moduleConfig.models.map(model => {
+      const routePath = model.parent?.routePrefix || 
+        `${moduleConfig.plural}/${model.plural}`;
+      
+      const className = toPascalCase(model.name);
+      const schemaName = `Get${className}Schema`;
+      
+      // Get fields for defaultFields, excluding relation fields
+      const defaultFields = ["id", ...model.fields
+        .filter(f => !f.relation)
+        .map(f => f.name)];
 
-    // Import validators for each model
-    const validatorImports = moduleConfig.models.map(model => {
-      const className = toPascalCase(model.name)
+      // Get relation fields for defaultRelations
+      const defaultRelations = model.fields
+        .filter(f => f.relation)
+        .map(f => f.name);
+      
+      return [
+        // GET route
+        `{
+          matcher: "/admin/${routePath}",
+          method: "GET",
+          middlewares: [
+            validateAndTransformQuery(${schemaName}, {
+              defaults: ${JSON.stringify(defaultFields)},
+              select: ${JSON.stringify(defaultFields)},
+              relations: ${JSON.stringify(defaultRelations)},
+              isList: true,
+            }),
+          ],
+        }`,
+        // CREATE route
+        `{
+          matcher: "/admin/${routePath}",
+          method: "POST",
+          middlewares: [validateAndTransformBody(PostAdminCreate${className})],
+        }`,
+        // UPDATE route
+        `{
+          matcher: "/admin/${routePath}/:id",
+          method: "POST",
+          middlewares: [validateAndTransformBody(PostAdminUpdate${className})],
+        }`
+      ].join(',\n');
+    }).join(',\n');
+
+    const imports = moduleConfig.models.map(model => {
+      const className = toPascalCase(model.name);
+      const routePath = model.parent?.routePrefix || 
+        `${moduleConfig.plural}/${model.plural}`;
+      
       return `import {
   PostAdminCreate${className},
   PostAdminUpdate${className}
-} from "./admin/${model.parent?.routePrefix || moduleConfig.plural}/${model.plural}/validators";`
-    }).join('\n')
+} from "./admin/${routePath}/validators";`;
+    }).join('\n');
 
-    // Generate route configurations
-    const routes = moduleConfig.models.map(model => {
-      const routePath = model.parent?.routePrefix || `${moduleConfig.name.toLowerCase()}/${model.plural}`
-      const className = toPascalCase(model.name)
-      return `
-    // GET routes
-    {
-      matcher: "/admin/${routePath}",
-      method: "GET",
-      middlewares: [
-        validateAndTransformQuery(GetVehiclesSchema, {
-          defaults: ["id", "start_year", "end_year"],
-          isList: true,
-        }),
-      ],
-    },
-    // CREATE routes
-    {
-      matcher: "/admin/${routePath}",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminCreate${className})],
-    },
-    // UPDATE routes
-    {
-      matcher: "/admin/${routePath}/:id",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminUpdate${className})],
-    }`
-    }).join(',\n')
+    const schemas = moduleConfig.models.map(model => {
+      const className = toPascalCase(model.name);
+      const makeIdField = model.fields.find(f => f.relation?.model === 'Make');
+      
+      if (makeIdField) {
+        return `export const Get${className}Schema = createFindParams().extend({
+  make_id: z.string().optional()
+});`;
+      }
+      return `export const Get${className}Schema = createFindParams();`;
+    }).join('\n');
 
-    const middlewareTemplate = `
+    return {
+      imports,
+      routes,
+      schemas,
+      fullTemplate: `// This file is auto-generated and will be overwritten by subsequent generations
+// Manual changes should be made to the generator templates instead
+
 import { z } from "zod";
 import {
   defineMiddlewares,
+  unlessPath,
   validateAndTransformBody,
   validateAndTransformQuery,
 } from "@medusajs/framework/http";
 import { createFindParams } from "@medusajs/medusa/api/utils/validators";
-${validatorImports}
 
-export const GetVehiclesSchema = createFindParams();
+${imports}
+
+${schemas}
 
 export default defineMiddlewares({
   routes: [
     ${routes}
   ],
 });`
-
-    return {
-      imports: validatorImports,
-      routes,
-      fullTemplate: middlewareTemplate
     }
   },
 
   validator: (modelName: string, fields: ModelField[]) => {
     const className = toPascalCase(modelName);
-    return `
-    import { z } from "zod"
+    return `import { z } from "zod"
 
-    export const PostAdminCreate${className} = z.object({
-      ${fields
-        .filter((f) => !f.relation)
-        .map(
-          (f) => {
-            const baseValidator = `z.${f.type}()${f.required ? "" : ".optional()"}`;
-            switch(f.type) {
-              case "string":
-                return `${f.name}: ${baseValidator}.min(1)`;
-              case "number":
-                return `${f.name}: ${baseValidator}.min(1)`;
-              default:
-                return `${f.name}: ${baseValidator}`;
-            }
-          }
-        )
-        .join(",\n      ")},
-      ${fields
-        .filter((f) => f.relation)
-        .map(
-          (f) =>
-            `${f.name}_id: z.string()${f.required ? "" : ".optional()"}.min(1)`
-        )
-        .join(",\n      ")}
+export const PostAdminCreate${className} = z.object({
+  ${fields
+    .filter((f) => !f.relation)
+    .map((f) => {
+      switch(f.type) {
+        case "string":
+          return `${f.name}: z.string()${f.required ? "" : ".optional()"}`;
+        case "number":
+          return `${f.name}: z.number()${f.required ? "" : ".optional()"}`;
+        case "boolean":
+          return `${f.name}: z.boolean()${f.required ? "" : ".optional()"}`;
+        case "date":
+          return `${f.name}: z.date()${f.required ? "" : ".optional()"}`;
+        default:
+          return `${f.name}: z.any()${f.required ? "" : ".optional()"}`;
+      }
     })
+    .join(",\n  ")}
+}).strict();
 
-    export const PostAdminUpdate${className} = z.object({
-      ${fields
-        .filter((f) => !f.relation)
-        .map(
-          (f) => {
-            const baseValidator = `z.${f.type}()`;
-            switch(f.type) {
-              case "string":
-                return `${f.name}: ${baseValidator}.min(1).optional()`;
-              case "number":
-                return `${f.name}: ${baseValidator}.min(1).optional()`;
-              default:
-                return `${f.name}: ${baseValidator}.optional()`;
-            }
-          }
-        )
-        .join(",\n      ")},
-      ${fields
-        .filter((f) => f.relation)
-        .map(
-          (f) =>
-            `${f.name}_id: z.string().min(1).optional()`
-        )
-        .join(",\n      ")}
-    })
-    `;
+export const PostAdminUpdate${className} = z.object({
+  ${fields
+    .filter((f) => !f.relation)
+    .map((f) => `${f.name}: z.${f.type}().optional()`)
+    .join(",\n  ")}
+}).strict();
+
+export type AdminCreate${className}Req = z.infer<typeof PostAdminCreate${className}>;
+export type AdminUpdate${className}Req = z.infer<typeof PostAdminUpdate${className}>;
+`;
   },
 
   route: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => {
@@ -678,71 +683,95 @@ type FileChange = {
   content: string; // Add content property
 };
 
-async function mergeMiddleware(existingContent: string, newImports: string, newRoutes: string): Promise<string> {
-  // Parse the existing content into an AST-like structure
-  const sections = {
-    imports: [] as string[],
-    schemas: [] as string[],
-    routes: [] as string[]
+function mergeMiddleware(existingContent: string, newContent: string): string {
+  // Extract sections using more precise regex
+  const extractSection = (content: string, type: 'imports' | 'schemas' | 'routes') => {
+    switch (type) {
+      case 'imports':
+        return (content.match(/import[^;]+;/g) || []).map(imp => imp.trim());
+      case 'schemas':
+        return (content.match(/export const [^;]+;/g) || []).map(schema => schema.trim());
+      case 'routes':
+        const routesMatch = content.match(/routes:\s*\[([\s\S]*?)\]\s*}\s*\);/);
+        if (!routesMatch) return [];
+        return (routesMatch[1].match(/\s*{[^{}]*(?:{[^{}]*})*[^{}]*},?/g) || [])
+          .map(route => route.trim())
+          .filter(route => route.includes('matcher:'));
+    }
   };
-  
-  let currentSection = '';
-  const lines = existingContent.split('\n');
-  
-  for (const line of lines) {
-    if (line.startsWith('import ')) {
-      sections.imports.push(line);
-    } else if (line.includes('export const') && line.includes('Schema')) {
-      sections.schemas.push(line);
-    } else if (line.match(/^\s*{.*matcher:/)) {
-      sections.routes.push(line);
+
+  // Extract all sections
+  const existingImports = extractSection(existingContent, 'imports');
+  const existingSchemas = extractSection(existingContent, 'schemas');
+  const existingRoutes = extractSection(existingContent, 'routes');
+
+  const newImports = extractSection(newContent, 'imports');
+  const newSchemas = extractSection(newContent, 'schemas');
+  const newRoutes = extractSection(newContent, 'routes');
+
+  // Combine unique items
+  const allImports = [...new Set([...existingImports, ...newImports])].join('\n');
+  const allSchemas = [...new Set([...existingSchemas, ...newSchemas])].join('\n');
+
+  // Helper to get route key (matcher + method)
+  const getRouteKey = (route: string) => {
+    const matcher = route.match(/matcher:\s*"([^"]+)"/)?.[1] || '';
+    const method = route.match(/method:\s*"([^"]+)"/)?.[1] || '';
+    return `${method}:${matcher}`;
+  };
+
+  // Combine routes using a Map to handle duplicates
+  const routeMap = new Map();
+  [...existingRoutes, ...newRoutes].forEach(route => {
+    const key = getRouteKey(route);
+    if (key && !routeMap.has(key)) {
+      routeMap.set(key, route);
     }
-  }
+  });
 
-  // Add new imports if they don't exist
-  const newImportLines = newImports.split('\n').filter(line => line.trim());
-  for (const newImport of newImportLines) {
-    if (!sections.imports.some(imp => imp.includes(newImport.split(' from ')[1]))) {
-      sections.imports.push(newImport);
-    }
-  }
+  // Sort routes by matcher path
+  const sortedRoutes = Array.from(routeMap.values())
+    .sort((a, b) => {
+      const matcherA = a.match(/matcher:\s*"([^"]+)"/)?.[1] || '';
+      const matcherB = b.match(/matcher:\s*"([^"]+)"/)?.[1] || '';
+      return matcherA.localeCompare(matcherB);
+    })
+    .join(',\n    ');
 
-  // Add new routes if they don't exist
-  const newRouteLines = newRoutes.split('\n')
-    .filter(line => line.match(/^\s*{.*matcher:/))
-    .map(line => line.trim());
+  return `// This file is auto-generated and will be overwritten by subsequent generations
+// Manual changes should be made to the generator templates instead
 
-  for (const newRoute of newRouteLines) {
-    const matcher = newRoute.match(/matcher:\s*"([^"]+)"/)?.[1];
-    if (matcher && !sections.routes.some(route => route.includes(matcher))) {
-      sections.routes.push(newRoute);
-    }
-  }
+${allImports}
 
-  // Reconstruct the file
-  return `
-import { z } from "zod";
-import {
-  defineMiddlewares,
-  validateAndTransformBody,
-  validateAndTransformQuery,
-} from "@medusajs/framework/http";
-import { createFindParams } from "@medusajs/medusa/api/utils/validators";
-${sections.imports.join('\n')}
-
-${sections.schemas.join('\n')}
+${allSchemas}
 
 export default defineMiddlewares({
   routes: [
-    ${sections.routes.join(',\n    ')}
+    ${sortedRoutes}
   ],
 });`;
 }
 
-export async function generateModule(config: ModuleConfig, options: { 
-  addToExisting?: boolean;
-  dryRun?: boolean;
-} = {}) {
+export async function generateModule(config: ModuleConfig, options: { addToExisting?: boolean; dryRun?: boolean } = {}) {
+  const { addToExisting = false, dryRun = false } = options;
+  
+  // Generate middleware content
+  const middlewareTemplate = TEMPLATES.middleware(config);
+  const middlewarePath = path.join(process.cwd(), 'src/api/middlewares.ts');
+  
+  if (addToExisting && fs.existsSync(middlewarePath)) {
+    const existingContent = fs.readFileSync(middlewarePath, 'utf-8');
+    const mergedContent = mergeMiddleware(existingContent, middlewareTemplate.fullTemplate);
+    
+    if (!dryRun) {
+      fs.writeFileSync(middlewarePath, await format(mergedContent, { parser: 'typescript' }));
+    }
+  } else {
+    if (!dryRun) {
+      fs.writeFileSync(middlewarePath, await format(middlewareTemplate.fullTemplate, { parser: 'typescript' }));
+    }
+  }
+
   const changes: FileChange[] = [];
 
   for (const model of config.models) {
@@ -848,33 +877,6 @@ export async function generateModule(config: ModuleConfig, options: {
         type: 'create',
         description: `Create admin edit form for ${model.name}`,
         content: TEMPLATES.editComponent(config, model)
-      });
-    }
-
-    // Middleware file
-    const middlewarePath = `src/api/middlewares.ts`;
-    const middleware = TEMPLATES.middleware(config);
-    
-    if (fs.existsSync(middlewarePath)) {
-      const existingContent = await fs.promises.readFile(middlewarePath, 'utf8');
-      const newContent = await mergeMiddleware(
-        existingContent,
-        middleware.imports,
-        middleware.routes
-      );
-
-      changes.push({
-        path: middlewarePath,
-        type: 'modify',
-        description: `Update middleware file to include ${config.name} routes`,
-        content: newContent
-      });
-    } else {
-      changes.push({
-        path: middlewarePath,
-        type: 'create',
-        description: `Create middleware file with ${config.name} routes`,
-        content: middleware.fullTemplate
       });
     }
   }
