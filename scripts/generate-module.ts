@@ -129,22 +129,58 @@ export const TEMPLATES = {
 
   service: ({ moduleName, models }) => {
     console.log('Service template input:', { moduleName, models });
-    const classNames = models.map(m => toPascalCase(typeof m === 'string' ? m : m.name));
-    const modelPaths = models.map(m => {
+    const modelImports = models.map(m => {
       const name = typeof m === 'string' ? m : m.name;
-      return name;  // Keep original kebab-case for import paths
+      const className = toPascalCase(name);
+      // Convert PascalCase to kebab-case for import paths
+      const path = name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+      return { path, className };
     });
+
     return `
     import { MedusaService } from "@medusajs/framework/utils"
-    ${classNames.map((className, i) => `import ${className} from "./models/${modelPaths[i]}"`).join("\n    ")}
+    ${modelImports.map(({ className, path }) => `import ${className} from "./models/${path}"`).join("\n    ")}
 
     class ${moduleName}Service extends MedusaService({
-      ${classNames.join(",\n      ")}
+      ${modelImports.map(({ className }) => className).join(",\n      ")}
     }){
     }
 
     export default ${moduleName}Service
     `
+  },
+
+  middleware: (moduleConfig: ModuleConfig) => {
+    const routeImports = moduleConfig.models.map(model => {
+      const routePath = model.parent?.routePrefix || `${moduleConfig.name.toLowerCase()}/${model.plural}`
+      const routeBase = routePath.replace(/\//g, '_')
+      return { base: routeBase, path: routePath }
+    })
+
+    const imports = routeImports.map(({ base, path }) => 
+      `import * as ${base} from "../api/admin/${path}/route"\n` + 
+      `import * as ${base}_id from "../api/admin/${path}/[id]/route"`
+    ).join("\n")
+
+    const routes = routeImports.map(({ base, path }) => 
+      `  app.use("/admin/${path}", ${base})\n` +
+      `  app.use("/admin/${path}/:id", ${base}_id)`
+    ).join("\n")
+
+    const middlewareTemplate = `
+import { defineMiddleware } from "@medusajs/framework/http"
+${imports}
+
+export default defineMiddleware((app) => {
+${routes}
+})
+`
+
+    return {
+      imports,
+      routes,
+      fullTemplate: middlewareTemplate
+    }
   },
 
   validator: (modelName: string, fields: ModelField[]) => {
@@ -697,6 +733,38 @@ export async function generateModule(config: ModuleConfig, options: {
       description: `Create admin edit form for ${model.name}`,
       content: TEMPLATES.editComponent(config, model)
     });
+
+    // Middleware file
+    const middlewarePath = `src/api/middlewares.ts`;
+    const middleware = TEMPLATES.middleware(config);
+    
+    if (fs.existsSync(middlewarePath)) {
+      const existingContent = fs.readFileSync(middlewarePath, 'utf8');
+      const lastImportIndex = existingContent.lastIndexOf('import');
+      const lastImportEndIndex = existingContent.indexOf('\n', lastImportIndex);
+      const appUseIndex = existingContent.indexOf('app.use');
+      
+      const newContent = 
+        existingContent.slice(0, lastImportEndIndex + 1) + 
+        '\n' + middleware.imports + '\n' +
+        existingContent.slice(lastImportEndIndex + 1, appUseIndex) +
+        '      ' + middleware.routes + '\n' +
+        existingContent.slice(appUseIndex);
+
+      changes.push({
+        path: middlewarePath,
+        type: 'modify',
+        description: `Update middleware file to include ${config.name} routes`,
+        content: newContent
+      });
+    } else {
+      changes.push({
+        path: middlewarePath,
+        type: 'create',
+        description: `Create middleware file with ${config.name} routes`,
+        content: middleware.fullTemplate
+      });
+    }
   }
 
   if (options.dryRun) {
