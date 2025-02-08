@@ -147,7 +147,7 @@ export const TEMPLATES = {
   route: (modelName: string) => `
     import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
     import { z } from "zod"
-    import { PostAdminCreate${modelName} } from "./validators"
+    import { PostAdminCreate${toPascalCase(modelName)} } from "./validators"
     
     type QueryResponse = {
       data: any[]
@@ -178,40 +178,40 @@ export const TEMPLATES = {
       })
     }
 
-    type PostAdminCreate${modelName}Type = z.infer<typeof PostAdminCreate${modelName}>
+    type PostAdminCreate${toPascalCase(modelName)}Type = z.infer<typeof PostAdminCreate${toPascalCase(modelName)}>
 
     export const POST = async (
-      req: MedusaRequest<PostAdminCreate${modelName}Type>,
+      req: MedusaRequest<PostAdminCreate${toPascalCase(modelName)}Type>,
       res: MedusaResponse
     ) => {
-      const { result } = await create${modelName}Workflow(req.scope).run({
+      const { result } = await create${toPascalCase(modelName)}Workflow(req.scope).run({
         input: req.validatedBody,
       })
 
-      res.json({ ${modelName.toLowerCase()}: result })
+      res.json({ ${toPascalCase(modelName)}: result })
     }
   `,
 
   idRoute: (modelName: string) => `
     import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
     import { z } from "zod"
-    import { update${modelName}Workflow } from "../../../../../workflows/update-${modelName.toLowerCase()}"
-    import { PostAdminUpdate${modelName} } from "../validators"
+    import { update${toPascalCase(modelName)}Workflow } from "../../../../../workflows/update-${toPascalCase(modelName).toLowerCase()}"
+    import { PostAdminUpdate${toPascalCase(modelName)} } from "../validators"
 
-    type PostAdminUpdate${modelName}Type = z.infer<typeof PostAdminUpdate${modelName}>
+    type PostAdminUpdate${toPascalCase(modelName)}Type = z.infer<typeof PostAdminUpdate${toPascalCase(modelName)}>
 
     export const POST = async (
-      req: MedusaRequest<PostAdminUpdate${modelName}Type>,
+      req: MedusaRequest<PostAdminUpdate${toPascalCase(modelName)}Type>,
       res: MedusaResponse
     ) => {
-      const { result } = await update${modelName}Workflow(req.scope).run({
+      const { result } = await update${toPascalCase(modelName)}Workflow(req.scope).run({
         input: {
           id: req.params.id,
           ...req.validatedBody,
         },
       })
 
-      res.json({ ${modelName.toLowerCase()}: result })
+      res.json({ ${toPascalCase(modelName)}: result })
     }
   `,
 
@@ -223,16 +223,16 @@ export const TEMPLATES = {
       WorkflowResponse,
     } from "@medusajs/framework/workflows-sdk"
 
-    export type Create${modelName}StepInput = {
+    export type Create${toPascalCase(modelName)}StepInput = {
       ${fields
         .map((f) => `${f.name}${f.required ? "" : "?"}: ${f.type}`)
         .join("\n")}
     }
 
-    export const create${modelName}Step = createStep(
-      "create-${modelName.toLowerCase()}-step",
-      async (input: Create${modelName}StepInput, { container }) => {
-        const moduleService = container.resolve("${modelName.toLowerCase()}")
+    export const create${toPascalCase(modelName)}Step = createStep(
+      "create-${toPascalCase(modelName).toLowerCase()}-step",
+      async (input: Create${toPascalCase(modelName)}StepInput, { container }) => {
+        const moduleService = container.resolve("${toPascalCase(modelName).toLowerCase()}")
 
         const result = await moduleService.create({
           ...input,
@@ -241,17 +241,17 @@ export const TEMPLATES = {
         return new StepResponse(result, result.id)
       },
       async (id: string, { container }) => {
-        const moduleService = container.resolve("${modelName.toLowerCase()}")
+        const moduleService = container.resolve("${toPascalCase(modelName).toLowerCase()}")
         await moduleService.delete(id)
       }
     )
 
-    type Create${modelName}WorkflowInput = Create${modelName}StepInput
+    type Create${toPascalCase(modelName)}WorkflowInput = Create${toPascalCase(modelName)}StepInput
 
-    export const create${modelName}Workflow = createWorkflow(
-      "create-${modelName.toLowerCase()}-workflow",
-      (input: Create${modelName}WorkflowInput) => {
-        const result = create${modelName}Step(input)
+    export const create${toPascalCase(modelName)}Workflow = createWorkflow(
+      "create-${toPascalCase(modelName).toLowerCase()}-workflow",
+      (input: Create${toPascalCase(modelName)}WorkflowInput) => {
+        const result = create${toPascalCase(modelName)}Step(input)
         return new WorkflowResponse(result)
       }
     )

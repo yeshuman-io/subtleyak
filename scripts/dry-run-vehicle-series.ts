@@ -78,11 +78,11 @@ console.log('----------------------------------');
 console.log(TEMPLATES.updateWorkflow(config.models[0].name, config.models[0].fields));
 console.log('\n');
 
-// Execute the dry run
-console.log('Dry Run Summary:');
+// Execute the generator
+console.log('Generating files:');
 console.log('================\n');
 
 generateModule(config, { 
   addToExisting: true,
-  dryRun: true 
+  dryRun: false 
 }); 
