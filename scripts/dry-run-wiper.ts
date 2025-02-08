@@ -5,44 +5,62 @@ console.log('\nGenerated File Contents:');
 console.log('======================\n');
 
 const config = {
-  name: "vehicle",
-  plural: "vehicles",
+  name: "wiper",
+  plural: "wipers",
   models: [
     {
-      name: "vehicle-series",
-      singular: "series",
-      plural: "series", // Special case where singular = plural
+      name: "wiper",
+      singular: "wiper",
+      plural: "wipers",
+      isParent: true,
+      fields: [
+        { 
+          name: "name", 
+          type: "string" as const, 
+          required: true 
+        },
+        { 
+          name: "code", 
+          type: "string" as const, 
+          required: true 
+        },
+        { 
+          name: "kits",
+          type: "string" as const,
+          relation: {
+            type: "hasMany" as const,
+            model: "WiperKit",
+            inverse: "wiper"
+          }
+        }
+      ]
+    },
+    {
+      name: "wiper-kit",
+      singular: "kit",
+      plural: "kits",
       parent: {
-        model: "Vehicle",
-        routePrefix: "vehicles/series"
+        model: "Wiper",
+        routePrefix: "wipers/kits"
       },
       fields: [
         { 
-          name: "start_year", 
-          type: "number" as const, 
+          name: "name", 
+          type: "string" as const, 
           required: true 
         },
         { 
-          name: "end_year", 
-          type: "number" as const, 
+          name: "code", 
+          type: "string" as const, 
           required: true 
         },
         { 
-          name: "vehicle",
+          name: "wiper",
           type: "string" as const,
           relation: {
             type: "belongsTo" as const,
-            model: "Vehicle",
-            inverse: "series"
-          }
-        },
-        {
-          name: "model",
-          type: "string" as const,
-          relation: {
-            type: "belongsTo" as const,
-            model: "VehicleModel",
-            inverse: "series"
+            model: "Wiper",
+            inverse: "kits"
           }
         }
       ]
@@ -52,7 +70,7 @@ const config = {
 
 // Generate content for each model
 for (const model of config.models) {
-  const routePath = model.parent?.routePrefix || config.plural;
+  const routePath = model.isParent ? config.plural : model.parent?.routePrefix;
 
   // Show model file content
   console.log(`src/modules/${config.plural}/models/${model.name}.ts:`);
@@ -73,7 +91,7 @@ for (const model of config.models) {
   console.log('\n');
 
   // Show create component
-  const componentName = model.parent ? `${model.parent.model.toLowerCase()}-${model.singular}` : model.singular;
+  const componentName = model.isParent ? model.singular : `${model.parent?.model.toLowerCase()}-${model.singular}`;
   console.log(`src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx:`);
   console.log('-------------------------------------------------------------------');
   console.log(TEMPLATES.createComponent(config, model));
@@ -89,11 +107,9 @@ for (const model of config.models) {
 // Show service update
 console.log(`src/modules/${config.plural}/service.ts:`);
 console.log('---------------------------');
-// Include existing models in the service
-const existingModels = ['Vehicle', 'VehicleMake', 'VehicleModel', 'VehicleBody'];
 console.log(TEMPLATES.service({ 
   moduleName: toPascalCase(config.name), 
-  models: [...existingModels, ...config.models.map(m => m.name)]
+  models: config.models.map(m => m.name)
 }));
 console.log('\n');
 
@@ -101,4 +117,4 @@ console.log('\n');
 console.log('Generating files:');
 console.log('================\n');
 
-dryRunModule(config, { addToExisting: true }); 
+dryRunModule(config, { addToExisting: false }); 

@@ -34,25 +34,58 @@ type ModelField = {
   };
 };
 
+type ModelConfig = {
+  // Core model info
+  name: string;
+  singular: string;    // e.g. "wiper", "vehicle"
+  plural: string;      // e.g. "wipers", "vehicles"
+  isParent?: boolean;  // Is this the parent model for the module?
+  
+  // Relationship info (for child models)
+  parent?: {
+    model: string;     // e.g. "Wiper" for WiperKit
+    routePrefix: string; // e.g. "wipers/kits" vs just "wipers" for parent
+  };
+  
+  fields: ModelField[];
+}
+
 type ModuleConfig = {
   name: string;
-  models: {
-    name: string;
-    fields: ModelField[];
-  }[];
+  plural: string;      // Module's plural name (often same as parent model's plural)
+  models: ModelConfig[];
 };
+
+// Helper function to get route path based on model config
+function getRoutePath(moduleConfig: ModuleConfig, modelConfig: ModelConfig): string {
+  if (modelConfig.isParent) {
+    return moduleConfig.plural;
+  }
+  return modelConfig.parent?.routePrefix || `${moduleConfig.plural}/${modelConfig.plural}`;
+}
+
+// Helper function to get component name based on model config
+function getComponentName(modelConfig: ModelConfig): string {
+  if (modelConfig.isParent) {
+    return modelConfig.singular;
+  }
+  const parentPrefix = modelConfig.parent?.model.toLowerCase() || '';
+  return `${parentPrefix}-${modelConfig.singular}`;
+}
 
 export const TEMPLATES = {
   model: (modelName: string, fields: ModelField[]) => {
     const className = toPascalCase(modelName);
     const toKebabCase = (str: string) => str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
     
+    const imports = fields
+      .filter((f) => f.relation)
+      .map((f) => `import ${f.relation!.model} from "./${toKebabCase(f.relation!.model).toLowerCase()}";`)
+      .join("\n");
+
     return `
     import { model } from "@medusajs/framework/utils"
-    ${fields
-      .filter((f) => f.relation)
-      .map((f) => `import ${toPascalCase(f.relation!.model)} from "./${toKebabCase(f.relation!.model)}"`)
-      .join("\n    ")}
+    ${imports}
 
     const ${className} = model.define("${toSnakeCase(modelName)}", {
       id: model.id().primaryKey(),
@@ -61,11 +94,19 @@ export const TEMPLATES = {
           if (f.relation) {
             switch (f.relation.type) {
               case "belongsTo":
-                return `${f.name}: model.belongsTo(() => ${toPascalCase(f.relation.model)}${f.relation.inverse ? `, { inverse: "${f.relation.inverse}" }` : ''})`;
+                return `${f.name}: model.belongsTo(() => ${f.relation.model}${
+                  f.relation.inverse ? `, { mappedBy: "${f.relation.inverse}" }` : ''
+                })`;
               case "hasMany":
-                return `${f.name}: model.hasMany(() => ${toPascalCase(f.relation.model)}, { mappedBy: "${f.relation.inverse || f.name}" })`;
+                return `${f.name}: model.hasMany(() => ${f.relation.model}, { 
+                  mappedBy: "${f.relation.inverse || f.name}" 
+                })`;
               case "manyToMany":
-                return `${f.name}: model.manyToMany(() => ${toPascalCase(f.relation.model)}, { mappedBy: "${f.relation.inverse || f.name}" })`;
+                return `${f.name}: model.manyToMany(() => ${f.relation.model}, {
+                  pivotTable: "${toSnakeCase(modelName)}_${toSnakeCase(f.relation.model)}",
+                  joinColumn: "${toSnakeCase(modelName)}_id",
+                  inverseJoinColumn: "${toSnakeCase(f.relation.model)}_id"
+                })`;
             }
           }
           switch (f.type) {
@@ -91,7 +132,7 @@ export const TEMPLATES = {
     const classNames = models.map(m => toPascalCase(typeof m === 'string' ? m : m.name));
     const modelPaths = models.map(m => {
       const name = typeof m === 'string' ? m : m.name;
-      return name.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+      return name;  // Keep original kebab-case for import paths
     });
     return `
     import { MedusaService } from "@medusajs/framework/utils"
@@ -115,10 +156,17 @@ export const TEMPLATES = {
       ${fields
         .filter((f) => !f.relation)
         .map(
-          (f) =>
-            `${f.name}: z.${f.type}()${f.required ? "" : ".optional()"}${
-              f.type === "string" ? ".min(1)" : ""
-            }`
+          (f) => {
+            const baseValidator = `z.${f.type}()${f.required ? "" : ".optional()"}`;
+            switch(f.type) {
+              case "string":
+                return `${f.name}: ${baseValidator}.min(1)`;
+              case "number":
+                return `${f.name}: ${baseValidator}.min(1)`;
+              default:
+                return `${f.name}: ${baseValidator}`;
+            }
+          }
         )
         .join(",\n      ")},
       ${fields
@@ -134,27 +182,38 @@ export const TEMPLATES = {
       ${fields
         .filter((f) => !f.relation)
         .map(
-          (f) =>
-            `${f.name}: z.${f.type}()${".optional()"}${
-              f.type === "string" ? ".min(1)" : ""
-            }`
+          (f) => {
+            const baseValidator = `z.${f.type}()`;
+            switch(f.type) {
+              case "string":
+                return `${f.name}: ${baseValidator}.min(1).optional()`;
+              case "number":
+                return `${f.name}: ${baseValidator}.min(1).optional()`;
+              default:
+                return `${f.name}: ${baseValidator}.optional()`;
+            }
+          }
         )
         .join(",\n      ")},
       ${fields
         .filter((f) => f.relation)
         .map(
           (f) =>
-            `${f.name}_id: z.string().optional().min(1)`
+            `${f.name}_id: z.string().min(1).optional()`
         )
         .join(",\n      ")}
     })
     `;
   },
 
-  route: (modelName: string) => `
+  route: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => {
+    const routePath = getRoutePath(moduleConfig, modelConfig);
+    const className = toPascalCase(modelConfig.name);
+    
+    return `
     import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
     import { z } from "zod"
-    import { PostAdminCreate${toPascalCase(modelName)} } from "./validators"
+    import { PostAdminCreate${className} } from "./validators"
     
     type QueryResponse = {
       data: any[]
@@ -169,58 +228,64 @@ export const TEMPLATES = {
       const query = req.scope.resolve("query")
 
       const queryOptions = {
-        entity: "${toSnakeCase(modelName)}",
+        entity: "${toSnakeCase(modelConfig.name)}",
         ...req.queryConfig,
       }
 
-      const { data: ${toSnakeCase(modelName)}_items, metadata } = await query.graph(
+      const { data: ${toSnakeCase(modelConfig.name)}_items, metadata } = await query.graph(
         queryOptions
       ) as QueryResponse
 
       res.json({
-        ${toSnakeCase(modelName)}_items,
+        ${toSnakeCase(modelConfig.name)}_items,
         count: metadata.count,
         limit: metadata.take,
         offset: metadata.skip,
       })
     }
 
-    type PostAdminCreate${toPascalCase(modelName)}Type = z.infer<typeof PostAdminCreate${toPascalCase(modelName)}>
+    type PostAdminCreate${className}Type = z.infer<typeof PostAdminCreate${className}>
 
     export const POST = async (
-      req: MedusaRequest<PostAdminCreate${toPascalCase(modelName)}Type>,
+      req: MedusaRequest<PostAdminCreate${className}Type>,
       res: MedusaResponse
     ) => {
-      const { result } = await create${toPascalCase(modelName)}Workflow(req.scope).run({
+      const { result } = await create${className}Workflow(req.scope).run({
         input: req.validatedBody,
       })
 
-      res.json({ ${toSnakeCase(modelName)}: result })
+      res.json({ ${toSnakeCase(modelConfig.name)}: result })
     }
-  `,
+  `;
+  },
 
-  idRoute: (modelName: string) => `
+  idRoute: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => {
+    const routePath = getRoutePath(moduleConfig, modelConfig);
+    const className = toPascalCase(modelConfig.name);
+    
+    return `
     import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
     import { z } from "zod"
-    import { update${toPascalCase(modelName)}Workflow } from "../../../../../workflows/update-${toPascalCase(modelName).toLowerCase()}"
-    import { PostAdminUpdate${toPascalCase(modelName)} } from "../validators"
+    import { update${className}Workflow } from "../../../../../workflows/update-${modelConfig.name}"
+    import { PostAdminUpdate${className} } from "../validators"
 
-    type PostAdminUpdate${toPascalCase(modelName)}Type = z.infer<typeof PostAdminUpdate${toPascalCase(modelName)}>
+    type PostAdminUpdate${className}Type = z.infer<typeof PostAdminUpdate${className}>
 
     export const POST = async (
-      req: MedusaRequest<PostAdminUpdate${toPascalCase(modelName)}Type>,
+      req: MedusaRequest<PostAdminUpdate${className}Type>,
       res: MedusaResponse
     ) => {
-      const { result } = await update${toPascalCase(modelName)}Workflow(req.scope).run({
+      const { result } = await update${className}Workflow(req.scope).run({
         input: {
           id: req.params.id,
           ...req.validatedBody,
         },
       })
 
-      res.json({ ${toPascalCase(modelName)}: result })
+      res.json({ ${className}: result })
     }
-  `,
+  `;
+  },
 
   workflow: (modelName: string, fields: ModelField[]) => `
     import {
@@ -259,19 +324,22 @@ export const TEMPLATES = {
       })
   `,
 
-  pageComponent: (modelName: string, fields: ModelField[]) => {
-    const className = toPascalCase(modelName);
-    const snakeName = toSnakeCase(modelName);
+  pageComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => {
+    const className = toPascalCase(modelConfig.name);
+    const snakeName = toSnakeCase(modelConfig.name);
+    const routePath = getRoutePath(moduleConfig, modelConfig);
+    const componentName = getComponentName(modelConfig);
+    
     return `
     import { defineRouteConfig } from "@medusajs/admin-sdk";
     import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
     import { ${className} } from "../../../types";
     import { DataTablePage } from "../../../components/data-table-page";
-    import { ${className}Create } from "./create/${modelName}-create";
+    import { ${className}Create } from "./create/${componentName}-create";
     import { useState } from "react";
     import { ActionMenu } from "../../../components/action-menu";
     import { Pencil } from "@medusajs/icons";
-    import { ${className}Edit } from "./edit/${modelName}-edit";
+    import { ${className}Edit } from "./edit/${componentName}-edit";
 
     const columnHelper = createDataTableColumnHelper<${className}>();
 
@@ -283,7 +351,7 @@ export const TEMPLATES = {
         columnHelper.accessor("id", {
           header: "ID",
         }),
-        ${fields.map(f => {
+        ${modelConfig.fields.map(f => {
           if (f.relation) {
             return `columnHelper.accessor("${f.name}.name", {
               header: "${toPascalCase(f.name)}",
@@ -291,7 +359,7 @@ export const TEMPLATES = {
             }),`;
           }
           return `columnHelper.accessor("${f.name}", {
-            header: "${toPascalCase(f.name)}",
+            header: "${toPascalCase(f.name).replace(/_/g, ' ')}",
             enableSorting: true,
           }),`;
         }).join('\n        ')}
@@ -322,8 +390,8 @@ export const TEMPLATES = {
         <>
           <DataTablePage<${className}>
             title="${className}"
-            subtitle="Manage your ${snakeName.replace(/_/g, ' ')}"
-            endpoint="/admin/${name}/${modelName}"
+            subtitle="Manage your ${modelConfig.plural}"
+            endpoint="/admin/${routePath}"
             columns={columns}
             queryKey="${snakeName}"
             dataKey="${snakeName}"
@@ -364,14 +432,17 @@ export const TEMPLATES = {
     `;
   },
 
-  createComponent: (modelName: string, fields: ModelField[]) => {
-    const className = toPascalCase(modelName);
+  createComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => {
+    const className = toPascalCase(modelConfig.name);
+    const routePath = getRoutePath(moduleConfig, modelConfig);
+    const componentName = getComponentName(modelConfig);
+    
     return `
     import { Form } from "@medusajs/forms";
     import { Button, FocusModal } from "@medusajs/ui";
     import { useForm } from "react-hook-form";
     import { zodResolver } from "@hookform/resolvers/zod";
-    import { PostAdminCreate${className} } from "../../../../api/admin/${name}/validators";
+    import { PostAdminCreate${className} } from "../../../../api/admin/${routePath}/validators";
     import { InputField, SelectField } from "../../../components/form";
 
     type Props = {
@@ -385,7 +456,7 @@ export const TEMPLATES = {
 
       const onSubmit = async (data) => {
         try {
-          await fetch(\`/admin/${name}/${modelName}\`, {
+          await fetch(\`/admin/${routePath}\`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -404,7 +475,7 @@ export const TEMPLATES = {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <FocusModal.Body className="flex flex-col gap-y-8">
-                ${fields.map(f => {
+                ${modelConfig.fields.map(f => {
                   if (f.relation) {
                     return `<SelectField
                       name="${f.name}_id"
@@ -414,7 +485,7 @@ export const TEMPLATES = {
                   }
                   return `<InputField
                     name="${f.name}"
-                    label="${toPascalCase(f.name)}"
+                    label="${toPascalCase(f.name).replace(/_/g, ' ')}"
                     required={${f.required}}
                     type="${f.type === 'number' ? 'number' : 'text'}"
                   />`;
@@ -441,14 +512,17 @@ export const TEMPLATES = {
     `;
   },
 
-  editComponent: (modelName: string, fields: ModelField[]) => {
-    const className = toPascalCase(modelName);
+  editComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => {
+    const className = toPascalCase(modelConfig.name);
+    const routePath = getRoutePath(moduleConfig, modelConfig);
+    const componentName = getComponentName(modelConfig);
+    
     return `
     import { Form } from "@medusajs/forms";
     import { Button, Drawer } from "@medusajs/ui";
     import { useForm } from "react-hook-form";
     import { zodResolver } from "@hookform/resolvers/zod";
-    import { PostAdminUpdate${className} } from "../../../../api/admin/${name}/validators";
+    import { PostAdminUpdate${className} } from "../../../../api/admin/${routePath}/validators";
     import { InputField, SelectField } from "../../../components/form";
 
     type Props = {
@@ -464,7 +538,7 @@ export const TEMPLATES = {
 
       const onSubmit = async (data) => {
         try {
-          await fetch(\`/admin/${name}/${modelName}/\${item.id}\`, {
+          await fetch(\`/admin/${routePath}/\${item.id}\`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(data),
@@ -483,7 +557,7 @@ export const TEMPLATES = {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)}>
               <Drawer.Body className="flex flex-col gap-y-8">
-                ${fields.map(f => {
+                ${modelConfig.fields.map(f => {
                   if (f.relation) {
                     return `<SelectField
                       name="${f.name}_id"
@@ -493,7 +567,7 @@ export const TEMPLATES = {
                   }
                   return `<InputField
                     name="${f.name}"
-                    label="${toPascalCase(f.name)}"
+                    label="${toPascalCase(f.name).replace(/_/g, ' ')}"
                     required={${f.required}}
                     type="${f.type === 'number' ? 'number' : 'text'}"
                   />`;
@@ -527,6 +601,7 @@ type FileChange = {
   mergeStrategy?: 'append' | 'prepend';
   description: string;
   originalContent?: string; // Track original content for revert
+  content: string; // Add content property
 };
 
 export async function generateModule(config: ModuleConfig, options: { 
@@ -534,11 +609,13 @@ export async function generateModule(config: ModuleConfig, options: {
   dryRun?: boolean;
 } = {}) {
   const changes: FileChange[] = [];
-  const { name, models } = config;
 
-  for (const model of models) {
+  for (const model of config.models) {
+    const routePath = model.parent?.routePrefix || config.plural;
+    const componentName = model.parent ? `${model.parent.model.toLowerCase()}-${model.singular}` : model.singular;
+
     // Model file
-    const modelPath = `src/modules/${name}/models/${model.name}.ts`;
+    const modelPath = `src/modules/${config.plural}/models/${model.name}.ts`;
     changes.push({
       path: modelPath,
       type: 'create',
@@ -547,79 +624,78 @@ export async function generateModule(config: ModuleConfig, options: {
     });
 
     // Service file
-    const servicePath = `src/modules/${name}/service.ts`;
+    const servicePath = `src/modules/${config.plural}/service.ts`;
     if (options.addToExisting) {
       changes.push({
         path: servicePath,
         type: 'modify',
         description: `Update service file to include ${model.name}`,
         content: TEMPLATES.service({ 
-          moduleName: toPascalCase(name), 
-          models: [model.name] 
+          moduleName: toPascalCase(config.name), 
+          models: config.models.map(m => m.name)
         })
       });
     } else {
       changes.push({
         path: servicePath,
         type: 'create',
-        description: `Create service file for ${name} module`,
+        description: `Create service file for ${config.name} module`,
         content: TEMPLATES.service({ 
-          moduleName: toPascalCase(name), 
-          models: [model.name]
+          moduleName: toPascalCase(config.name), 
+          models: config.models.map(m => m.name)
         })
       });
     }
 
     // Validator file
-    const validatorPath = `src/api/admin/${name}/validators.ts`;
+    const validatorPath = `src/api/admin/${routePath}/validators.ts`;
     changes.push({
       path: validatorPath,
-      type: options.addToExisting ? 'merge' : 'create',
-      mergeStrategy: 'append',
-      description: `Add validator for ${model.name}`,
+      type: 'create',
+      description: `Create validator for ${model.name}`,
       content: TEMPLATES.validator(model.name, model.fields)
     });
 
     // Route files
-    const routePath = `src/api/admin/${name}/${model.name}/route.ts`;
+    const routeFilePath = `src/api/admin/${routePath}/route.ts`;
     changes.push({
-      path: routePath,
+      path: routeFilePath,
       type: 'create',
       description: `Create route file for ${model.name}`,
-      content: TEMPLATES.route(model.name)
+      content: TEMPLATES.route(config, model)
     });
 
-    const idRoutePath = `src/api/admin/${name}/${model.name}/[id]/route.ts`;
+    const idRoutePath = `src/api/admin/${routePath}/[id]/route.ts`;
     changes.push({
       path: idRoutePath,
       type: 'create',
       description: `Create ID route file for ${model.name}`,
-      content: TEMPLATES.idRoute(model.name)
+      content: TEMPLATES.idRoute(config, model)
     });
 
     // Admin UI Components
-    const adminPagePath = `src/admin/routes/${name}/${model.name}/page.tsx`;
+    const adminPagePath = `src/admin/routes/${config.plural}/${model.plural}/page.tsx`;
     changes.push({
       path: adminPagePath,
       type: 'create',
       description: `Create admin page for ${model.name}`,
-      content: TEMPLATES.pageComponent(model.name, model.fields)
+      content: TEMPLATES.pageComponent(config, model)
     });
 
-    const adminCreatePath = `src/admin/routes/${name}/${model.name}/create/${model.name}-create.tsx`;
+    const adminCreatePath = `src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx`;
     changes.push({
       path: adminCreatePath,
       type: 'create',
       description: `Create admin create form for ${model.name}`,
-      content: TEMPLATES.createComponent(model.name, model.fields)
+      content: TEMPLATES.createComponent(config, model)
     });
 
-    const adminEditPath = `src/admin/routes/${name}/${model.name}/edit/${model.name}-edit.tsx`;
+    const adminEditPath = `src/admin/routes/${config.plural}/${model.plural}/edit/${componentName}-edit.tsx`;
     changes.push({
       path: adminEditPath,
       type: 'create',
       description: `Create admin edit form for ${model.name}`,
-      content: TEMPLATES.editComponent(model.name, model.fields)
+      content: TEMPLATES.editComponent(config, model)
     });
   }
 
@@ -663,6 +739,75 @@ export async function generateModule(config: ModuleConfig, options: {
         break;
     }
   }
+}
+
+export function dryRunModule(config: ModuleConfig, options: { addToExisting?: boolean } = {}) {
+  // First show the content that would be generated
+  console.log('\nGenerated File Contents:');
+  console.log('======================\n');
+
+  // Generate content for each model
+  for (const model of config.models) {
+    const routePath = model.parent?.routePrefix || config.plural;
+
+    // Show model file content
+    console.log(`src/modules/${config.plural}/models/${model.name}.ts:`);
+    console.log('----------------------------------------');
+    console.log(TEMPLATES.model(model.name, model.fields));
+    console.log('\n');
+
+    // Show validator content
+    console.log(`src/api/admin/${routePath}/validators.ts:`);
+    console.log('----------------------------------------');
+    console.log(TEMPLATES.validator(model.name, model.fields));
+    console.log('\n');
+
+    // Show page component
+    console.log(`src/admin/routes/${config.plural}/${model.plural}/page.tsx:`);
+    console.log('--------------------------------------------');
+    console.log(TEMPLATES.pageComponent(config, model));
+    console.log('\n');
+
+    // Show create component
+    const componentName = model.parent ? `${model.parent.model.toLowerCase()}-${model.singular}` : model.singular;
+    console.log(`src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx:`);
+    console.log('-------------------------------------------------------------------');
+    console.log(TEMPLATES.createComponent(config, model));
+    console.log('\n');
+
+    // Show edit component
+    console.log(`src/admin/routes/${config.plural}/${model.plural}/edit/${componentName}-edit.tsx:`);
+    console.log('----------------------------------------------------------------');
+    console.log(TEMPLATES.editComponent(config, model));
+    console.log('\n');
+  }
+
+  // Show service update
+  console.log(`src/modules/${config.plural}/service.ts:`);
+  console.log('---------------------------');
+  if (options.addToExisting) {
+    // Include existing models in the service
+    const existingModels = ['Vehicle', 'VehicleMake', 'VehicleModel', 'VehicleBody'];
+    console.log(TEMPLATES.service({ 
+      moduleName: toPascalCase(config.name), 
+      models: [...existingModels, ...config.models.map(m => m.name)]
+    }));
+  } else {
+    console.log(TEMPLATES.service({ 
+      moduleName: toPascalCase(config.name), 
+      models: config.models.map(m => m.name)
+    }));
+  }
+  console.log('\n');
+
+  // Execute the generator
+  console.log('Generating files:');
+  console.log('================\n');
+
+  generateModule(config, { 
+    addToExisting: options.addToExisting,
+    dryRun: true 
+  });
 }
 
 // Example usage with dry run:
