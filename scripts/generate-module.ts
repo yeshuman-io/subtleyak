@@ -120,14 +120,14 @@ export const TEMPLATES = {
               f.type === "string" ? ".min(1)" : ""
             }`
         )
-        .join(",\n")},
+        .join(",\n      ")},
       ${fields
         .filter((f) => f.relation)
         .map(
           (f) =>
             `${f.name}_id: z.string()${f.required ? "" : ".optional()"}.min(1)`
         )
-        .join(",\n")}
+        .join(",\n      ")}
     })
 
     export const PostAdminUpdate${className} = z.object({
@@ -139,14 +139,14 @@ export const TEMPLATES = {
               f.type === "string" ? ".min(1)" : ""
             }`
         )
-        .join(",\n")},
+        .join(",\n      ")},
       ${fields
         .filter((f) => f.relation)
         .map(
           (f) =>
             `${f.name}_id: z.string().optional().min(1)`
         )
-        .join(",\n")}
+        .join(",\n      ")}
     })
     `;
   },
@@ -233,13 +233,13 @@ export const TEMPLATES = {
     export type Create${toPascalCase(modelName)}StepInput = {
       ${fields
         .map((f) => `${f.name}${f.required ? "" : "?"}: ${f.type}`)
-        .join("\n")}
+        .join("\n      ")}
     }
 
     export const create${toPascalCase(modelName)}Step = createStep(
-      "create-${toPascalCase(modelName).toLowerCase()}-step",
+      "create-${modelName}-step",
       async (input: Create${toPascalCase(modelName)}StepInput, { container }) => {
-        const moduleService = container.resolve("${toPascalCase(modelName).toLowerCase()}")
+        const moduleService = container.resolve("${modelName}")
 
         const result = await moduleService.create({
           ...input,
@@ -248,51 +248,53 @@ export const TEMPLATES = {
         return new StepResponse(result, result.id)
       },
       async (id: string, { container }) => {
-        const moduleService = container.resolve("${toPascalCase(modelName).toLowerCase()}")
+        const moduleService = container.resolve("${modelName}")
         await moduleService.delete(id)
       }
     )
 
-    type Create${toPascalCase(modelName)}WorkflowInput = Create${toPascalCase(modelName)}StepInput
-
-    export const create${toPascalCase(modelName)}Workflow = createWorkflow(
-      "create-${toPascalCase(modelName).toLowerCase()}-workflow",
-      (input: Create${toPascalCase(modelName)}WorkflowInput) => {
-        const result = create${toPascalCase(modelName)}Step(input)
-        return new WorkflowResponse(result)
-      }
-    )
+    export const create${toPascalCase(modelName)}Workflow = (container) =>
+      createWorkflow(container, {
+        steps: [create${toPascalCase(modelName)}Step],
+      })
   `,
 
-  adminPage: (modelName: string, fields: ModelField[]) => {
+  pageComponent: (modelName: string, fields: ModelField[]) => {
     const className = toPascalCase(modelName);
+    const snakeName = toSnakeCase(modelName);
     return `
-    import { defineRouteConfig } from "@medusajs/admin-sdk"
-    import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui"
-    import { ${className} } from "../../../../types"
-    import { DataTablePage } from "../../../../components/data-table-page"
-    import { ${className}Create } from "./create/vehicle-${modelName}-create"
-    import { ${className}Edit } from "./edit/vehicle-${modelName}-edit"
-    import { useState } from "react"
-    import { ActionMenu } from "../../../../components/action-menu"
-    import { Pencil } from "@medusajs/icons"
+    import { defineRouteConfig } from "@medusajs/admin-sdk";
+    import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
+    import { ${className} } from "../../../types";
+    import { DataTablePage } from "../../../components/data-table-page";
+    import { ${className}Create } from "./create/${modelName}-create";
+    import { useState } from "react";
+    import { ActionMenu } from "../../../components/action-menu";
+    import { Pencil } from "@medusajs/icons";
+    import { ${className}Edit } from "./edit/${modelName}-edit";
 
-    const columnHelper = createDataTableColumnHelper<${className}>()
+    const columnHelper = createDataTableColumnHelper<${className}>();
 
     const ${className}Page = () => {
-      const [showCreate, setShowCreate] = useState(false)
-      const [editing, setEditing] = useState<${className} | null>(null)
+      const [showCreate, setShowCreate] = useState(false);
+      const [editing${className}, setEditing${className}] = useState<${className} | null>(null);
 
       const columns = [
         columnHelper.accessor("id", {
           header: "ID",
         }),
-        ${fields
-          .filter(f => !f.relation)
-          .map(f => `columnHelper.accessor("${f.name}", {
-          header: "${f.name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}",
-          enableSorting: true,
-        })`).join(",\n        ")},
+        ${fields.map(f => {
+          if (f.relation) {
+            return `columnHelper.accessor("${f.name}.name", {
+              header: "${toPascalCase(f.name)}",
+              enableSorting: true,
+            }),`;
+          }
+          return `columnHelper.accessor("${f.name}", {
+            header: "${toPascalCase(f.name)}",
+            enableSorting: true,
+          }),`;
+        }).join('\n        ')}
         columnHelper.accessor("actions", {
           header: "",
           cell: ({ row }) => {
@@ -305,7 +307,7 @@ export const TEMPLATES = {
                       {
                         label: "Edit",
                         icon: <Pencil />,
-                        onClick: () => setEditing(item),
+                        onClick: () => setEditing${className}(item),
                       },
                     ],
                   },
@@ -314,17 +316,17 @@ export const TEMPLATES = {
             );
           },
         }),
-      ]
+      ];
 
       return (
         <>
           <DataTablePage<${className}>
-            title="${className}s"
-            subtitle="Manage your ${modelName.toLowerCase()}s"
-            endpoint="/admin/vehicles/${modelName}"
+            title="${className}"
+            subtitle="Manage your ${snakeName.replace(/_/g, ' ')}"
+            endpoint="/admin/${name}/${modelName}"
             columns={columns}
-            queryKey="${modelName}"
-            dataKey="${modelName}s"
+            queryKey="${snakeName}"
+            dataKey="${snakeName}"
             actions={[
               {
                 type: "button",
@@ -342,405 +344,181 @@ export const TEMPLATES = {
               <${className}Create onClose={() => setShowCreate(false)} />
             </FocusModal>
           )}
-          {editing && (
-            <Drawer open onOpenChange={() => setEditing(null)}>
+          {editing${className} && (
+            <Drawer open onOpenChange={() => setEditing${className}(null)}>
               <${className}Edit 
-                item={editing} 
-                onClose={() => setEditing(null)} 
+                item={editing${className}} 
+                onClose={() => setEditing${className}(null)} 
               />
             </Drawer>
           )}
         </>
-      )
-    }
+      );
+    };
 
     export const config = defineRouteConfig({
-      label: "${className}s",
-    })
+      label: "${className}",
+    });
 
-    export default ${className}Page
-    `
-  },
-
-  createWorkflow: (modelName: string, fields: ModelField[]) => {
-    const className = toPascalCase(modelName);
-    return `
-    import {
-      createStep,
-      StepResponse,
-      createWorkflow,
-      WorkflowResponse,
-    } from "@medusajs/framework/workflows-sdk"
-    import { VEHICLES_MODULE } from "../modules/vehicles"
-    import VehiclesModuleService from "../modules/vehicles/service"
-
-    export type Create${className}StepInput = {
-      ${fields
-        .filter(f => !f.relation)
-        .map((f) => `${f.name}${f.required ? "" : "?"}: ${f.type}`)
-        .join(",\n")}
-      ${fields
-        .filter(f => f.relation)
-        .map((f) => `${f.name}_id${f.required ? "" : "?"}: string`)
-        .join(",\n")}
-    }
-
-    export const create${className}Step = createStep(
-      "create-${modelName}-step",
-      async (input: Create${className}StepInput, { container }) => {
-        const vehiclesModuleService: VehiclesModuleService =
-          container.resolve(VEHICLES_MODULE)
-
-        const result = await vehiclesModuleService.create${className}({
-          ...input,
-        })
-
-        return new StepResponse(result, result.id)
-      },
-      async (id: string, { container }) => {
-        const vehiclesModuleService: VehiclesModuleService =
-          container.resolve(VEHICLES_MODULE)
-
-        await vehiclesModuleService.delete${className}(id)
-      }
-    )
-
-    type Create${className}WorkflowInput = Create${className}StepInput
-
-    export const create${className}Workflow = createWorkflow(
-      "create-${modelName}-workflow",
-      (input: Create${className}WorkflowInput) => {
-        const result = create${className}Step(input)
-        return new WorkflowResponse(result)
-      }
-    )
+    export default ${className}Page;
     `;
   },
 
-  updateWorkflow: (modelName: string, fields: ModelField[]) => {
+  createComponent: (modelName: string, fields: ModelField[]) => {
     const className = toPascalCase(modelName);
     return `
-    import {
-      createStep,
-      StepResponse,
-      createWorkflow,
-      WorkflowResponse,
-    } from "@medusajs/framework/workflows-sdk"
-    import { VEHICLES_MODULE } from "../modules/vehicles"
-    import VehiclesModuleService from "../modules/vehicles/service"
-
-    export type Update${className}StepInput = {
-      id: string
-      ${fields
-        .filter(f => !f.relation)
-        .map((f) => `${f.name}?: ${f.type}`)
-        .join(",\n")}
-      ${fields
-        .filter(f => f.relation)
-        .map((f) => `${f.name}_id?: string`)
-        .join(",\n")}
-    }
-
-    export const update${className}Step = createStep(
-      "update-${modelName}-step",
-      async (input: Update${className}StepInput, { container }) => {
-        const vehiclesModuleService: VehiclesModuleService =
-          container.resolve(VEHICLES_MODULE)
-
-        // First, get the existing entity to preserve any fields we're not updating
-        const existing = await vehiclesModuleService.retrieve${className}(input.id)
-
-        const result = await vehiclesModuleService.update${className}({
-          id: input.id,
-          ...input,
-        })
-
-        return new StepResponse(result, result.id)
-      },
-      async (id: string, { container }) => {
-        // Rollback logic if needed
-        const vehiclesModuleService: VehiclesModuleService =
-          container.resolve(VEHICLES_MODULE)
-      }
-    )
-
-    type Update${className}WorkflowInput = Update${className}StepInput
-
-    export const update${className}Workflow = createWorkflow(
-      "update-${modelName}-workflow",
-      (input: Update${className}WorkflowInput) => {
-        const result = update${className}Step(input)
-        return new WorkflowResponse(result)
-      }
-    )
-    `;
-  },
-
-  createForm: (modelName: string, fields: ModelField[]) => {
-    const className = toPascalCase(modelName);
-    
-    // Type guard function
-    const hasValidRelation = (field: ModelField): field is ModelField & { relation: { model: string } } => {
-      return field.relation !== undefined && 
-             typeof field.relation === 'object' && 
-             'model' in field.relation &&
-             typeof field.relation.model === 'string';
-    };
-
-    return `
-    import { useForm } from "react-hook-form"
-    import { zodResolver } from "@hookform/resolvers/zod"
-    import { useNavigate } from "react-router-dom"
-    import { Form, Input, Select } from "@medusajs/ui"
-    import { useAdminCreateVehicle${className} } from "../../../../hooks/vehicles/${modelName}"
-    import { PostAdminCreate${className} } from "../../../../types"
-    import { useToast } from "../../../../hooks/use-toast"
-    import { useEffect } from "react"
-    ${fields
-      .filter(hasValidRelation)
-      .map(f => `import { useAdminList${toPascalCase(f.relation.model)} } from "../../../../hooks/vehicles/${f.relation.model.toLowerCase()}"`)
-      .join("\n    ")}
+    import { Form } from "@medusajs/forms";
+    import { Button, FocusModal } from "@medusajs/ui";
+    import { useForm } from "react-hook-form";
+    import { zodResolver } from "@hookform/resolvers/zod";
+    import { PostAdminCreate${className} } from "../../../../api/admin/${name}/validators";
+    import { InputField, SelectField } from "../../../components/form";
 
     type Props = {
-      onClose: () => void
-    }
+      onClose: () => void;
+    };
 
     export const ${className}Create = ({ onClose }: Props) => {
-      const navigate = useNavigate()
-      const { toast } = useToast()
-      const { mutateAsync: create${className}, isLoading } = useAdminCreateVehicle${className}()
-      ${fields
-        .filter(hasValidRelation)
-        .map(f => `const { data: ${f.relation.model.toLowerCase()}s } = useAdminList${toPascalCase(f.relation.model)}()`)
-        .join("\n      ")}
-
-      const form = useForm<PostAdminCreate${className}>({
+      const form = useForm({
         resolver: zodResolver(PostAdminCreate${className}),
-        defaultValues: {
-          ${fields.map(f => `${f.name}: ${f.type === "string" ? '""' : f.type === "number" ? "0" : "null"}`).join(",\n          ")}
-        }
-      })
+      });
 
-      const onSubmit = async (data: PostAdminCreate${className}) => {
+      const onSubmit = async (data) => {
         try {
-          await create${className}(data)
-          toast({
-            title: "Success",
-            description: "${className} created successfully",
-            variant: "success",
-          })
-          onClose()
+          await fetch(\`/admin/${name}/${modelName}\`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          onClose();
         } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to create ${className}",
-            variant: "error",
-          })
+          console.error("Failed to create ${className}:", error);
         }
-      }
+      };
 
       return (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 p-4">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-bold">Create ${className}</h1>
-              <p className="text-sm text-gray-500">Fill in the details below to create a new ${modelName.toLowerCase()}</p>
-            </div>
-            ${fields.map(f => {
-              if (hasValidRelation(f)) {
-                return `
-              <Form.Field
-                control={form.control}
-                name="${f.name}"
-                render={({ field }) => (
-                  <Form.Item>
-                    <Form.Label>${f.name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</Form.Label>
-                    <Form.Control>
-                      <Select
-                        {...field}
-                        options={${f.relation.model.toLowerCase()}s?.items?.map(item => ({
-                          label: item.name || item.id,
-                          value: item.id,
-                        })) || []}
-                      />
-                    </Form.Control>
-                    <Form.Message />
-                  </Form.Item>
-                )}
-              />`
-              }
-              return `
-              <Form.Field
-                control={form.control}
-                name="${f.name}"
-                render={({ field }) => (
-                  <Form.Item>
-                    <Form.Label>${f.name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</Form.Label>
-                    <Form.Control>
-                      <Input {...field} type="${f.type === "number" ? "number" : "text"}" />
-                    </Form.Control>
-                    <Form.Message />
-                  </Form.Item>
-                )}
-              />`
-            }).join("")}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700"
-              >
-                Create
-              </button>
-            </div>
-          </form>
-        </Form>
-      )
-    }
-    `
+        <FocusModal.Content>
+          <FocusModal.Header>
+            <h1>Create ${className}</h1>
+          </FocusModal.Header>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <FocusModal.Body className="flex flex-col gap-y-8">
+                ${fields.map(f => {
+                  if (f.relation) {
+                    return `<SelectField
+                      name="${f.name}_id"
+                      label="${toPascalCase(f.name)}"
+                      required={${f.required}}
+                    />`;
+                  }
+                  return `<InputField
+                    name="${f.name}"
+                    label="${toPascalCase(f.name)}"
+                    required={${f.required}}
+                    type="${f.type === 'number' ? 'number' : 'text'}"
+                  />`;
+                }).join('\n                ')}
+              </FocusModal.Body>
+              <FocusModal.Footer>
+                <div className="flex items-center justify-end w-full gap-x-2">
+                  <Button
+                    variant="secondary"
+                    onClick={onClose}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    Create
+                  </Button>
+                </div>
+              </FocusModal.Footer>
+            </form>
+          </Form>
+        </FocusModal.Content>
+      );
+    };
+    `;
   },
 
-  editForm: (modelName: string, fields: ModelField[]) => {
+  editComponent: (modelName: string, fields: ModelField[]) => {
     const className = toPascalCase(modelName);
-    
-    // Type guard function
-    const hasValidRelation = (field: ModelField): field is ModelField & { relation: { model: string } } => {
-      return field.relation !== undefined && 
-             typeof field.relation === 'object' && 
-             'model' in field.relation &&
-             typeof field.relation.model === 'string';
-    };
-
     return `
-    import { useForm } from "react-hook-form"
-    import { zodResolver } from "@hookform/resolvers/zod"
-    import { useNavigate } from "react-router-dom"
-    import { Form, Input, Select } from "@medusajs/ui"
-    import { useAdminUpdateVehicle${className} } from "../../../../hooks/vehicles/${modelName}"
-    import { PostAdminUpdate${className} } from "../../../../types"
-    import { useToast } from "../../../../hooks/use-toast"
-    import { useEffect } from "react"
-    ${fields
-      .filter(hasValidRelation)
-      .map(f => `import { useAdminList${toPascalCase(f.relation.model)} } from "../../../../hooks/vehicles/${f.relation.model.toLowerCase()}"`)
-      .join("\n    ")}
+    import { Form } from "@medusajs/forms";
+    import { Button, Drawer } from "@medusajs/ui";
+    import { useForm } from "react-hook-form";
+    import { zodResolver } from "@hookform/resolvers/zod";
+    import { PostAdminUpdate${className} } from "../../../../api/admin/${name}/validators";
+    import { InputField, SelectField } from "../../../components/form";
 
     type Props = {
-      item: any
-      onClose: () => void
-    }
+      item: any;
+      onClose: () => void;
+    };
 
     export const ${className}Edit = ({ item, onClose }: Props) => {
-      const navigate = useNavigate()
-      const { toast } = useToast()
-      const { mutateAsync: update${className}, isLoading } = useAdminUpdateVehicle${className}()
-      ${fields
-        .filter(hasValidRelation)
-        .map(f => `const { data: ${f.relation.model.toLowerCase()}s } = useAdminList${toPascalCase(f.relation.model)}()`)
-        .join("\n      ")}
-
-      const form = useForm<PostAdminUpdate${className}>({
+      const form = useForm({
         resolver: zodResolver(PostAdminUpdate${className}),
-        defaultValues: {
-          ${fields.map(f => `${f.name}: item.${f.name}`).join(",\n          ")}
-        }
-      })
+        defaultValues: item,
+      });
 
-      const onSubmit = async (data: PostAdminUpdate${className}) => {
+      const onSubmit = async (data) => {
         try {
-          await update${className}({
-            id: item.id,
-            ...data
-          })
-          toast({
-            title: "Success",
-            description: "${className} updated successfully",
-            variant: "success",
-          })
-          onClose()
+          await fetch(\`/admin/${name}/${modelName}/\${item.id}\`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(data),
+          });
+          onClose();
         } catch (error) {
-          toast({
-            title: "Error",
-            description: "Failed to update ${className}",
-            variant: "error",
-          })
+          console.error("Failed to update ${className}:", error);
         }
-      }
+      };
 
       return (
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="flex flex-col gap-4 p-4">
-            <div className="flex flex-col gap-2">
-              <h1 className="text-2xl font-bold">Edit ${className}</h1>
-              <p className="text-sm text-gray-500">Update the details below to modify this ${modelName.toLowerCase()}</p>
-            </div>
-            ${fields.map(f => {
-              if (hasValidRelation(f)) {
-                return `
-              <Form.Field
-                control={form.control}
-                name="${f.name}"
-                render={({ field }) => (
-                  <Form.Item>
-                    <Form.Label>${f.name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</Form.Label>
-                    <Form.Control>
-                      <Select
-                        {...field}
-                        options={${f.relation.model.toLowerCase()}s?.items?.map(item => ({
-                          label: item.name || item.id,
-                          value: item.id,
-                        })) || []}
-                      />
-                    </Form.Control>
-                    <Form.Message />
-                  </Form.Item>
-                )}
-              />`
-              }
-              return `
-              <Form.Field
-                control={form.control}
-                name="${f.name}"
-                render={({ field }) => (
-                  <Form.Item>
-                    <Form.Label>${f.name.split('_').map(word => word.charAt(0).toUpperCase() + word.slice(1)).join(' ')}</Form.Label>
-                    <Form.Control>
-                      <Input {...field} type="${f.type === "number" ? "number" : "text"}" />
-                    </Form.Control>
-                    <Form.Message />
-                  </Form.Item>
-                )}
-              />`
-            }).join("")}
-            <div className="flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={onClose}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-md shadow-sm hover:bg-gray-50"
-              >
-                Cancel
-              </button>
-              <button
-                type="submit"
-                disabled={isLoading}
-                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 border border-transparent rounded-md shadow-sm hover:bg-blue-700"
-              >
-                Save Changes
-              </button>
-            </div>
-          </form>
-        </Form>
-      )
-    }
-    `
-  },
+        <Drawer.Content>
+          <Drawer.Header>
+            <h1>Edit ${className}</h1>
+          </Drawer.Header>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)}>
+              <Drawer.Body className="flex flex-col gap-y-8">
+                ${fields.map(f => {
+                  if (f.relation) {
+                    return `<SelectField
+                      name="${f.name}_id"
+                      label="${toPascalCase(f.name)}"
+                      required={${f.required}}
+                    />`;
+                  }
+                  return `<InputField
+                    name="${f.name}"
+                    label="${toPascalCase(f.name)}"
+                    required={${f.required}}
+                    type="${f.type === 'number' ? 'number' : 'text'}"
+                  />`;
+                }).join('\n                ')}
+              </Drawer.Body>
+              <Drawer.Footer>
+                <div className="flex items-center justify-end w-full gap-x-2">
+                  <Button
+                    variant="secondary"
+                    onClick={onClose}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit">
+                    Save Changes
+                  </Button>
+                </div>
+              </Drawer.Footer>
+            </form>
+          </Form>
+        </Drawer.Content>
+      );
+    };
+    `;
+  }
 };
 
 type FileChange = {
@@ -748,207 +526,143 @@ type FileChange = {
   type: 'create' | 'modify' | 'merge';
   mergeStrategy?: 'append' | 'prepend';
   description: string;
+  originalContent?: string; // Track original content for revert
 };
 
 export async function generateModule(config: ModuleConfig, options: { 
   addToExisting?: boolean;
   dryRun?: boolean;
 } = {}) {
-  const { name, models } = config;
-  const basePath = path.join(process.cwd(), "src");
   const changes: FileChange[] = [];
-  
-  // Check if module exists
-  const moduleExists = fs.existsSync(path.join(basePath, `modules/${name}`));
-  
-  if (moduleExists && !options.addToExisting) {
-    throw new Error(`Module ${name} already exists. Use addToExisting: true to add models to it.`);
-  }
+  const { name, models } = config;
 
-  // Track directory creation
-  const dirs = [
-    `modules/${name}/models`,
-    `modules/${name}/migrations`,
-    `api/admin/${name}`,
-    ...models.map(model => [
-      `api/admin/${name}/${model.name}`,
-      `api/admin/${name}/${model.name}/[id]`,
-      `admin/routes/${name}/${model.name}`,
-      `admin/routes/${name}/${model.name}/create`,
-      `admin/routes/${name}/${model.name}/edit`
-    ]).flat()
-  ];
-
-  dirs.forEach((dir) => {
-    const fullPath = path.join(basePath, dir);
-    if (!fs.existsSync(fullPath)) {
-      changes.push({
-        path: dir,
-        type: 'create',
-        description: `Create directory: ${dir}`
-      });
-      if (!options.dryRun) {
-        fs.mkdirSync(fullPath, { recursive: true });
-      }
-    }
-  });
-
-  // Helper to track and write file changes
-  async function safeWrite(filePath: string, content: string, mergeStrategy?: 'append' | 'prepend') {
-    const fullPath = path.join(basePath, filePath);
-    let finalContent = content;
-    const fileExists = fs.existsSync(fullPath);
-
-    if (fileExists && mergeStrategy) {
-      const existing = fs.readFileSync(fullPath, 'utf-8');
-      if (mergeStrategy === 'append') {
-        finalContent = existing + '\n' + content;
-      } else {
-        finalContent = content + '\n' + existing;
-      }
-      changes.push({
-        path: filePath,
-        type: 'merge',
-        mergeStrategy,
-        description: `Merge content into existing file: ${filePath} (${mergeStrategy})`
-      });
-    } else {
-      changes.push({
-        path: filePath,
-        type: fileExists ? 'modify' : 'create',
-        description: `${fileExists ? 'Modify' : 'Create'} file: ${filePath}`
-      });
-    }
-
-    if (!options.dryRun) {
-      fs.writeFileSync(fullPath, await format(finalContent, { parser: "typescript" }));
-    }
-  }
-
-  // Generate or update files for each model
   for (const model of models) {
-    // Model file - always create new
-    await safeWrite(
-      `modules/${name}/models/${model.name}.ts`,
-      TEMPLATES.model(model.name, model.fields)
-    );
+    // Model file
+    const modelPath = `src/modules/${name}/models/${model.name}.ts`;
+    changes.push({
+      path: modelPath,
+      type: 'create',
+      description: `Create model file for ${model.name}`,
+      content: TEMPLATES.model(model.name, model.fields)
+    });
 
-    // Validators - merge if exists
-    const validatorPath = `api/admin/${name}/validators.ts`;
-    if (fs.existsSync(path.join(basePath, validatorPath))) {
-      await safeWrite(
-        validatorPath,
-        TEMPLATES.validator(model.name, model.fields),
-        'append'
-      );
+    // Service file
+    const servicePath = `src/modules/${name}/service.ts`;
+    if (options.addToExisting) {
+      changes.push({
+        path: servicePath,
+        type: 'modify',
+        description: `Update service file to include ${model.name}`,
+        content: TEMPLATES.service({ 
+          moduleName: toPascalCase(name), 
+          models: [model.name] 
+        })
+      });
     } else {
-      await safeWrite(
-        validatorPath,
-        TEMPLATES.validator(model.name, model.fields)
-      );
+      changes.push({
+        path: servicePath,
+        type: 'create',
+        description: `Create service file for ${name} module`,
+        content: TEMPLATES.service({ 
+          moduleName: toPascalCase(name), 
+          models: [model.name]
+        })
+      });
     }
 
-    // Routes - create if don't exist
-    const routePath = `api/admin/${name}/${model.name}/route.ts`;
-    if (!fs.existsSync(path.join(basePath, routePath))) {
-      await safeWrite(routePath, TEMPLATES.route(model.name));
-    }
+    // Validator file
+    const validatorPath = `src/api/admin/${name}/validators.ts`;
+    changes.push({
+      path: validatorPath,
+      type: options.addToExisting ? 'merge' : 'create',
+      mergeStrategy: 'append',
+      description: `Add validator for ${model.name}`,
+      content: TEMPLATES.validator(model.name, model.fields)
+    });
 
-    const idRoutePath = `api/admin/${name}/${model.name}/[id]/route.ts`;
-    if (!fs.existsSync(path.join(basePath, idRoutePath))) {
-      await safeWrite(idRoutePath, TEMPLATES.idRoute(model.name));
-    }
+    // Route files
+    const routePath = `src/api/admin/${name}/${model.name}/route.ts`;
+    changes.push({
+      path: routePath,
+      type: 'create',
+      description: `Create route file for ${model.name}`,
+      content: TEMPLATES.route(model.name)
+    });
 
-    // Admin UI - always create new
-    const adminPagePath = `admin/routes/${name}/${model.name}/page.tsx`;
-    await safeWrite(adminPagePath, TEMPLATES.adminPage(model.name, model.fields));
+    const idRoutePath = `src/api/admin/${name}/${model.name}/[id]/route.ts`;
+    changes.push({
+      path: idRoutePath,
+      type: 'create',
+      description: `Create ID route file for ${model.name}`,
+      content: TEMPLATES.idRoute(model.name)
+    });
 
-    const adminCreatePath = `admin/routes/${name}/${model.name}/create/vehicle-${model.name}-create.tsx`;
-    await safeWrite(adminCreatePath, TEMPLATES.createForm(model.name, model.fields));
+    // Admin UI Components
+    const adminPagePath = `src/admin/routes/${name}/${model.name}/page.tsx`;
+    changes.push({
+      path: adminPagePath,
+      type: 'create',
+      description: `Create admin page for ${model.name}`,
+      content: TEMPLATES.pageComponent(model.name, model.fields)
+    });
 
-    const adminEditPath = `admin/routes/${name}/${model.name}/edit/vehicle-${model.name}-edit.tsx`;
-    await safeWrite(adminEditPath, TEMPLATES.editForm(model.name, model.fields));
+    const adminCreatePath = `src/admin/routes/${name}/${model.name}/create/${model.name}-create.tsx`;
+    changes.push({
+      path: adminCreatePath,
+      type: 'create',
+      description: `Create admin create form for ${model.name}`,
+      content: TEMPLATES.createComponent(model.name, model.fields)
+    });
 
-    // Workflow - always create new
-    await safeWrite(
-      `workflows/create-${model.name.toLowerCase()}.ts`,
-      TEMPLATES.createWorkflow(model.name, model.fields)
-    );
-
-    // Update workflow - always create new
-    await safeWrite(
-      `workflows/update-${model.name.toLowerCase()}.ts`,
-      TEMPLATES.updateWorkflow(model.name, model.fields)
-    );
-  }
-
-  // Service - merge if exists, create if new
-  const servicePath = `modules/${name}/service.ts`;
-  if (fs.existsSync(path.join(basePath, servicePath))) {
-    const existingService = fs.readFileSync(path.join(basePath, servicePath), 'utf-8');
-    const existingModels = existingService.match(/MedusaService\({([^}]+)}/)?.[1].split(',').map(m => m.trim()) || [];
-    const allModels = [...new Set([...existingModels, ...models.map(m => m.name)])];
-    
-    await safeWrite(
-      servicePath,
-      TEMPLATES.service({ moduleName: name, models })
-    );
-  } else {
-    await safeWrite(
-      servicePath,
-      TEMPLATES.service({ moduleName: name, models })
-    );
-  }
-
-  // Update types file
-  const typesPath = 'admin/types/index.ts';
-  if (fs.existsSync(path.join(basePath, typesPath))) {
-    const typeDefinitions = models.map(model => `
-      export type ${toPascalCase(model.name)} = {
-        id: string
-        ${model.fields.map(f => `${f.name}: ${f.type}`).join('\n  ')}
-        created_at: string
-        updated_at: string
-        deleted_at: string | null
-      }
-
-      export type List${toPascalCase(model.name)}sRes = {
-        ${toSnakeCase(model.name)}_items: ${toPascalCase(model.name)}[]
-        count: number
-        limit: number
-        offset: number
-      }
-    `).join('\n');
-
-    await safeWrite(typesPath, typeDefinitions, 'append');
+    const adminEditPath = `src/admin/routes/${name}/${model.name}/edit/${model.name}-edit.tsx`;
+    changes.push({
+      path: adminEditPath,
+      type: 'create',
+      description: `Create admin edit form for ${model.name}`,
+      content: TEMPLATES.editComponent(model.name, model.fields)
+    });
   }
 
   if (options.dryRun) {
-    console.log('\nDry Run Summary:');
-    console.log('================\n');
-    
-    // Group changes by type
-    const grouped = changes.reduce((acc, change) => {
-      const key = change.type + (change.mergeStrategy ? ` (${change.mergeStrategy})` : '');
-      if (!acc[key]) acc[key] = [];
-      acc[key].push(change);
-      return acc;
-    }, {} as Record<string, FileChange[]>);
-
-    // Print summary
-    Object.entries(grouped).forEach(([type, typeChanges]) => {
-      console.log(`${type.toUpperCase()}:`);
-      typeChanges.forEach(change => {
-        console.log(`  - ${change.description}`);
-      });
-      console.log('');
-    });
-
-    console.log('No files were modified (dry run)');
-    return changes;
+    console.log('Changes to be made:');
+    for (const change of changes) {
+      console.log(`\n${change.type.toUpperCase()}: ${change.path}`);
+      console.log('-'.repeat(40));
+      if (change.type === 'merge') {
+        console.log(`Strategy: ${change.mergeStrategy}`);
+      }
+      console.log(change.description);
+    }
+    return;
   }
 
-  return changes;
+  // Apply changes
+  for (const change of changes) {
+    const dir = path.dirname(change.path);
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+
+    switch (change.type) {
+      case 'create':
+        await fs.promises.writeFile(change.path, change.content);
+        break;
+      case 'modify':
+        await fs.promises.writeFile(change.path, change.content);
+        break;
+      case 'merge':
+        if (fs.existsSync(change.path)) {
+          const existingContent = await fs.promises.readFile(change.path, 'utf8');
+          const newContent = change.mergeStrategy === 'append'
+            ? existingContent + '\n' + change.content
+            : change.content + '\n' + existingContent;
+          await fs.promises.writeFile(change.path, newContent);
+        } else {
+          await fs.promises.writeFile(change.path, change.content);
+        }
+        break;
+    }
+  }
 }
 
 // Example usage with dry run:

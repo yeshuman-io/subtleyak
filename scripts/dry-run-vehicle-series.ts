@@ -66,16 +66,22 @@ console.log(TEMPLATES.service({
 }));
 console.log('\n');
 
-// Show create workflow
-console.log('workflows/create-vehicle-series.ts:');
-console.log('----------------------------------');
-console.log(TEMPLATES.createWorkflow(config.models[0].name, config.models[0].fields));
+// Show page component
+console.log('admin/routes/vehicles/vehicle-series/page.tsx:');
+console.log('--------------------------------------------');
+console.log(TEMPLATES.pageComponent(config.models[0].name, config.models[0].fields));
 console.log('\n');
 
-// Show update workflow
-console.log('workflows/update-vehicle-series.ts:');
-console.log('----------------------------------');
-console.log(TEMPLATES.updateWorkflow(config.models[0].name, config.models[0].fields));
+// Show create component
+console.log('admin/routes/vehicles/vehicle-series/create/vehicle-series-create.tsx:');
+console.log('-------------------------------------------------------------------');
+console.log(TEMPLATES.createComponent(config.models[0].name, config.models[0].fields));
+console.log('\n');
+
+// Show edit component
+console.log('admin/routes/vehicles/vehicle-series/edit/vehicle-series-edit.tsx:');
+console.log('----------------------------------------------------------------');
+console.log(TEMPLATES.editComponent(config.models[0].name, config.models[0].fields));
 console.log('\n');
 
 // Execute the generator
@@ -84,5 +90,5 @@ console.log('================\n');
 
 generateModule(config, { 
   addToExisting: true,
-  dryRun: false 
+  dryRun: true 
 }); 
