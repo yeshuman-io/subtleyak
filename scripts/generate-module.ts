@@ -157,27 +157,65 @@ export const TEMPLATES = {
       return { base: routeBase, path: routePath }
     })
 
-    const imports = routeImports.map(({ base, path }) => 
-      `import * as ${base} from "../api/admin/${path}/route"\n` + 
-      `import * as ${base}_id from "../api/admin/${path}/[id]/route"`
-    ).join("\n")
+    // Import validators for each model
+    const validatorImports = moduleConfig.models.map(model => {
+      const className = toPascalCase(model.name)
+      return `import {
+  PostAdminCreate${className},
+  PostAdminUpdate${className}
+} from "./admin/${model.parent?.routePrefix || moduleConfig.plural}/${model.plural}/validators";`
+    }).join('\n')
 
-    const routes = routeImports.map(({ base, path }) => 
-      `  app.use("/admin/${path}", ${base})\n` +
-      `  app.use("/admin/${path}/:id", ${base}_id)`
-    ).join("\n")
+    // Generate route configurations
+    const routes = moduleConfig.models.map(model => {
+      const routePath = model.parent?.routePrefix || `${moduleConfig.name.toLowerCase()}/${model.plural}`
+      const className = toPascalCase(model.name)
+      return `
+    // GET routes
+    {
+      matcher: "/admin/${routePath}",
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetVehiclesSchema, {
+          defaults: ["id", "start_year", "end_year"],
+          isList: true,
+        }),
+      ],
+    },
+    // CREATE routes
+    {
+      matcher: "/admin/${routePath}",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostAdminCreate${className})],
+    },
+    // UPDATE routes
+    {
+      matcher: "/admin/${routePath}/:id",
+      method: "POST",
+      middlewares: [validateAndTransformBody(PostAdminUpdate${className})],
+    }`
+    }).join(',\n')
 
     const middlewareTemplate = `
-import { defineMiddleware } from "@medusajs/framework/http"
-${imports}
+import { z } from "zod";
+import {
+  defineMiddlewares,
+  validateAndTransformBody,
+  validateAndTransformQuery,
+} from "@medusajs/framework/http";
+import { createFindParams } from "@medusajs/medusa/api/utils/validators";
+${validatorImports}
 
-export default defineMiddleware((app) => {
-${routes}
-})
-`
+export const GetVehiclesSchema = createFindParams();
+
+export default defineMiddlewares({
+  routes: [
+    ${routes}
+  ],
+});`
 
     return {
-      imports,
+      imports: validatorImports,
       routes,
       fullTemplate: middlewareTemplate
     }
@@ -640,9 +678,71 @@ type FileChange = {
   content: string; // Add content property
 };
 
+async function mergeMiddleware(existingContent: string, newImports: string, newRoutes: string): Promise<string> {
+  // Parse the existing content into an AST-like structure
+  const sections = {
+    imports: [] as string[],
+    schemas: [] as string[],
+    routes: [] as string[]
+  };
+  
+  let currentSection = '';
+  const lines = existingContent.split('\n');
+  
+  for (const line of lines) {
+    if (line.startsWith('import ')) {
+      sections.imports.push(line);
+    } else if (line.includes('export const') && line.includes('Schema')) {
+      sections.schemas.push(line);
+    } else if (line.match(/^\s*{.*matcher:/)) {
+      sections.routes.push(line);
+    }
+  }
+
+  // Add new imports if they don't exist
+  const newImportLines = newImports.split('\n').filter(line => line.trim());
+  for (const newImport of newImportLines) {
+    if (!sections.imports.some(imp => imp.includes(newImport.split(' from ')[1]))) {
+      sections.imports.push(newImport);
+    }
+  }
+
+  // Add new routes if they don't exist
+  const newRouteLines = newRoutes.split('\n')
+    .filter(line => line.match(/^\s*{.*matcher:/))
+    .map(line => line.trim());
+
+  for (const newRoute of newRouteLines) {
+    const matcher = newRoute.match(/matcher:\s*"([^"]+)"/)?.[1];
+    if (matcher && !sections.routes.some(route => route.includes(matcher))) {
+      sections.routes.push(newRoute);
+    }
+  }
+
+  // Reconstruct the file
+  return `
+import { z } from "zod";
+import {
+  defineMiddlewares,
+  validateAndTransformBody,
+  validateAndTransformQuery,
+} from "@medusajs/framework/http";
+import { createFindParams } from "@medusajs/medusa/api/utils/validators";
+${sections.imports.join('\n')}
+
+${sections.schemas.join('\n')}
+
+export default defineMiddlewares({
+  routes: [
+    ${sections.routes.join(',\n    ')}
+  ],
+});`;
+}
+
 export async function generateModule(config: ModuleConfig, options: { 
   addToExisting?: boolean;
   dryRun?: boolean;
+  skipExisting?: boolean;
 } = {}) {
   const changes: FileChange[] = [];
 
@@ -652,26 +752,32 @@ export async function generateModule(config: ModuleConfig, options: {
 
     // Model file
     const modelPath = `src/modules/${config.plural}/models/${model.name}.ts`;
-    changes.push({
-      path: modelPath,
-      type: 'create',
-      description: `Create model file for ${model.name}`,
-      content: TEMPLATES.model(model.name, model.fields)
-    });
+    if (!options.skipExisting || !fs.existsSync(modelPath)) {
+      changes.push({
+        path: modelPath,
+        type: 'create',
+        description: `Create model file for ${model.name}`,
+        content: TEMPLATES.model(model.name, model.fields)
+      });
+    }
 
     // Service file
     const servicePath = `src/modules/${config.plural}/service.ts`;
-    if (options.addToExisting) {
-      changes.push({
-        path: servicePath,
-        type: 'modify',
-        description: `Update service file to include ${model.name}`,
-        content: TEMPLATES.service({ 
-          moduleName: toPascalCase(config.name), 
-          models: config.models.map(m => m.name)
-        })
-      });
-    } else {
+    if (fs.existsSync(servicePath) && options.addToExisting) {
+      // Read existing service to check for model
+      const existingContent = await fs.promises.readFile(servicePath, 'utf8');
+      if (!existingContent.includes(toPascalCase(model.name)) && (!options.skipExisting || !fs.existsSync(servicePath))) {
+        changes.push({
+          path: servicePath,
+          type: 'modify',
+          description: `Update service file to include ${model.name}`,
+          content: TEMPLATES.service({ 
+            moduleName: toPascalCase(config.name), 
+            models: [...config.models.map(m => m.name)]
+          })
+        });
+      }
+    } else if (!options.skipExisting || !fs.existsSync(servicePath)) {
       changes.push({
         path: servicePath,
         type: 'create',
@@ -685,79 +791,88 @@ export async function generateModule(config: ModuleConfig, options: {
 
     // Validator file
     const validatorPath = `src/api/admin/${routePath}/validators.ts`;
-    changes.push({
-      path: validatorPath,
-      type: 'create',
-      description: `Create validator for ${model.name}`,
-      content: TEMPLATES.validator(model.name, model.fields)
-    });
+    if (!options.skipExisting || !fs.existsSync(validatorPath)) {
+      changes.push({
+        path: validatorPath,
+        type: 'create',
+        description: `Create validator for ${model.name}`,
+        content: TEMPLATES.validator(model.name, model.fields)
+      });
+    }
 
     // Route files
     const routeFilePath = `src/api/admin/${routePath}/route.ts`;
-    changes.push({
-      path: routeFilePath,
-      type: 'create',
-      description: `Create route file for ${model.name}`,
-      content: TEMPLATES.route(config, model)
-    });
+    if (!options.skipExisting || !fs.existsSync(routeFilePath)) {
+      changes.push({
+        path: routeFilePath,
+        type: 'create',
+        description: `Create route file for ${model.name}`,
+        content: TEMPLATES.route(config, model)
+      });
+    }
 
     const idRoutePath = `src/api/admin/${routePath}/[id]/route.ts`;
-    changes.push({
-      path: idRoutePath,
-      type: 'create',
-      description: `Create ID route file for ${model.name}`,
-      content: TEMPLATES.idRoute(config, model)
-    });
+    if (!options.skipExisting || !fs.existsSync(idRoutePath)) {
+      changes.push({
+        path: idRoutePath,
+        type: 'create',
+        description: `Create ID route file for ${model.name}`,
+        content: TEMPLATES.idRoute(config, model)
+      });
+    }
 
     // Admin UI Components
     const adminPagePath = `src/admin/routes/${config.plural}/${model.plural}/page.tsx`;
-    changes.push({
-      path: adminPagePath,
-      type: 'create',
-      description: `Create admin page for ${model.name}`,
-      content: TEMPLATES.pageComponent(config, model)
-    });
+    if (!options.skipExisting || !fs.existsSync(adminPagePath)) {
+      changes.push({
+        path: adminPagePath,
+        type: 'create',
+        description: `Create admin page for ${model.name}`,
+        content: TEMPLATES.pageComponent(config, model)
+      });
+    }
 
     const adminCreatePath = `src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx`;
-    changes.push({
-      path: adminCreatePath,
-      type: 'create',
-      description: `Create admin create form for ${model.name}`,
-      content: TEMPLATES.createComponent(config, model)
-    });
+    if (!options.skipExisting || !fs.existsSync(adminCreatePath)) {
+      changes.push({
+        path: adminCreatePath,
+        type: 'create',
+        description: `Create admin create form for ${model.name}`,
+        content: TEMPLATES.createComponent(config, model)
+      });
+    }
 
     const adminEditPath = `src/admin/routes/${config.plural}/${model.plural}/edit/${componentName}-edit.tsx`;
-    changes.push({
-      path: adminEditPath,
-      type: 'create',
-      description: `Create admin edit form for ${model.name}`,
-      content: TEMPLATES.editComponent(config, model)
-    });
+    if (!options.skipExisting || !fs.existsSync(adminEditPath)) {
+      changes.push({
+        path: adminEditPath,
+        type: 'create',
+        description: `Create admin edit form for ${model.name}`,
+        content: TEMPLATES.editComponent(config, model)
+      });
+    }
 
     // Middleware file
     const middlewarePath = `src/api/middlewares.ts`;
     const middleware = TEMPLATES.middleware(config);
     
     if (fs.existsSync(middlewarePath)) {
-      const existingContent = fs.readFileSync(middlewarePath, 'utf8');
-      const lastImportIndex = existingContent.lastIndexOf('import');
-      const lastImportEndIndex = existingContent.indexOf('\n', lastImportIndex);
-      const appUseIndex = existingContent.indexOf('app.use');
-      
-      const newContent = 
-        existingContent.slice(0, lastImportEndIndex + 1) + 
-        '\n' + middleware.imports + '\n' +
-        existingContent.slice(lastImportEndIndex + 1, appUseIndex) +
-        '      ' + middleware.routes + '\n' +
-        existingContent.slice(appUseIndex);
+      const existingContent = await fs.promises.readFile(middlewarePath, 'utf8');
+      const newContent = await mergeMiddleware(
+        existingContent,
+        middleware.imports,
+        middleware.routes
+      );
 
-      changes.push({
-        path: middlewarePath,
-        type: 'modify',
-        description: `Update middleware file to include ${config.name} routes`,
-        content: newContent
-      });
-    } else {
+      if (!options.skipExisting || !fs.existsSync(middlewarePath)) {
+        changes.push({
+          path: middlewarePath,
+          type: 'modify',
+          description: `Update middleware file to include ${config.name} routes`,
+          content: newContent
+        });
+      }
+    } else if (!options.skipExisting || !fs.existsSync(middlewarePath)) {
       changes.push({
         path: middlewarePath,
         type: 'create',
@@ -789,7 +904,9 @@ export async function generateModule(config: ModuleConfig, options: {
 
     switch (change.type) {
       case 'create':
-        await fs.promises.writeFile(change.path, change.content);
+        if (!fs.existsSync(change.path)) {
+          await fs.promises.writeFile(change.path, change.content);
+        }
         break;
       case 'modify':
         await fs.promises.writeFile(change.path, change.content);
