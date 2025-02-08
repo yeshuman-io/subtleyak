@@ -742,7 +742,6 @@ export default defineMiddlewares({
 export async function generateModule(config: ModuleConfig, options: { 
   addToExisting?: boolean;
   dryRun?: boolean;
-  skipExisting?: boolean;
 } = {}) {
   const changes: FileChange[] = [];
 
@@ -752,7 +751,7 @@ export async function generateModule(config: ModuleConfig, options: {
 
     // Model file
     const modelPath = `src/modules/${config.plural}/models/${model.name}.ts`;
-    if (!options.skipExisting || !fs.existsSync(modelPath)) {
+    if (!fs.existsSync(modelPath)) {
       changes.push({
         path: modelPath,
         type: 'create',
@@ -766,7 +765,7 @@ export async function generateModule(config: ModuleConfig, options: {
     if (fs.existsSync(servicePath) && options.addToExisting) {
       // Read existing service to check for model
       const existingContent = await fs.promises.readFile(servicePath, 'utf8');
-      if (!existingContent.includes(toPascalCase(model.name)) && (!options.skipExisting || !fs.existsSync(servicePath))) {
+      if (!existingContent.includes(toPascalCase(model.name))) {
         changes.push({
           path: servicePath,
           type: 'modify',
@@ -777,7 +776,7 @@ export async function generateModule(config: ModuleConfig, options: {
           })
         });
       }
-    } else if (!options.skipExisting || !fs.existsSync(servicePath)) {
+    } else {
       changes.push({
         path: servicePath,
         type: 'create',
@@ -791,7 +790,7 @@ export async function generateModule(config: ModuleConfig, options: {
 
     // Validator file
     const validatorPath = `src/api/admin/${routePath}/validators.ts`;
-    if (!options.skipExisting || !fs.existsSync(validatorPath)) {
+    if (!fs.existsSync(validatorPath)) {
       changes.push({
         path: validatorPath,
         type: 'create',
@@ -802,7 +801,7 @@ export async function generateModule(config: ModuleConfig, options: {
 
     // Route files
     const routeFilePath = `src/api/admin/${routePath}/route.ts`;
-    if (!options.skipExisting || !fs.existsSync(routeFilePath)) {
+    if (!fs.existsSync(routeFilePath)) {
       changes.push({
         path: routeFilePath,
         type: 'create',
@@ -812,7 +811,7 @@ export async function generateModule(config: ModuleConfig, options: {
     }
 
     const idRoutePath = `src/api/admin/${routePath}/[id]/route.ts`;
-    if (!options.skipExisting || !fs.existsSync(idRoutePath)) {
+    if (!fs.existsSync(idRoutePath)) {
       changes.push({
         path: idRoutePath,
         type: 'create',
@@ -823,7 +822,7 @@ export async function generateModule(config: ModuleConfig, options: {
 
     // Admin UI Components
     const adminPagePath = `src/admin/routes/${config.plural}/${model.plural}/page.tsx`;
-    if (!options.skipExisting || !fs.existsSync(adminPagePath)) {
+    if (!fs.existsSync(adminPagePath)) {
       changes.push({
         path: adminPagePath,
         type: 'create',
@@ -833,7 +832,7 @@ export async function generateModule(config: ModuleConfig, options: {
     }
 
     const adminCreatePath = `src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx`;
-    if (!options.skipExisting || !fs.existsSync(adminCreatePath)) {
+    if (!fs.existsSync(adminCreatePath)) {
       changes.push({
         path: adminCreatePath,
         type: 'create',
@@ -843,7 +842,7 @@ export async function generateModule(config: ModuleConfig, options: {
     }
 
     const adminEditPath = `src/admin/routes/${config.plural}/${model.plural}/edit/${componentName}-edit.tsx`;
-    if (!options.skipExisting || !fs.existsSync(adminEditPath)) {
+    if (!fs.existsSync(adminEditPath)) {
       changes.push({
         path: adminEditPath,
         type: 'create',
@@ -864,15 +863,13 @@ export async function generateModule(config: ModuleConfig, options: {
         middleware.routes
       );
 
-      if (!options.skipExisting || !fs.existsSync(middlewarePath)) {
-        changes.push({
-          path: middlewarePath,
-          type: 'modify',
-          description: `Update middleware file to include ${config.name} routes`,
-          content: newContent
-        });
-      }
-    } else if (!options.skipExisting || !fs.existsSync(middlewarePath)) {
+      changes.push({
+        path: middlewarePath,
+        type: 'modify',
+        description: `Update middleware file to include ${config.name} routes`,
+        content: newContent
+      });
+    } else {
       changes.push({
         path: middlewarePath,
         type: 'create',

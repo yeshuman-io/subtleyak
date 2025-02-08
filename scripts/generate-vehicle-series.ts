@@ -46,13 +46,5 @@ const config = {
   ]
 };
 
-// Parse command line arguments
-const args = process.argv.slice(2);
-const isDryRun = args.includes('--dry-run');
-const skipExisting = args.includes('--skip-existing');
-
-generateModule(config, { 
-  addToExisting: true,
-  dryRun: isDryRun,
-  skipExisting: skipExisting 
-}); 
+// Generate the module
+generateModule(config, { addToExisting: true }); 
