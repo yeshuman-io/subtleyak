@@ -1,0 +1,183 @@
+# Cursor Project Rules
+
+## Module Structure
+- Follow standard directory layout:
+```
+src/modules/[module_name]/
+├── models/
+│   ├── index.ts
+│   └── [model_name].ts
+├── migrations/
+│   └── Migration[timestamp].ts
+├── service.ts
+└── index.ts
+```
+- Keep related models in the same module
+- Include rollback logic in migrations
+- Export all models through index.ts
+
+## API Route Structure
+- Routes must be ordered from most specific to least specific
+- Sub-resource routes must come before parent resource routes
+- Use unlessPath for generic routes that might conflict
+- Avoid trailing slashes in route matchers
+- Follow standard API directory structure:
+```
+src/api/admin/[module_name]/
+├── route.ts
+├── [id]/
+│   └── route.ts
+├── validators.ts
+└── middlewares.ts
+```
+
+## Admin UI Structure
+- Follow component organization:
+```
+src/admin/routes/[module_name]/
+├── page.tsx
+├── create/
+│   └── [model]-create.tsx
+└── edit/
+    └── [model]-edit.tsx
+```
+- Keep form components separate from pages
+- Use shared components where possible
+- Maintain consistent styling
+
+## Middleware Patterns
+- GET routes should use validateAndTransformQuery
+- POST/PATCH routes should use validateAndTransformBody
+- Always specify method and matcher for each route
+- Group routes by HTTP method and specificity
+
+## Type Definitions
+- Use zod for all request validation
+- Define response types in src/admin/types/index.ts
+- Suffix response types with 'Res' (e.g., ListVehicleModelsRes)
+- Use strict TypeScript checks
+- Follow type pattern:
+```typescript
+export type ModelType = {
+    id: string
+    // ... other fields
+    created_at: string
+    updated_at: string
+    deleted_at: string | null
+}
+
+export type ListModelTypeRes = {
+    items: ModelType[]
+    count: number
+    limit: number
+    offset: number
+}
+```
+
+## Workflow Patterns
+- Create separate steps for complex operations
+- Include rollback logic in workflows
+- Handle partial failures gracefully
+- Document workflow steps
+- Follow workflow structure:
+```typescript
+export type WorkflowInput = {
+    // input fields
+};
+
+export const workflowStep = createStep(
+    "[action]-[model]-step",
+    async (input: WorkflowInput, { container }) => {
+        // implementation
+        return new StepResponse(result, result.id);
+    },
+    async (id: string, { container }) => {
+        // rollback logic
+    }
+);
+```
+
+## Model Definitions
+- Use Medusa's model.define pattern
+- Define clear relationships between models
+- Include all necessary fields and validations
+- Follow model structure:
+```typescript
+const ModelName = model.define("[model_name]", {
+    id: model.id().primaryKey(),
+    name: model.text(),
+    // relationships
+    relatedModels: model.manyToMany(() => RelatedModel, {
+        mappedBy: "relationName"
+    })
+})
+```
+
+## Service Layer
+- Extend MedusaService for all modules
+- Register all models in service
+- Follow service pattern:
+```typescript
+class ModuleService extends MedusaService({
+    Model1,
+    Model2
+}){
+    // Additional service methods if needed
+}
+```
+
+## Code Style
+- Use camelCase for variables and functions
+- Use PascalCase for types and interfaces
+- Use SCREAMING_SNAKE_CASE for constants
+- Maximum line length: 100 characters
+- Indent using 2 spaces
+
+## File Organization
+- API routes go in src/api/
+- Admin routes go in src/admin/routes/
+- Models go in src/modules/*/models/
+- Workflows go in src/workflows/
+- Types go in src/admin/types/
+
+## Documentation
+- Document all public functions and types
+- Include examples for complex functions
+- Document route parameters and responses
+- Keep docs/product/ and docs/session/ up to date
+
+## Testing
+- Write tests for all workflows
+- Mock external services in tests
+- Use descriptive test names
+- Group tests by feature/module
+
+## Error Handling
+- Use consistent error patterns
+- Log errors with appropriate levels
+- Return meaningful error messages
+- Handle edge cases explicitly
+
+## Database
+- Use Medusa's model definitions
+- Define clear relationships
+- Use migrations for schema changes
+- Document model relationships
+
+## Security
+- Validate all inputs
+- Use proper HTTP methods
+- Handle authentication appropriately
+- Sanitize error messages
+
+## Performance
+- Use query optimization where possible
+- Implement pagination for lists
+- Cache heavy computations
+- Monitor query performance
+
+## Git Workflow
+- Use descriptive commit messages
+- Keep commits focused and atomic
+- Follow conventional commits
+- Update documentation with code changes 
