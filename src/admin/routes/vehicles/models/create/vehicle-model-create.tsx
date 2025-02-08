@@ -9,6 +9,7 @@ import { SelectField } from "../../../../components/form/select-field";
 import { InputField } from "../../../../components/form/input-field";
 import { FormLayout } from "../../../../components/form/form-layout";
 import { ModalForm } from "../../../../components/form/modal-form";
+
 import { ListVehicleMakesRes } from "../../../../types";
 
 const schema = PostAdminCreateVehicleModel;
@@ -20,7 +21,7 @@ type VehicleModelCreateProps = {
 
 export function VehicleModelCreate({ onClose }: VehicleModelCreateProps) {
   const navigate = useNavigate();
-
+  
   const form = useForm<CreateVehicleModelFormData>({
     defaultValues: {
       name: "",
@@ -29,12 +30,12 @@ export function VehicleModelCreate({ onClose }: VehicleModelCreateProps) {
     resolver: zodResolver(schema),
   });
 
-  const { data: makesData } = useQuery<ListVehicleMakesRes>({
+  const { data: vehicleMakesData } = useQuery<ListVehicleMakesRes>({
     queryKey: ["vehicle_makes"],
     queryFn: () => sdk.client.fetch("/admin/vehicles/makes"),
   });
 
-  const makes = makesData?.vehicle_makes || [];
+  const vehicleMakes = vehicleMakesData?.vehicle_makes || [];
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
@@ -42,11 +43,11 @@ export function VehicleModelCreate({ onClose }: VehicleModelCreateProps) {
         method: "POST",
         body: data,
       });
-
+      
       onClose();
       navigate("/vehicles/models");
     } catch (error) {
-      console.error("Failed to create model:", error);
+      console.error("Failed to create Vehicle Model:", error);
     }
   });
 
@@ -58,21 +59,22 @@ export function VehicleModelCreate({ onClose }: VehicleModelCreateProps) {
         onClose={onClose}
       >
         <FormLayout>
-          <SelectField
-            name="make_id"
-            control={form.control}
-            label="Make"
-            placeholder="Select a make..."
-            options={makes}
-          />
-          
           <InputField
             name="name"
             control={form.control}
-            label="Model Name"
+            label="Name"
+            
+            
+          />
+          <SelectField
+            name="vehicle_make_id"
+            control={form.control}
+            label="Vehicle Make"
+            placeholder="Select a Vehicle Make..."
+            options={makes}            
           />
         </FormLayout>
       </ModalForm>
     </FormProvider>
   );
-}
+} 

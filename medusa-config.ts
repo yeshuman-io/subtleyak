@@ -27,12 +27,20 @@ module.exports = defineConfig({
       storeCors: process.env.STORE_CORS!,
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
-    }
+    },
+    redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
+    redisPrefix: "medusa:",
   },
   modules: [
     {
       resolve: "./src/modules/vehicles"
     },
+    {
+      resolve: "./src/modules/wipers"
+    },
+    {
+      resolve: "./src/modules/fitments"
+    }
     {
       resolve: "@medusajs/medusa/cache-redis",
       options: {

@@ -1,0 +1,47 @@
+import {
+  createStep,
+  StepResponse,
+  createWorkflow,
+  WorkflowResponse,
+} from "@medusajs/framework/workflows-sdk";
+import { {{toUpperCase module.plural}}_MODULE } from "../../modules/{{module.plural}}";
+import {{toPascalCase module.plural}}ModuleService from "../../modules/{{module.plural}}/service";
+
+export type Create{{toPascalCase model.name}}StepInput = {
+{{#each model.fields}}
+  {{#if relation}}
+  {{name}}_ids?: string[];
+  {{else}}
+  {{name}}{{#unless required}}?{{/unless}}: {{type}};
+  {{/if}}
+{{/each}}
+};
+
+export const create{{toPascalCase model.name}}Step = createStep(
+  "create-{{toKebabCase model.name}}-step",
+  async (input: Create{{toPascalCase model.name}}StepInput, { container }) => {
+    const {{module.plural}}ModuleService: {{toPascalCase module.plural}}ModuleService = 
+      container.resolve({{toUpperCase module.plural}}_MODULE);
+
+    const {{toCamelCase model.name}} = await {{module.plural}}ModuleService.create{{toPascalCase model.name}}s(input);
+
+    return new StepResponse({{toCamelCase model.name}}, {{toCamelCase model.name}}.id);
+  },
+  async (id: string, { container }) => {
+    const {{module.plural}}ModuleService: {{toPascalCase module.plural}}ModuleService = 
+      container.resolve({{toUpperCase module.plural}}_MODULE);
+
+    await {{module.plural}}ModuleService.delete{{toPascalCase model.name}}s(id);
+  }
+);
+
+type Create{{toPascalCase model.name}}WorkflowInput = Create{{toPascalCase model.name}}StepInput;
+
+export const create{{toPascalCase model.name}}Workflow = createWorkflow(
+  "create-{{toKebabCase model.name}}-workflow",
+  (input: Create{{toPascalCase model.name}}WorkflowInput) => {
+    const {{toCamelCase model.name}} = create{{toPascalCase model.name}}Step(input);
+
+    return new WorkflowResponse({{toCamelCase model.name}});
+  }
+); 

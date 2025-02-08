@@ -18,25 +18,24 @@ const VehiclesPage = () => {
       header: "ID",
     }),
     columnHelper.accessor("make.name", {
+      cell: ({ row }) => row.original.make?.name || "-",
       header: "Make",
       enableSorting: true,
     }),
     columnHelper.accessor("model.name", {
+      cell: ({ row }) => row.original.model?.name || "-",
       header: "Model",
       enableSorting: true,
     }),
-    columnHelper.accessor("start_year", {
-      header: "Start Year",
-      enableSorting: true,
-    }),
-    columnHelper.accessor("end_year", {
-      header: "End Year",
+    columnHelper.accessor("series", {
+      cell: ({ row }) => row.original.series?.length || 0,
+      header: "Series",
       enableSorting: true,
     }),
     columnHelper.accessor("actions", {
       header: "",
       cell: ({ row }) => {
-        const vehicle = row.original;
+        const model = row.original;
         return (
           <ActionMenu
             groups={[
@@ -45,7 +44,7 @@ const VehiclesPage = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditingVehicle(vehicle),
+                    onClick: () => setEditingVehicle(model),
                   },
                 ],
               },
@@ -102,8 +101,8 @@ const VehiclesPage = () => {
       {editingVehicle && (
         <Drawer open onOpenChange={() => setEditingVehicle(null)}>
           <VehicleEdit 
-            vehicle={editingVehicle} 
-            onClose={() => setEditingVehicle(null)} 
+            vehicle={editingVehicle}
+            onClose={() => setEditingVehicle(null)}
           />
         </Drawer>
       )}
@@ -113,7 +112,7 @@ const VehiclesPage = () => {
 
 export const config = defineRouteConfig({
   label: "Vehicles",
-  icon: RocketLaunch,
-});
+  icon: RocketLaunch
+});//asdf
 
-export default VehiclesPage;
+export default VehiclesPage; 

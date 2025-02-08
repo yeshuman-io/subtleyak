@@ -1,0 +1,32 @@
+/**
+ * This file is auto-generated and will be overwritten by subsequent generations.
+ * Manual changes should be made to the generator templates instead.
+ */
+
+{{#each modules}}
+{{!-- Outer loop: Iterates through each module configuration --}}
+// {{toTitleCase plural}} Types
+{{!-- Adds a section header for each module's types --}}
+
+{{#each models}}
+{{!-- Conditional: Generates types for models that aren't the main module type --}}
+export type {{toPascalCase name}} = {
+  id: string
+  {{#each fields}}
+  {{name}}{{#unless required}}?{{/unless}}: {{#if relation}}{{#if (eq relation.type "belongsTo")}}{{toPascalCase relation.model}}{{else}}{{toPascalCase relation.model}}[]{{/if}}{{else}}{{#if (eq type "string")}}string{{else if (eq type "text")}}string{{else if (eq type "number")}}number{{else if (eq type "boolean")}}boolean{{else if (eq type "date")}}string{{/if}}{{/if}}
+  {{/each}}
+}
+
+{{/each}}
+// {{toTitleCase plural}} Response Types
+
+{{#each models}}
+{{!-- Generates list response types for each model --}}
+export type List{{toPascalCase name}}sRes = {
+  {{toSnakeCase plural}}: {{toPascalCase name}}[]
+  count: number
+  limit: number
+  offset: number
+}
+
+{{/each}}{{/each}}

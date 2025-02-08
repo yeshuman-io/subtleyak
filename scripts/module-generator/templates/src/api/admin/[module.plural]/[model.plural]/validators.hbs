@@ -1,0 +1,51 @@
+import { z } from "zod";
+import { createFindParams } from "@medusajs/medusa/api/utils/validators";
+import {{toPascalCase model.name}} from "../../../../modules/{{module.plural}}/models/{{toKebabCase model.name}}";
+
+export const Get{{toPascalCase model.name}}Schema = createFindParams();
+
+export const PostAdminCreate{{toPascalCase model.name}} = z.object({
+  {{#each model.fields}}
+  {{#if relation}}
+  {{#if (eq relation.type "belongsTo")}}
+  {{toSnakeCase name}}_id: z.string().min(1),
+  {{/if}}
+  {{#if (eq relation.type "hasMany")}}
+  {{toSnakeCase name}}_ids: z.array(z.string().min(1)),
+  {{/if}}
+  {{#if (eq relation.type "manyToMany")}}
+  {{toSnakeCase name}}_ids: z.array(z.string().min(1)),
+  {{/if}}
+  {{else}}
+  {{toSnakeCase name}}: z.{{#if (eq type "text")}}string(){{else if (eq type "number")}}number(){{else if (eq type "boolean")}}boolean(){{else if (eq type "date")}}date(){{else}}string(){{/if}}{{#if required}}.min(1){{/if}},
+  {{/if}}
+  {{/each}}
+});
+
+export const PostAdminUpdate{{toPascalCase model.name}} = z.object({
+  {{#each model.fields}}
+  {{#if relation}}
+  {{#if (eq relation.type "belongsTo")}}
+  {{toSnakeCase name}}_id: z.string().min(1).optional(),
+  {{/if}}
+  {{#if (eq relation.type "hasMany")}}
+  {{toSnakeCase name}}_ids: z.array(z.string().min(1)).optional(),
+  {{/if}}
+  {{#if (eq relation.type "manyToMany")}}
+  {{toSnakeCase name}}_ids: z.array(z.string().min(1)).optional(),
+  {{/if}}
+  {{else}}
+  {{toSnakeCase name}}: z.{{#if (eq type "text")}}string(){{else if (eq type "number")}}number(){{else if (eq type "boolean")}}boolean(){{else if (eq type "date")}}date(){{else}}string(){{/if}}{{#if required}}.min(1){{/if}}.optional(),
+  {{/if}}
+  {{/each}}
+});
+
+export type AdminCreate{{toPascalCase model.name}}Req = z.infer<typeof PostAdminCreate{{toPascalCase model.name}}>;
+export type AdminUpdate{{toPascalCase model.name}}Req = z.infer<typeof PostAdminUpdate{{toPascalCase model.name}}>;
+
+export type {{toPascalCase model.name}}AdminListRes = {
+  items: typeof {{toPascalCase model.name}};
+  count: number;
+  limit: number;
+  offset: number;
+};

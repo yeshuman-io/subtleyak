@@ -1,28 +1,48 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { createVehicleWorkflow } from "../../../workflows/create-vehicle";
+import { createVehicleWorkflow } from "../../../workflows/vehicles/create-vehicle";
 import { PostAdminCreateVehicle } from "./validators";
+
+type QueryResponse = {
+  data: any[];
+  metadata: {
+    count: number;
+    take: number;
+    skip: number;
+  };
+}; //asdfsdfg
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
 
-  const {
-    data: vehicles,
-    metadata: { count, take, skip },
-  } = await query.graph({
-    entity: "vehicle",
-    ...req.queryConfig,
-  });
+    const queryOptions = {
+      entity: "vehicle",
+      ...req.queryConfig,
+      filters: {
+        ...req.queryConfig?.filters,
+      },
+    };
+
+  try {
+    const { data: vehicles, metadata } = (await query.graph(
+      queryOptions
+    )) as QueryResponse;
 
   res.json({
     vehicles,
-    count,
-    limit: take,
-    offset: skip,
-  });
+    count: metadata.count,
+    limit: metadata.take,
+    offset: metadata.skip,
+    });
+  } catch (error) {
+    console.error("Error fetching Vehicles:", error);
+    res.status(500).json({ error: "An error occurred while fetching Vehicles" });
+  }
 };
 
-type PostAdminCreateVehicleType = z.infer<typeof PostAdminCreateVehicle>;
+type PostAdminCreateVehicleType = z.infer<
+  typeof PostAdminCreateVehicle
+>;
 
 export const POST = async (
   req: MedusaRequest<PostAdminCreateVehicleType>,
@@ -32,5 +52,5 @@ export const POST = async (
     input: req.validatedBody,
   });
 
-  res.json({ vehicle: result });
-};
+  res.json({ vehicles: result });
+}; 
