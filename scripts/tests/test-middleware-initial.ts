@@ -16,14 +16,6 @@ import {
   PostAdminUpdateVehicle,
 } from './admin/vehicles/validators';
 import {
-  PostAdminCreateWiperKit,
-  PostAdminUpdateWiperKit,
-} from './admin/wipers/kits/validators';
-import {
-  PostAdminCreateWiper,
-  PostAdminUpdateWiper,
-} from './admin/wipers/validators';
-import {
   defineMiddlewares,
   unlessPath,
   validateAndTransformBody,
@@ -33,52 +25,97 @@ import { createFindParams } from '@medusajs/medusa/api/utils/validators';
 import { z } from 'zod';
 export default defineMiddlewares({
   routes: [
-    // GET routes - specific first
     {
-      matcher: '/admin/wipers/kits',
+      matcher: '/admin/vehicles/bodies',
       method: 'GET',
       middlewares: [
-        validateAndTransformQuery(GetWiperKitSchema, {
-          defaults: ['id', 'name', 'code', 'wiper'],
-          select: ['id', 'name', 'code', 'wiper'],
-          relations: ['wiper'],
+        validateAndTransformQuery(GetVehiclesSchema, {
+          defaults: ['id', 'name'],
+          isList: true,
+        }),
+      ],
+    }, // GET routes - specific first
+    {
+      matcher: '/admin/vehicles/makes',
+      method: 'GET',
+      middlewares: [
+        validateAndTransformQuery(GetVehiclesSchema, {
+          defaults: ['id', 'name', 'models.*'],
           isList: true,
         }),
       ],
     },
     {
-      matcher: '/admin/wipers',
+      matcher: '/admin/vehicles/models',
       method: 'GET',
       middlewares: [
-        validateAndTransformQuery(GetWiperSchema, {
-          defaults: ['id', 'name', 'code', 'kits'],
-          select: ['id', 'name', 'code', 'kits'],
-          relations: ['kits'],
+        validateAndTransformQuery(GetVehicleModelsSchema, {
+          defaults: ['id', 'name', 'make.*'],
+          isList: true,
+        }),
+      ],
+    },
+    {
+      matcher: '/admin/vehicles',
+      method: 'GET',
+      middlewares: [
+        validateAndTransformQuery(GetVehiclesSchema, {
+          defaults: ['id', 'start_year', 'end_year', 'make.*', 'model.*'],
           isList: true,
         }),
       ],
     },
 
-    // UPDATE routes - specific first
     {
-      matcher: '/admin/wipers/kits/:id',
+      matcher: '/admin/vehicles/bodies/:id',
       method: 'POST',
-      middlewares: [validateAndTransformBody(PostAdminUpdateWiperKit)],
+      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleBody)],
+    }, // UPDATE - specific routes first
+    {
+      matcher: '/admin/vehicles/makes/:id',
+      method: 'POST',
+      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleMake)],
     },
     {
-      matcher: '/admin/wipers/:id',
+      matcher: '/admin/vehicles/models/:id',
       method: 'POST',
-      middlewares: [validateAndTransformBody(PostAdminUpdateWiper)],
-    }, // CREATE routes - specific first
+      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleModel)],
+    },
+
     {
-      matcher: '/admin/wipers/kits',
+      matcher: '/admin/vehicles/:id',
       method: 'POST',
-      middlewares: [validateAndTransformBody(PostAdminCreateWiperKit)],
+      middlewares: [
+        unlessPath(
+          /.*\/(models|makes|bodies)/,
+          validateAndTransformBody(PostAdminUpdateVehicle)
+        ),
+      ],
     },
     {
-      matcher: '/admin/wipers',
+      matcher: '/admin/vehicles/bodies',
       method: 'POST',
-      middlewares: [validateAndTransformBody(PostAdminCreateWiper)],
+      middlewares: [validateAndTransformBody(PostAdminCreateVehicleBody)],
+    }, // CREATE - specific routes first
+    {
+      matcher: '/admin/vehicles/makes',
+      method: 'POST',
+      middlewares: [validateAndTransformBody(PostAdminCreateVehicleMake)],
+    },
+    {
+      matcher: '/admin/vehicles/models',
+      method: 'POST',
+      middlewares: [validateAndTransformBody(PostAdminCreateVehicleModel)],
+    }, // Generic routes last
+    {
+      matcher: '/admin/vehicles',
+      method: 'POST',
+      middlewares: [
+        unlessPath(
+          /.*\/(models|makes|bodies)/,
+          validateAndTransformBody(PostAdminCreateVehicle)
+        ),
+      ],
     },
   ],
 });
