@@ -145,7 +145,7 @@ const TEMPLATES: TemplateMap = {
 
   service: ({ moduleName, models }: { moduleName: string; models: ModelConfig[] }): string => {
     return `import { MedusaService } from "@medusajs/framework/utils";
-    ${models.map(m => `import ${toPascalCase(m.name)} from "./models/${m.name}";`).join("\n")}
+    ${models.map(m => `import ${toPascalCase(m.name)} from "./models/${m.name}";`).join("\n    ")}
 
     class ${moduleName}Service extends MedusaService({
       ${models.map(m => toPascalCase(m.name)).join(",\n      ")}
@@ -192,11 +192,14 @@ const TEMPLATES: TemplateMap = {
   route: (moduleConfig: ModuleConfig, modelConfig: ModelConfig): string => {
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const className = toPascalCase(modelConfig.name);
+    const routeFilePath = `src/api/admin/${routePath}/route.ts`;
+    const workflowFilePath = `src/workflows/create-${modelConfig.name}.ts`;
+    const relativePath = path.relative(path.dirname(routeFilePath), workflowFilePath).replace(/\\/g, '/');
     
     return `import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
     import { z } from "zod";
     import { PostAdminCreate${className} } from "./validators";
-    import { create${className}Workflow } from "@/workflows/create-${modelConfig.name}";
+    import { create${className}Workflow } from "${relativePath}";
 
     type PostAdminCreate${className}Type = z.infer<typeof PostAdminCreate${className}>;
 
@@ -235,11 +238,14 @@ const TEMPLATES: TemplateMap = {
   idRoute: (moduleConfig: ModuleConfig, modelConfig: ModelConfig): string => {
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const className = toPascalCase(modelConfig.name);
+    const routeFilePath = `src/api/admin/${routePath}/[id]/route.ts`;
+    const workflowFilePath = `src/workflows/update-${modelConfig.name}.ts`;
+    const relativePath = path.relative(path.dirname(routeFilePath), workflowFilePath).replace(/\\/g, '/');
     
     return `import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
     import { z } from "zod";
     import { PostAdminUpdate${className} } from "../validators";
-    import { update${className}Workflow } from "@/workflows/update-${modelConfig.name}";
+    import { update${className}Workflow } from "${relativePath}";
 
     type PostAdminUpdate${className}Type = z.infer<typeof PostAdminUpdate${className}>;
 
@@ -321,16 +327,20 @@ const TEMPLATES: TemplateMap = {
     const snakeName = toSnakeCase(modelConfig.name);
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const componentName = getComponentName(modelConfig);
-    const importDepth = modelConfig.isParent ? 3 : 4;
-    const basePath = '../'.repeat(importDepth);
+    const pageFilePath = `src/admin/routes/${getAdminRoutePath(moduleConfig, modelConfig)}/page.tsx`;
+    const dataTablePath = path.relative(path.dirname(pageFilePath), 'src/admin/components/data-table-page.tsx').replace(/\\/g, '/');
+    const actionMenuPath = path.relative(path.dirname(pageFilePath), 'src/admin/components/action-menu.tsx').replace(/\\/g, '/');
+    const typesPath = path.relative(path.dirname(pageFilePath), 'src/admin/types').replace(/\\/g, '/');
+    
+    const camelName = modelConfig.name.replace(/-([a-z])/g, g => g[1].toUpperCase());
     
     return `import { defineRouteConfig } from "@medusajs/admin-sdk";
     import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
-    import { ${className} } from "${basePath}types";
-    import { DataTablePage } from "${basePath}components/data-table-page";
+    import { ${className} } from "${typesPath}";
+    import { DataTablePage } from "${dataTablePath}";
     import { ${className}Create } from "./create/${componentName}-create";
     import { useState } from "react";
-    import { ActionMenu } from "${basePath}components/action-menu";
+    import { ActionMenu } from "${actionMenuPath}";
     import { Pencil } from "@medusajs/icons";
     import { ${className}Edit } from "./edit/${componentName}-edit";
 
@@ -408,7 +418,7 @@ const TEMPLATES: TemplateMap = {
           {editing${className} && (
             <Drawer open onOpenChange={() => setEditing${className}(null)}>
               <${className}Edit 
-                item={editing${className}} 
+                ${camelName}={editing${className}} 
                 onClose={() => setEditing${className}(null)} 
               />
             </Drawer>
@@ -428,78 +438,95 @@ const TEMPLATES: TemplateMap = {
     const className = toPascalCase(modelConfig.name);
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const componentName = getComponentName(modelConfig);
-    const importDepth = modelConfig.isParent ? 4 : 5;
-    const basePath = '../'.repeat(importDepth);
+    const createFilePath = `src/admin/routes/${getAdminRoutePath(moduleConfig, modelConfig)}/create/${componentName}-create.tsx`;
+    const validatorsPath = path.relative(path.dirname(createFilePath), `src/api/admin/${routePath}/validators.ts`).replace(/\\/g, '/');
+    const formDir = path.relative(path.dirname(createFilePath), 'src/admin/components/form').replace(/\\/g, '/');
+    const sdkPath = path.relative(path.dirname(createFilePath), 'src/admin/lib/sdk').replace(/\\/g, '/');
     
-    return `import { Form } from "@medusajs/forms";
-    import { Button, FocusModal } from "@medusajs/ui";
-    import { useForm } from "react-hook-form";
+    return `import * as zod from "zod";
+    import { FormProvider, useForm } from "react-hook-form";
+    import { PostAdminCreate${className} } from "${validatorsPath}";
+    import { sdk } from "${sdkPath}";
+    import { useNavigate } from "react-router-dom";
     import { zodResolver } from "@hookform/resolvers/zod";
-    import { PostAdminCreate${className} } from "${basePath}api/admin/${routePath}/validators";
-    import { InputField, SelectField } from "${basePath}components/form";
+    import { SelectField } from "${formDir}/select-field";
+    import { InputField } from "${formDir}/input-field";
+    import { FormLayout } from "${formDir}/form-layout";
+    import { ModalForm } from "${formDir}/modal-form";
 
-    type Props = {
+    const schema = PostAdminCreate${className};
+    type Create${className}FormData = zod.infer<typeof schema>;
+
+    type ${className}CreateProps = {
       onClose: () => void;
     };
 
-    export const ${className}Create = ({ onClose }: Props) => {
-      const form = useForm({
-        resolver: zodResolver(PostAdminCreate${className}),
+    export function ${className}Create({ onClose }: ${className}CreateProps) {
+      const navigate = useNavigate();
+
+      const form = useForm<Create${className}FormData>({
+        defaultValues: {
+          ${modelConfig.fields.map(f => {
+            if (f.relation) {
+              return `${f.name}_id: "",`;
+            }
+            switch (f.type) {
+              case 'string':
+                return `${f.name}: "",`;
+              case 'number':
+                return `${f.name}: 0,`;
+              case 'boolean':
+                return `${f.name}: false,`;
+              default:
+                return `${f.name}: "",`;
+            }
+          }).join('\n          ')}
+        },
+        resolver: zodResolver(schema),
       });
 
-      const onSubmit = async (data) => {
+      const handleSubmit = form.handleSubmit(async (data) => {
         try {
-          await fetch(\`/admin/${routePath}\`, {
+          await sdk.client.fetch("/admin/${routePath}", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            body: data,
           });
+
           onClose();
+          navigate("/${getAdminRoutePath(moduleConfig, modelConfig)}");
         } catch (error) {
           console.error("Failed to create ${className}:", error);
         }
-      };
+      });
 
       return (
-        <FocusModal.Content>
-          <FocusModal.Header>
-            <h1>Create ${className}</h1>
-          </FocusModal.Header>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <FocusModal.Body className="flex flex-col gap-y-8">
-                ${modelConfig.fields.map(f => {
-                  if (f.relation) {
-                    return `<SelectField
-                      name="${f.name}_id"
-                      label="${toPascalCase(f.name)}"
-                      required={${f.required}}
-                    />`;
-                  }
-                  return `<InputField
-                    name="${f.name}"
-                    label="${toPascalCase(f.name).replace(/_/g, ' ')}"
-                    required={${f.required}}
-                    type="${f.type === 'number' ? 'number' : 'text'}"
+        <FormProvider {...form}>
+          <ModalForm
+            title="Create ${className}"
+            onSubmit={handleSubmit}
+            onClose={onClose}
+          >
+            <FormLayout>
+              ${modelConfig.fields.map(f => {
+                if (f.relation) {
+                  return `<SelectField
+                    name="${f.name}_id"
+                    control={form.control}
+                    label="${toPascalCase(f.name)}"
+                    placeholder="Select a ${f.name}..."
+                    options={[]}
                   />`;
-                }).join('\n                ')}
-              </FocusModal.Body>
-              <FocusModal.Footer>
-                <div className="flex items-center justify-end w-full gap-x-2">
-                  <Button
-                    variant="secondary"
-                    onClick={onClose}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    Create
-                  </Button>
-                </div>
-              </FocusModal.Footer>
-            </form>
-          </Form>
-        </FocusModal.Content>
+                }
+                return `<InputField
+                  name="${f.name}"
+                  control={form.control}
+                  label="${toPascalCase(f.name).replace(/_/g, ' ')}"
+                  type="${f.type === 'number' ? 'number' : 'text'}"
+                />`;
+              }).join('\n              ')}
+            </FormLayout>
+          </ModalForm>
+        </FormProvider>
       );
     };`;
   },
@@ -508,83 +535,123 @@ const TEMPLATES: TemplateMap = {
     const className = toPascalCase(modelConfig.name);
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const componentName = getComponentName(modelConfig);
-    const importDepth = modelConfig.isParent ? 4 : 5;
-    const basePath = '../'.repeat(importDepth);
+    const editFilePath = `src/admin/routes/${getAdminRoutePath(moduleConfig, modelConfig)}/edit/${componentName}-edit.tsx`;
+    const validatorsPath = path.relative(path.dirname(editFilePath), `src/api/admin/${routePath}/validators.ts`).replace(/\\/g, '/');
+    const formDir = path.relative(path.dirname(editFilePath), 'src/admin/components/form').replace(/\\/g, '/');
+    const typesPath = path.relative(path.dirname(editFilePath), 'src/admin/types').replace(/\\/g, '/');
+    const sdkPath = path.relative(path.dirname(editFilePath), 'src/admin/lib/sdk').replace(/\\/g, '/');
+    const drawerFormLayoutPath = path.relative(path.dirname(editFilePath), 'src/admin/components/drawer-form-layout').replace(/\\/g, '/');
+    const drawerPath = path.relative(path.dirname(editFilePath), 'src/admin/components/drawer').replace(/\\/g, '/');
     
-    return `import { Form } from "@medusajs/forms";
-    import { Button, Drawer } from "@medusajs/ui";
-    import { useForm } from "react-hook-form";
+    const camelName = modelConfig.name.replace(/-([a-z])/g, g => g[1].toUpperCase());
+    
+    return `import * as zod from "zod";
+    import { Drawer } from "@medusajs/ui";
+    import { FormProvider, useForm } from "react-hook-form";
+    import { PostAdminUpdate${className} } from "${validatorsPath}";
+    import { sdk } from "${sdkPath}";
+    import { useNavigate } from "react-router-dom";
     import { zodResolver } from "@hookform/resolvers/zod";
-    import { PostAdminUpdate${className} } from "${basePath}api/admin/${routePath}/validators";
-    import { InputField, SelectField } from "${basePath}components/form";
-    import { ${className} } from "${basePath}types";
+    import { SelectField } from "${formDir}/select-field";
+    import { InputField } from "${formDir}/input-field";
+    import { FormLayout } from "${formDir}/form-layout";
+    import { DrawerFormLayout } from "${drawerFormLayoutPath}";
+    import { useDrawer } from "${drawerPath}";
+    import { ${className} } from "${typesPath}";
 
-    type Props = {
-      item: any;
-      onClose: () => void;
+    const schema = PostAdminUpdate${className};
+    type Edit${className}FormData = zod.infer<typeof schema>;
+
+    type ${className}EditProps = {
+      ${camelName}: {
+        id: string;
+        ${modelConfig.fields.map(f => {
+          if (f.relation) {
+            return `${f.name}_id: string;
+            ${f.name}?: { id?: string; name: string };`;
+          }
+          return `${f.name}: ${f.type};`;
+        }).join('\n        ')}
+      };
     };
 
-    export const ${className}Edit = ({ item, onClose }: Props) => {
-      const form = useForm({
-        resolver: zodResolver(PostAdminUpdate${className}),
-        defaultValues: item,
+    function ${className}EditForm({ ${camelName} }: ${className}EditProps) {
+      const { close } = useDrawer();
+      const navigate = useNavigate();
+
+      const form = useForm<Edit${className}FormData>({
+        defaultValues: {
+          ${modelConfig.fields.map(f => {
+            if (f.relation) {
+              return `${f.name}_id: ${camelName}.${f.name}?.id || ${camelName}.${f.name}_id,`;
+            }
+            return `${f.name}: ${camelName}.${f.name},`;
+          }).join('\n          ')}
+        },
+        values: {
+          ${modelConfig.fields.map(f => {
+            if (f.relation) {
+              return `${f.name}_id: ${camelName}.${f.name}?.id || ${camelName}.${f.name}_id,`;
+            }
+            return `${f.name}: ${camelName}.${f.name},`;
+          }).join('\n          ')}
+        },
+        resolver: zodResolver(schema),
       });
 
-      const onSubmit = async (data) => {
+      const handleSubmit = form.handleSubmit(async (data) => {
         try {
-          await fetch(\`/admin/${routePath}/\${item.id}\`, {
+          await sdk.client.fetch(\`/admin/${routePath}/\${${camelName}.id}\`, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(data),
+            body: data,
           });
-          onClose();
+          
+          close();
+          navigate("/${getAdminRoutePath(moduleConfig, modelConfig)}");
         } catch (error) {
           console.error("Failed to update ${className}:", error);
         }
-      };
+      });
 
       return (
-        <Drawer.Content>
-          <Drawer.Header>
-            <h1>Edit ${className}</h1>
-          </Drawer.Header>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)}>
-              <Drawer.Body className="flex flex-col gap-y-8">
-                ${modelConfig.fields.map(f => {
-                  if (f.relation) {
-                    return `<SelectField
-                      name="${f.name}_id"
-                      label="${toPascalCase(f.name)}"
-                      required={${f.required}}
-                    />`;
-                  }
-                  return `<InputField
-                    name="${f.name}"
-                    label="${toPascalCase(f.name).replace(/_/g, ' ')}"
-                    required={${f.required}}
-                    type="${f.type === 'number' ? 'number' : 'text'}"
+        <FormProvider {...form}>
+          <DrawerFormLayout
+            title="Edit ${className}"
+            description="Edit ${modelConfig.name} details"
+            onSubmit={handleSubmit}
+          >
+            <FormLayout>
+              ${modelConfig.fields.map(f => {
+                if (f.relation) {
+                  return `<SelectField
+                    name="${f.name}_id"
+                    control={form.control}
+                    label="${toPascalCase(f.name)}"
+                    placeholder="Select a ${f.name}..."
+                    options={[]}
+                    defaultValue={${camelName}.${f.name}?.name}
                   />`;
-                }).join('\n                ')}
-              </Drawer.Body>
-              <Drawer.Footer>
-                <div className="flex items-center justify-end w-full gap-x-2">
-                  <Button
-                    variant="secondary"
-                    onClick={onClose}
-                  >
-                    Cancel
-                  </Button>
-                  <Button type="submit">
-                    Save Changes
-                  </Button>
-                </div>
-              </Drawer.Footer>
-            </form>
-          </Form>
+                }
+                return `<InputField
+                  name="${f.name}"
+                  control={form.control}
+                  label="${toPascalCase(f.name).replace(/_/g, ' ')}"
+                  type="${f.type === 'number' ? 'number' : 'text'}"
+                />`;
+              }).join('\n              ')}
+            </FormLayout>
+          </DrawerFormLayout>
+        </FormProvider>
+      );
+    }
+
+    export function ${className}Edit(props: ${className}EditProps) {
+      return (
+        <Drawer.Content aria-describedby="edit-${modelConfig.name}-description">
+          <${className}EditForm ${camelName}={props.${camelName}} />
         </Drawer.Content>
       );
-    };`;
+    }`;
   },
 
   types: (moduleConfig: ModuleConfig): string => {
