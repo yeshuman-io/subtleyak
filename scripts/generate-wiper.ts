@@ -69,6 +69,6 @@ const args = process.argv.slice(2);
 const isDryRun = args.includes('--dry-run');
 
 generateModule(config, { 
-  addToExisting: false,
+  addToExisting: true,
   dryRun: isDryRun
 }); 

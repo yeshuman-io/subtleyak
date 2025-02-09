@@ -1,6 +1,11 @@
 import fs from "fs";
 import path from "path";
 import { format } from "prettier";
+import { mergeRoutes } from './utils/route-merge';
+import { parse } from '@babel/parser';
+import traverse from '@babel/traverse';
+import generate from '@babel/generator';
+import { CallExpression, ObjectProperty, Identifier } from '@babel/types';
 
 // Helper function to convert kebab-case to PascalCase
 export const toPascalCase = (str: string) => {
@@ -72,6 +77,28 @@ function getComponentName(modelConfig: ModelConfig): string {
   const parentPrefix = modelConfig.parent?.model.toLowerCase() || '';
   return `${parentPrefix}-${modelConfig.singular}`;
 }
+
+// Import the utilities
+import { generateMiddleware, parseExistingMiddleware } from './utils/middleware-generator';
+import { mergeSchemas } from './utils/schema-merge';
+
+// Add type definitions
+type Route = {
+  matcher: string;
+  method: string;
+  middlewares: {
+    name: string;
+    args: any[];
+  }[];
+};
+
+type MiddlewareConfig = {
+  routes: Route[];
+  schemas: {
+    imports: string[];
+    schemas: { name: string; definition: string; }[];
+  };
+};
 
 export const TEMPLATES = {
   model: (modelName: string, fields: ModelField[]) => {
@@ -150,103 +177,88 @@ export const TEMPLATES = {
     `
   },
 
-  middleware: (moduleConfig: ModuleConfig) => {
-    // Generate route configurations
-    const routes = moduleConfig.models.map(model => {
-      const routePath = model.parent?.routePrefix || 
-        `${moduleConfig.plural}/${model.plural}`;
-      
-      const className = toPascalCase(model.name);
-      const schemaName = `Get${className}Schema`;
-      
-      // Get fields for defaultFields, excluding relation fields
-      const defaultFields = ["id", ...model.fields
-        .filter(f => !f.relation)
-        .map(f => f.name)];
+  middleware: (moduleConfig: ModuleConfig): MiddlewareConfig => {
+    const imports = new Set<string>();
+    const schemas = new Set<string>();
+    const routes: Route[] = [];
 
-      // Get relation fields for defaultRelations
-      const defaultRelations = model.fields
-        .filter(f => f.relation)
-        .map(f => f.name);
+    // Add framework imports
+    imports.add("import { createFindParams } from '@medusajs/medusa/api/utils/validators';");
+    imports.add("import { defineMiddlewares, validateAndTransformQuery, validateAndTransformBody } from '@medusajs/framework/http';");
+    imports.add("import { z } from 'zod';");
+
+    // Process each model
+    moduleConfig.models.forEach(model => {
+      const modelName = toPascalCase(model.name);
+      const modelPath = getRoutePath(moduleConfig, model);
       
-      return [
+      // Add validator imports
+      imports.add(`import { PostAdminCreate${modelName}, PostAdminUpdate${modelName} } from './admin/${modelPath}/validators';`);
+      
+      // Add schema
+      const schemaName = `Get${modelName}Schema`;
+      const schemaDefinition = model.fields.find(f => f.relation?.model === 'Make')
+        ? 'createFindParams().extend({ make_id: z.string().optional() })'
+        : 'createFindParams()';
+      schemas.add(`export const ${schemaName} = ${schemaDefinition};`);
+
+      // Add routes
+      const modelRoutes = [
         // GET route
-        `{
-          matcher: "/admin/${routePath}",
-          method: "GET",
+        {
+          matcher: `/admin/${modelPath}`,
+          method: 'GET',
           middlewares: [
-            validateAndTransformQuery(${schemaName}, {
-              defaults: ${JSON.stringify(defaultFields)},
-              select: ${JSON.stringify(defaultFields)},
-              relations: ${JSON.stringify(defaultRelations)},
-              isList: true,
-            }),
-          ],
-        }`,
+            {
+              name: 'validateAndTransformQuery',
+              args: [schemaName, {
+                defaults: ['id', ...model.fields.map(f => f.name)],
+                select: ['id', ...model.fields.map(f => f.name)],
+                relations: model.fields
+                  .filter(f => f.relation)
+                  .map(f => f.name),
+                isList: true,
+              }]
+            }
+          ]
+        },
         // CREATE route
-        `{
-          matcher: "/admin/${routePath}",
-          method: "POST",
-          middlewares: [validateAndTransformBody(PostAdminCreate${className})],
-        }`,
+        {
+          matcher: `/admin/${modelPath}`,
+          method: 'POST',
+          middlewares: [
+            {
+              name: 'validateAndTransformBody',
+              args: [`PostAdminCreate${modelName}`]
+            }
+          ]
+        },
         // UPDATE route
-        `{
-          matcher: "/admin/${routePath}/:id",
-          method: "POST",
-          middlewares: [validateAndTransformBody(PostAdminUpdate${className})],
-        }`
-      ].join(',\n');
-    }).join(',\n');
+        {
+          matcher: `/admin/${modelPath}/:id`,
+          method: 'POST',
+          middlewares: [
+            {
+              name: 'validateAndTransformBody',
+              args: [`PostAdminUpdate${modelName}`]
+            }
+          ]
+        }
+      ];
 
-    const imports = moduleConfig.models.map(model => {
-      const className = toPascalCase(model.name);
-      const routePath = model.parent?.routePrefix || 
-        `${moduleConfig.plural}/${model.plural}`;
-      
-      return `import {
-  PostAdminCreate${className},
-  PostAdminUpdate${className}
-} from "./admin/${routePath}/validators";`;
-    }).join('\n');
-
-    const schemas = moduleConfig.models.map(model => {
-      const className = toPascalCase(model.name);
-      const makeIdField = model.fields.find(f => f.relation?.model === 'Make');
-      
-      if (makeIdField) {
-        return `export const Get${className}Schema = createFindParams().extend({
-  make_id: z.string().optional()
-});`;
-      }
-      return `export const Get${className}Schema = createFindParams();`;
-    }).join('\n');
+      routes.push(...modelRoutes);
+    });
 
     return {
-      imports,
       routes,
-      schemas,
-      fullTemplate: `// This file is auto-generated and will be overwritten by subsequent generations
-// Manual changes should be made to the generator templates instead
-
-import { z } from "zod";
-import {
-  defineMiddlewares,
-  unlessPath,
-  validateAndTransformBody,
-  validateAndTransformQuery,
-} from "@medusajs/framework/http";
-import { createFindParams } from "@medusajs/medusa/api/utils/validators";
-
-${imports}
-
-${schemas}
-
-export default defineMiddlewares({
-  routes: [
-    ${routes}
-  ],
-});`
-    }
+      schemas: {
+        imports: Array.from(imports),
+        schemas: Array.from(schemas).map(schema => {
+          const [, name, definition] = schema.match(/export const (\w+) = (.+);/) || [];
+          return { name, definition };
+        })
+      }
+    };
   },
 
   validator: (modelName: string, fields: ModelField[]) => {
@@ -683,104 +695,196 @@ type FileChange = {
   content: string; // Add content property
 };
 
-function mergeMiddleware(existingContent: string, newContent: string): string {
-  // Extract sections using more precise regex
-  const extractSection = (content: string, type: 'imports' | 'schemas' | 'routes') => {
-    switch (type) {
-      case 'imports':
-        return (content.match(/import[^;]+;/g) || []).map(imp => imp.trim());
-      case 'schemas':
-        return (content.match(/export const [^;]+;/g) || []).map(schema => schema.trim());
-      case 'routes':
-        const routesMatch = content.match(/routes:\s*\[([\s\S]*?)\]\s*}\s*\);/);
-        if (!routesMatch) return [];
-        return (routesMatch[1].match(/\s*{[^{}]*(?:{[^{}]*})*[^{}]*},?/g) || [])
-          .map(route => route.trim())
-          .filter(route => route.includes('matcher:'));
+function mergeMiddleware(templates: string[]): string {
+  const importMap = new Map<string, string>();
+  const standardImports = [
+    "import { z } from 'zod';",
+    "import { defineMiddlewares, unlessPath, validateAndTransformBody, validateAndTransformQuery } from '@medusajs/framework/http';",
+    "import { createFindParams } from '@medusajs/medusa/api/utils/validators';"
+  ];
+
+  const routes: string[] = [];
+  const schemaMap = new Map<string, string>();
+
+  templates.forEach(content => {
+    // Extract imports
+    const importMatches = content.match(/import\s+{[^}]+}\s+from\s+['"].*?['"]/g) || [];
+    importMatches.forEach(imp => {
+      if (!imp.includes('@medusajs/') && !imp.includes('zod')) {
+        // Extract the path and imports separately
+        const [_, imports, path] = imp.match(/import\s+{([^}]+)}\s+from\s+['"]([^'"]+)['"]/) || [];
+        if (imports && path) {
+          // Split multiple imports and trim each one
+          const importList = imports.split(',').map(i => i.trim());
+          importList.forEach(importName => {
+            importMap.set(`${importName}:${path}`, `import { ${importName} } from "${path}";`);
+          });
+        }
+      }
+    });
+
+    // Extract routes from template strings
+    const routeMatches = content.match(/routes:\s*\[([\s\S]*?)\s*\]\s*}\s*\);?$/m);
+    if (routeMatches && routeMatches[1].trim()) {
+      const routeContent = routeMatches[1].trim();
+      let currentRoute = '';
+      let depth = 0;
+
+      for (let i = 0; i < routeContent.length; i++) {
+        const char = routeContent[i];
+        
+        if (char === '{') {
+          depth++;
+          currentRoute += char;
+        }
+        else if (char === '}') {
+          depth--;
+          currentRoute += char;
+          if (depth === 0) {
+            if (currentRoute.includes('matcher:')) {
+              routes.push(currentRoute.trim());
+            }
+            currentRoute = '';
+          }
+        }
+        else {
+          currentRoute += char;
+        }
+      }
     }
-  };
 
-  // Extract all sections
-  const existingImports = extractSection(existingContent, 'imports');
-  const existingSchemas = extractSection(existingContent, 'schemas');
-  const existingRoutes = extractSection(existingContent, 'routes');
-
-  const newImports = extractSection(newContent, 'imports');
-  const newSchemas = extractSection(newContent, 'schemas');
-  const newRoutes = extractSection(newContent, 'routes');
-
-  // Combine unique items
-  const allImports = [...new Set([...existingImports, ...newImports])].join('\n');
-  const allSchemas = [...new Set([...existingSchemas, ...newSchemas])].join('\n');
-
-  // Helper to get route key (matcher + method)
-  const getRouteKey = (route: string) => {
-    const matcher = route.match(/matcher:\s*"([^"]+)"/)?.[1] || '';
-    const method = route.match(/method:\s*"([^"]+)"/)?.[1] || '';
-    return `${method}:${matcher}`;
-  };
-
-  // Combine routes using a Map to handle duplicates
-  const routeMap = new Map();
-  [...existingRoutes, ...newRoutes].forEach(route => {
-    const key = getRouteKey(route);
-    if (key && !routeMap.has(key)) {
-      routeMap.set(key, route);
-    }
+    // Extract schemas with deduplication
+    const schemaMatches = content.match(/export const (\w+Schema)\s*=\s*[^;]+;/g) || [];
+    schemaMatches.forEach(schema => {
+      const schemaName = schema.match(/export const (\w+Schema)/)?.[1];
+      if (schemaName) {
+        schemaMap.set(schemaName, schema);
+      }
+    });
   });
 
-  // Sort routes by matcher path
-  const sortedRoutes = Array.from(routeMap.values())
-    .sort((a, b) => {
-      const matcherA = a.match(/matcher:\s*"([^"]+)"/)?.[1] || '';
-      const matcherB = b.match(/matcher:\s*"([^"]+)"/)?.[1] || '';
-      return matcherA.localeCompare(matcherB);
-    })
-    .join(',\n    ');
+  // Group routes by type
+  const getRoutes = routes.filter(r => r.includes('method: "GET"'));
+  const createRoutes = routes.filter(r => r.includes('method: "POST"') && !r.includes('/:id'));
+  const updateRoutes = routes.filter(r => r.includes('method: "POST"') && r.includes('/:id'));
+
+  const routeGroups = [
+    getRoutes.length > 0 ? `    // GET routes\n    ${getRoutes.join(',\n    ')}` : '',
+    createRoutes.length > 0 ? `    // CREATE routes\n    ${createRoutes.join(',\n    ')}` : '',
+    updateRoutes.length > 0 ? `    // UPDATE routes\n    ${updateRoutes.join(',\n    ')}` : ''
+  ].filter(Boolean);
 
   return `// This file is auto-generated and will be overwritten by subsequent generations
 // Manual changes should be made to the generator templates instead
 
-${allImports}
+${standardImports.join('\n')}
 
-${allSchemas}
+${Array.from(importMap.values()).join('\n')}
+
+${Array.from(schemaMap.values()).join('\n')}
 
 export default defineMiddlewares({
   routes: [
-    ${sortedRoutes}
+${routeGroups.join(',\n\n')}
   ],
 });`;
+}
+
+// Helper to stringify a route object
+function stringifyRoute(route: Route): string {
+  const middlewares = route.middlewares.map(m => stringifyMiddleware(m)).join(', ');
+  return `{
+      matcher: "${route.matcher}",
+      method: "${route.method}",
+      middlewares: [${middlewares}]
+    }`;
+}
+
+// Helper to stringify a middleware object
+function stringifyMiddleware(middleware: { name: string; args: any[] }): string {
+  const args = middleware.args.map(arg => {
+    if (typeof arg === 'string') {
+      // If it looks like a variable name, return as is
+      if (/^[a-zA-Z_][a-zA-Z0-9_]*$/.test(arg)) {
+        return arg;
+      }
+      // Otherwise quote it
+      return `"${arg}"`;
+    }
+    if (typeof arg === 'object' && arg !== null) {
+      return JSON.stringify(arg);
+    }
+    return String(arg);
+  });
+  
+  return `${middleware.name}(${args.join(', ')})`;
 }
 
 export async function generateModule(config: ModuleConfig, options: { addToExisting?: boolean; dryRun?: boolean } = {}) {
   const { addToExisting = false, dryRun = false } = options;
   
-  // Generate middleware content
-  const middlewareTemplate = TEMPLATES.middleware(config);
+  // Generate middleware config
+  const middlewareConfig = TEMPLATES.middleware(config);
   const middlewarePath = path.join(process.cwd(), 'src/api/middlewares.ts');
   
-  if (addToExisting && fs.existsSync(middlewarePath)) {
+  // Always merge middleware routes, regardless of addToExisting flag
+  if (fs.existsSync(middlewarePath)) {
     const existingContent = fs.readFileSync(middlewarePath, 'utf-8');
-    const mergedContent = mergeMiddleware(existingContent, middlewareTemplate.fullTemplate);
+    const existingConfig = parseExistingMiddleware(existingContent);
+    const mergedContent = generateMiddleware(existingConfig, middlewareConfig);
     
     if (!dryRun) {
-      fs.writeFileSync(middlewarePath, await format(mergedContent, { parser: 'typescript' }));
+      try {
+        const formattedContent = await format(mergedContent, { 
+          parser: 'typescript',
+          printWidth: 120,
+          tabWidth: 2,
+          singleQuote: true,
+          trailingComma: 'es5',
+        });
+        fs.writeFileSync(middlewarePath, formattedContent);
+      } catch (error) {
+        console.error('Error formatting middleware file:', error);
+        fs.writeFileSync(middlewarePath, mergedContent);
+      }
     }
   } else {
+    // For new file, use empty config as existing
+    const emptyConfig: MiddlewareConfig = {
+      routes: [],
+      schemas: {
+        imports: [],
+        schemas: []
+      }
+    };
+    
     if (!dryRun) {
-      fs.writeFileSync(middlewarePath, await format(middlewareTemplate.fullTemplate, { parser: 'typescript' }));
+      try {
+        const formattedContent = await format(generateMiddleware(emptyConfig, middlewareConfig), { 
+          parser: 'typescript',
+          printWidth: 120,
+          tabWidth: 2,
+          singleQuote: true,
+          trailingComma: 'es5',
+        });
+        fs.writeFileSync(middlewarePath, formattedContent);
+      } catch (error) {
+        console.error('Error formatting middleware file:', error);
+        fs.writeFileSync(middlewarePath, generateMiddleware(emptyConfig, middlewareConfig));
+      }
     }
   }
 
   const changes: FileChange[] = [];
 
+  // For all other files, respect the addToExisting flag
   for (const model of config.models) {
     const routePath = model.parent?.routePrefix || config.plural;
     const componentName = model.parent ? `${model.parent.model.toLowerCase()}-${model.singular}` : model.singular;
 
     // Model file
     const modelPath = `src/modules/${config.plural}/models/${model.name}.ts`;
-    if (!fs.existsSync(modelPath)) {
+    if (!fs.existsSync(modelPath) || !addToExisting) {
       changes.push({
         path: modelPath,
         type: 'create',
@@ -791,7 +895,7 @@ export async function generateModule(config: ModuleConfig, options: { addToExist
 
     // Service file
     const servicePath = `src/modules/${config.plural}/service.ts`;
-    if (fs.existsSync(servicePath) && options.addToExisting) {
+    if (fs.existsSync(servicePath) && addToExisting) {
       // Read existing service to check for model
       const existingContent = await fs.promises.readFile(servicePath, 'utf8');
       if (!existingContent.includes(toPascalCase(model.name))) {
@@ -817,67 +921,49 @@ export async function generateModule(config: ModuleConfig, options: { addToExist
       });
     }
 
-    // Validator file
-    const validatorPath = `src/api/admin/${routePath}/validators.ts`;
-    if (!fs.existsSync(validatorPath)) {
-      changes.push({
-        path: validatorPath,
-        type: 'create',
-        description: `Create validator for ${model.name}`,
-        content: TEMPLATES.validator(model.name, model.fields)
-      });
-    }
+    // Other files - only create if they don't exist or if not addToExisting
+    const filesToCreate = [
+      {
+        path: `src/api/admin/${routePath}/validators.ts`,
+        content: TEMPLATES.validator(model.name, model.fields),
+        description: `Create validator for ${model.name}`
+      },
+      {
+        path: `src/api/admin/${routePath}/route.ts`,
+        content: TEMPLATES.route(config, model),
+        description: `Create route file for ${model.name}`
+      },
+      {
+        path: `src/api/admin/${routePath}/[id]/route.ts`,
+        content: TEMPLATES.idRoute(config, model),
+        description: `Create ID route file for ${model.name}`
+      },
+      {
+        path: `src/admin/routes/${config.plural}/${model.plural}/page.tsx`,
+        content: TEMPLATES.pageComponent(config, model),
+        description: `Create admin page for ${model.name}`
+      },
+      {
+        path: `src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx`,
+        content: TEMPLATES.createComponent(config, model),
+        description: `Create admin create form for ${model.name}`
+      },
+      {
+        path: `src/admin/routes/${config.plural}/${model.plural}/edit/${componentName}-edit.tsx`,
+        content: TEMPLATES.editComponent(config, model),
+        description: `Create admin edit form for ${model.name}`
+      }
+    ];
 
-    // Route files
-    const routeFilePath = `src/api/admin/${routePath}/route.ts`;
-    if (!fs.existsSync(routeFilePath)) {
-      changes.push({
-        path: routeFilePath,
-        type: 'create',
-        description: `Create route file for ${model.name}`,
-        content: TEMPLATES.route(config, model)
-      });
-    }
-
-    const idRoutePath = `src/api/admin/${routePath}/[id]/route.ts`;
-    if (!fs.existsSync(idRoutePath)) {
-      changes.push({
-        path: idRoutePath,
-        type: 'create',
-        description: `Create ID route file for ${model.name}`,
-        content: TEMPLATES.idRoute(config, model)
-      });
-    }
-
-    // Admin UI Components
-    const adminPagePath = `src/admin/routes/${config.plural}/${model.plural}/page.tsx`;
-    if (!fs.existsSync(adminPagePath)) {
-      changes.push({
-        path: adminPagePath,
-        type: 'create',
-        description: `Create admin page for ${model.name}`,
-        content: TEMPLATES.pageComponent(config, model)
-      });
-    }
-
-    const adminCreatePath = `src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx`;
-    if (!fs.existsSync(adminCreatePath)) {
-      changes.push({
-        path: adminCreatePath,
-        type: 'create',
-        description: `Create admin create form for ${model.name}`,
-        content: TEMPLATES.createComponent(config, model)
-      });
-    }
-
-    const adminEditPath = `src/admin/routes/${config.plural}/${model.plural}/edit/${componentName}-edit.tsx`;
-    if (!fs.existsSync(adminEditPath)) {
-      changes.push({
-        path: adminEditPath,
-        type: 'create',
-        description: `Create admin edit form for ${model.name}`,
-        content: TEMPLATES.editComponent(config, model)
-      });
+    for (const file of filesToCreate) {
+      if (!fs.existsSync(file.path) || !addToExisting) {
+        changes.push({
+          path: file.path,
+          type: 'create',
+          description: file.description,
+          content: file.content
+        });
+      }
     }
   }
 
@@ -924,93 +1010,3 @@ export async function generateModule(config: ModuleConfig, options: { addToExist
     }
   }
 }
-
-export function dryRunModule(config: ModuleConfig, options: { addToExisting?: boolean } = {}) {
-  // First show the content that would be generated
-  console.log('\nGenerated File Contents:');
-  console.log('======================\n');
-
-  // Generate content for each model
-  for (const model of config.models) {
-    const routePath = model.parent?.routePrefix || config.plural;
-
-    // Show model file content
-    console.log(`src/modules/${config.plural}/models/${model.name}.ts:`);
-    console.log('----------------------------------------');
-    console.log(TEMPLATES.model(model.name, model.fields));
-    console.log('\n');
-
-    // Show validator content
-    console.log(`src/api/admin/${routePath}/validators.ts:`);
-    console.log('----------------------------------------');
-    console.log(TEMPLATES.validator(model.name, model.fields));
-    console.log('\n');
-
-    // Show page component
-    console.log(`src/admin/routes/${config.plural}/${model.plural}/page.tsx:`);
-    console.log('--------------------------------------------');
-    console.log(TEMPLATES.pageComponent(config, model));
-    console.log('\n');
-
-    // Show create component
-    const componentName = model.parent ? `${model.parent.model.toLowerCase()}-${model.singular}` : model.singular;
-    console.log(`src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx:`);
-    console.log('-------------------------------------------------------------------');
-    console.log(TEMPLATES.createComponent(config, model));
-    console.log('\n');
-
-    // Show edit component
-    console.log(`src/admin/routes/${config.plural}/${model.plural}/edit/${componentName}-edit.tsx:`);
-    console.log('----------------------------------------------------------------');
-    console.log(TEMPLATES.editComponent(config, model));
-    console.log('\n');
-  }
-
-  // Show service update
-  console.log(`src/modules/${config.plural}/service.ts:`);
-  console.log('---------------------------');
-  if (options.addToExisting) {
-    // Include existing models in the service
-    const existingModels = ['Vehicle', 'VehicleMake', 'VehicleModel', 'VehicleBody'];
-    console.log(TEMPLATES.service({ 
-      moduleName: toPascalCase(config.name), 
-      models: [...existingModels, ...config.models.map(m => m.name)]
-    }));
-  } else {
-    console.log(TEMPLATES.service({ 
-      moduleName: toPascalCase(config.name), 
-      models: config.models.map(m => m.name)
-    }));
-  }
-  console.log('\n');
-
-  // Execute the generator
-  console.log('Generating files:');
-  console.log('================\n');
-
-  generateModule(config, { 
-    addToExisting: options.addToExisting,
-    dryRun: true 
-  });
-}
-
-// Example usage with dry run:
-// generateModule({
-//   name: "inventory",
-//   models: [
-//     {
-//       name: "Category",
-//       fields: [
-//         { name: "name", type: "string", required: true },
-//         { name: "products", type: "string", relation: {
-//           type: "hasMany",
-//           model: "Product",
-//           inverse: "category"
-//         }}
-//       ]
-//     }
-//   ]
-// }, { 
-//   addToExisting: true,
-//   dryRun: true 
-// }); 
