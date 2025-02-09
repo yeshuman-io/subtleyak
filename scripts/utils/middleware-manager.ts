@@ -19,6 +19,7 @@ export class MiddlewareManager {
   private ast: t.File;
   private importDeclarations: Map<string, Set<string>> = new Map();
   private routes: Map<string, t.ObjectExpression> = new Map();
+  private schemaDefinitions: Map<string, t.VariableDeclaration | t.ExportNamedDeclaration> = new Map();
 
   constructor(existingContent?: string) {
     if (existingContent) {
@@ -42,6 +43,16 @@ export class MiddlewareManager {
           )
         );
         this.importDeclarations.set(source, specifiers);
+      },
+
+      VariableDeclaration: (path) => {
+        // Extract schema definitions
+        if (path.node.declarations.length === 1) {
+          const decl = path.node.declarations[0];
+          if (t.isIdentifier(decl.id) && decl.id.name.endsWith('Schema')) {
+            this.schemaDefinitions.set(decl.id.name, path.node);
+          }
+        }
       },
 
       CallExpression: (path) => {
@@ -130,6 +141,9 @@ export class MiddlewareManager {
   }
 
   private valueToAst(value: any): t.Expression {
+    if (value && typeof value === 'object' && 'type' in value && value.type === 'identifier') {
+      return t.identifier(value.value);
+    }
     if (typeof value === 'string') {
       if (value.includes('.')) {
         // Handle dotted paths as member expressions
@@ -218,6 +232,9 @@ export class MiddlewareManager {
         )
       );
 
+    // Generate schema definitions
+    const schemas = Array.from(this.schemaDefinitions.values());
+
     // Generate middleware definition
     const middlewaresDef = t.exportDefaultDeclaration(
       t.callExpression(
@@ -233,7 +250,7 @@ export class MiddlewareManager {
       )
     );
 
-    const program = t.program([...imports, middlewaresDef]);
+    const program = t.program([...imports, ...schemas, middlewaresDef]);
     
     // Add file comment
     const commentText = [
@@ -263,5 +280,19 @@ export class MiddlewareManager {
       singleQuote: true,
       trailingComma: 'es5',
     });
+  }
+
+  // Add method to add schema definitions
+  addSchemaDefinition(name: string, expression: t.Expression, shouldExport: boolean = false) {
+    const declaration = t.variableDeclaration('const', [
+      t.variableDeclarator(t.identifier(name), expression)
+    ]);
+    
+    if (shouldExport) {
+      const exportDecl = t.exportNamedDeclaration(declaration);
+      this.schemaDefinitions.set(name, exportDecl);
+    } else {
+      this.schemaDefinitions.set(name, declaration);
+    }
   }
 } 

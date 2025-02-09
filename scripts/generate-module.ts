@@ -2,6 +2,7 @@ import { MiddlewareManager } from './utils/middleware-manager';
 import * as fs from 'fs/promises';
 import * as path from 'path';
 import { existsSync } from 'fs';
+import * as t from '@babel/types';
 
 // Core types
 type ModelField = {
@@ -115,13 +116,38 @@ const TEMPLATES: TemplateMap = {
   },
 
   validator: (modelName: string, fields: ModelField[]): string => {
+    const className = toPascalCase(modelName);
     return `import { z } from "zod";
 
-    export const PostAdminCreate${toPascalCase(modelName)} = z.object({
-      ${fields.map(f => `${f.name}: z.${f.type}()`).join(",\n      ")}
+    // GET schema for querying
+    export const Get${className}Schema = z.object({
+      id: z.string().optional(),
+      ${fields
+        .filter(f => !f.relation)
+        .map(f => `${f.name}: z.${f.type}().optional()`)
+        .join(",\n      ")},
+      limit: z.number().optional(),
+      offset: z.number().optional()
     }).strict();
 
-    export type AdminCreate${toPascalCase(modelName)}Req = z.infer<typeof PostAdminCreate${toPascalCase(modelName)}>;`;
+    // Create schema - all required fields must be present
+    export const PostAdminCreate${className} = z.object({
+      ${fields
+        .filter(f => !f.relation)
+        .map(f => `${f.name}: z.${f.type}()${f.required ? "" : ".optional()"}`)
+        .join(",\n      ")}
+    }).strict();
+
+    // Update schema - all fields are optional
+    export const PostAdminUpdate${className} = z.object({
+      ${fields
+        .filter(f => !f.relation)
+        .map(f => `${f.name}: z.${f.type}().optional()`)
+        .join(",\n      ")}
+    }).strict();
+
+    export type AdminCreate${className}Req = z.infer<typeof PostAdminCreate${className}>;
+    export type AdminUpdate${className}Req = z.infer<typeof PostAdminUpdate${className}>;`;
   },
 
   route: (moduleConfig: ModuleConfig, modelConfig: ModelConfig): string => {
@@ -485,12 +511,48 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
     names.forEach(name => manager.addImport(source, name));
   });
 
+  // Add base schema definitions
+  manager.addSchemaDefinition(
+    'GetVehiclesSchema',
+    t.callExpression(t.identifier('createFindParams'), []),
+    true // export
+  );
+
+  manager.addSchemaDefinition(
+    'GetVehicleModelsSchema',
+    t.callExpression(
+      t.memberExpression(
+        t.callExpression(t.identifier('createFindParams'), []),
+        t.identifier('extend')
+      ),
+      [
+        t.objectExpression([
+          t.objectProperty(
+            t.identifier('make_id'),
+            t.callExpression(
+              t.memberExpression(
+                t.callExpression(
+                  t.memberExpression(t.identifier('z'), t.identifier('string')),
+                  []
+                ),
+                t.identifier('optional')
+              ),
+              []
+            )
+          )
+        ])
+      ]
+    ),
+    true // export
+  );
+
   // Add routes for each model
   for (const model of moduleConfig.models) {
     const routePath = getRoutePath(moduleConfig, model);
     const className = toPascalCase(model.name);
 
     // Add validator imports
+    manager.addImport(`./admin/${routePath}/validators`, `Get${className}Schema`);
     manager.addImport(`./admin/${routePath}/validators`, `PostAdminCreate${className}`);
     manager.addImport(`./admin/${routePath}/validators`, `PostAdminUpdate${className}`);
 
@@ -498,32 +560,41 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
     manager.addRoute({
       matcher: `/admin/${routePath}`,
       method: 'GET',
-      middlewares: [{
-        name: 'validateAndTransformQuery',
-        args: ['GetVehiclesSchema', {
-          defaults: ['id', ...model.fields.map(f => f.name)],
-          relations: model.fields.filter(f => f.relation).map(f => f.name),
-          isList: true
-        }]
-      }]
+      middlewares: [
+        {
+          name: 'validateAndTransformQuery',
+          args: [
+            { type: 'identifier', value: `Get${className}Schema` },
+            {
+              defaults: ['id', ...model.fields.map(f => f.name)],
+              relations: model.fields.filter(f => f.relation).map(f => f.name),
+              isList: true
+            }
+          ]
+        }
+      ]
     });
 
     manager.addRoute({
       matcher: `/admin/${routePath}`,
       method: 'POST',
-      middlewares: [{
-        name: 'validateAndTransformBody',
-        args: [`PostAdminCreate${className}`]
-      }]
+      middlewares: [
+        {
+          name: 'validateAndTransformBody',
+          args: [{ type: 'identifier', value: `PostAdminCreate${className}` }]
+        }
+      ]
     });
 
     manager.addRoute({
       matcher: `/admin/${routePath}/:id`,
       method: 'POST',
-      middlewares: [{
-        name: 'validateAndTransformBody',
-        args: [`PostAdminUpdate${className}`]
-      }]
+      middlewares: [
+        {
+          name: 'validateAndTransformBody',
+          args: [{ type: 'identifier', value: `PostAdminUpdate${className}` }]
+        }
+      ]
     });
   }
 
