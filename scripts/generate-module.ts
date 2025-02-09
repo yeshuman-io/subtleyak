@@ -85,6 +85,7 @@ type TemplateMap = {
   createComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => string;
   editComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => string;
   types: (moduleConfig: ModuleConfig) => string;
+  moduleIndex: (moduleConfig: ModuleConfig) => string;
 };
 
 // Helper function to get component name based on model config
@@ -108,7 +109,7 @@ const TEMPLATES: TemplateMap = {
       .join("\n");
 
     return `${imports}
-    import { model } from "@medusajs/medusa";
+    import { model } from "@medusajs/framework/utils";
 
     const ${className} = model.define("${toSnakeCase(modelName)}", {
       id: model.id().primaryKey(),
@@ -202,6 +203,15 @@ const TEMPLATES: TemplateMap = {
     import { create${className}Workflow } from "${relativePath}";
 
     type PostAdminCreate${className}Type = z.infer<typeof PostAdminCreate${className}>;
+
+    type QueryResponse = {
+      data: any[];
+      metadata: {
+        count: number;
+        take: number;
+        skip: number;
+      };
+    };
 
     export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       const query = req.scope.resolve("query")
@@ -701,6 +711,18 @@ const TEMPLATES: TemplateMap = {
 ${types.join('\n\n')}
 
 ${listTypes.join('\n\n')}`;
+  },
+
+  moduleIndex: (moduleConfig: ModuleConfig): string => {
+    const moduleName = toPascalCase(moduleConfig.name);
+    return `import ${moduleName}Service from "./service";
+    import { Module } from "@medusajs/framework/utils";
+
+    export const ${moduleName.toUpperCase()}_MODULE = "${moduleConfig.name}";
+
+    export default Module(${moduleName.toUpperCase()}_MODULE, {
+      service: ${moduleName}Service,
+    });`;
   }
 };
 
@@ -904,6 +926,14 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
           moduleName: toPascalCase(moduleConfig.name), 
           models: moduleConfig.models
         })
+      });
+    }
+
+    // Add module index file
+    if (!addToExisting || !existsSync(`src/modules/${moduleConfig.plural}/index.ts`)) {
+      filesToCreate.push({
+        path: `src/modules/${moduleConfig.plural}/index.ts`,
+        content: TEMPLATES.moduleIndex(moduleConfig)
       });
     }
 

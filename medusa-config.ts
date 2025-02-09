@@ -16,6 +16,9 @@ module.exports = defineConfig({
   modules: [
     {
       resolve: "./src/modules/vehicles"
+    },
+    {
+      resolve: "./src/modules/wipers"
     }
   ]
 })
