@@ -6,6 +6,7 @@ import { parse } from '@babel/parser';
 import traverse from '@babel/traverse';
 import generate from '@babel/generator';
 import { CallExpression, ObjectProperty, Identifier } from '@babel/types';
+import { MiddlewareManager } from './utils/middleware-manager';
 
 // Helper function to convert kebab-case to PascalCase
 export const toPascalCase = (str: string) => {
@@ -820,70 +821,56 @@ function stringifyMiddleware(middleware: { name: string; args: any[] }): string 
   return `${middleware.name}(${args.join(', ')})`;
 }
 
-export async function generateModule(config: ModuleConfig, options: { addToExisting?: boolean; dryRun?: boolean } = {}) {
+export async function generateModule(moduleConfig: ModuleConfig, options: { addToExisting?: boolean; dryRun?: boolean } = {}) {
   const { addToExisting = false, dryRun = false } = options;
   
-  // Generate middleware config
-  const middlewareConfig = TEMPLATES.middleware(config);
+  // Create middleware manager and read existing content
   const middlewarePath = path.join(process.cwd(), 'src/api/middlewares.ts');
+  const existingContent = fs.existsSync(middlewarePath) 
+    ? await fs.promises.readFile(middlewarePath, 'utf-8')
+    : '';
   
-  // Always merge middleware routes, regardless of addToExisting flag
-  if (fs.existsSync(middlewarePath)) {
-    const existingContent = fs.readFileSync(middlewarePath, 'utf-8');
-    const existingConfig = parseExistingMiddleware(existingContent);
-    const mergedContent = generateMiddleware(existingConfig, middlewareConfig);
-    
-    if (!dryRun) {
-      try {
-        const formattedContent = await format(mergedContent, { 
-          parser: 'typescript',
-          printWidth: 120,
-          tabWidth: 2,
-          singleQuote: true,
-          trailingComma: 'es5',
-        });
-        fs.writeFileSync(middlewarePath, formattedContent);
-      } catch (error) {
-        console.error('Error formatting middleware file:', error);
-        fs.writeFileSync(middlewarePath, mergedContent);
-      }
+  const manager = new MiddlewareManager(existingContent);
+  
+  // Generate new middleware config
+  const middlewareConfig = TEMPLATES.middleware(moduleConfig);
+  
+  // Add imports
+  middlewareConfig.schemas.imports.forEach(imp => {
+    const match = imp.match(/import\s+{([^}]+)}\s+from\s+['"]([^'"]+)['"]/);
+    if (match) {
+      const [_, imports, path] = match;
+      imports.split(',').forEach(imp => {
+        manager.addImport(path, imp.trim());
+      });
     }
-  } else {
-    // For new file, use empty config as existing
-    const emptyConfig: MiddlewareConfig = {
-      routes: [],
-      schemas: {
-        imports: [],
-        schemas: []
-      }
-    };
-    
-    if (!dryRun) {
-      try {
-        const formattedContent = await format(generateMiddleware(emptyConfig, middlewareConfig), { 
-          parser: 'typescript',
-          printWidth: 120,
-          tabWidth: 2,
-          singleQuote: true,
-          trailingComma: 'es5',
-        });
-        fs.writeFileSync(middlewarePath, formattedContent);
-      } catch (error) {
-        console.error('Error formatting middleware file:', error);
-        fs.writeFileSync(middlewarePath, generateMiddleware(emptyConfig, middlewareConfig));
-      }
-    }
+  });
+  
+  // Add schemas
+  middlewareConfig.schemas.schemas.forEach(schema => {
+    manager.addSchema(schema.name, schema.definition);
+  });
+  
+  // Add routes
+  middlewareConfig.routes.forEach(route => {
+    manager.addRoute(route);
+  });
+  
+  // Generate and write the final file
+  const content = await manager.generateFile();
+  if (!dryRun) {
+    await fs.promises.writeFile(middlewarePath, content);
   }
 
   const changes: FileChange[] = [];
-
+  
   // For all other files, respect the addToExisting flag
-  for (const model of config.models) {
-    const routePath = model.parent?.routePrefix || config.plural;
+  for (const model of moduleConfig.models) {
+    const routePath = model.parent?.routePrefix || moduleConfig.plural;
     const componentName = model.parent ? `${model.parent.model.toLowerCase()}-${model.singular}` : model.singular;
 
     // Model file
-    const modelPath = `src/modules/${config.plural}/models/${model.name}.ts`;
+    const modelPath = `src/modules/${moduleConfig.plural}/models/${model.name}.ts`;
     if (!fs.existsSync(modelPath) || !addToExisting) {
       changes.push({
         path: modelPath,
@@ -894,7 +881,7 @@ export async function generateModule(config: ModuleConfig, options: { addToExist
     }
 
     // Service file
-    const servicePath = `src/modules/${config.plural}/service.ts`;
+    const servicePath = `src/modules/${moduleConfig.plural}/service.ts`;
     if (fs.existsSync(servicePath) && addToExisting) {
       // Read existing service to check for model
       const existingContent = await fs.promises.readFile(servicePath, 'utf8');
@@ -904,8 +891,8 @@ export async function generateModule(config: ModuleConfig, options: { addToExist
           type: 'modify',
           description: `Update service file to include ${model.name}`,
           content: TEMPLATES.service({ 
-            moduleName: toPascalCase(config.name), 
-            models: [...config.models.map(m => m.name)]
+            moduleName: toPascalCase(moduleConfig.name), 
+            models: [...moduleConfig.models.map(m => m.name)]
           })
         });
       }
@@ -913,10 +900,10 @@ export async function generateModule(config: ModuleConfig, options: { addToExist
       changes.push({
         path: servicePath,
         type: 'create',
-        description: `Create service file for ${config.name} module`,
+        description: `Create service file for ${moduleConfig.name} module`,
         content: TEMPLATES.service({ 
-          moduleName: toPascalCase(config.name), 
-          models: config.models.map(m => m.name)
+          moduleName: toPascalCase(moduleConfig.name), 
+          models: moduleConfig.models.map(m => m.name)
         })
       });
     }
@@ -930,27 +917,27 @@ export async function generateModule(config: ModuleConfig, options: { addToExist
       },
       {
         path: `src/api/admin/${routePath}/route.ts`,
-        content: TEMPLATES.route(config, model),
+        content: TEMPLATES.route(moduleConfig, model),
         description: `Create route file for ${model.name}`
       },
       {
         path: `src/api/admin/${routePath}/[id]/route.ts`,
-        content: TEMPLATES.idRoute(config, model),
+        content: TEMPLATES.idRoute(moduleConfig, model),
         description: `Create ID route file for ${model.name}`
       },
       {
-        path: `src/admin/routes/${config.plural}/${model.plural}/page.tsx`,
-        content: TEMPLATES.pageComponent(config, model),
+        path: `src/admin/routes/${moduleConfig.plural}/${model.plural}/page.tsx`,
+        content: TEMPLATES.pageComponent(moduleConfig, model),
         description: `Create admin page for ${model.name}`
       },
       {
-        path: `src/admin/routes/${config.plural}/${model.plural}/create/${componentName}-create.tsx`,
-        content: TEMPLATES.createComponent(config, model),
+        path: `src/admin/routes/${moduleConfig.plural}/${model.plural}/create/${componentName}-create.tsx`,
+        content: TEMPLATES.createComponent(moduleConfig, model),
         description: `Create admin create form for ${model.name}`
       },
       {
-        path: `src/admin/routes/${config.plural}/${model.plural}/edit/${componentName}-edit.tsx`,
-        content: TEMPLATES.editComponent(config, model),
+        path: `src/admin/routes/${moduleConfig.plural}/${model.plural}/edit/${componentName}-edit.tsx`,
+        content: TEMPLATES.editComponent(moduleConfig, model),
         description: `Create admin edit form for ${model.name}`
       }
     ];
@@ -967,7 +954,7 @@ export async function generateModule(config: ModuleConfig, options: { addToExist
     }
   }
 
-  if (options.dryRun) {
+  if (dryRun) {
     console.log('Changes to be made:');
     for (const change of changes) {
       console.log(`\n${change.type.toUpperCase()}: ${change.path}`);
