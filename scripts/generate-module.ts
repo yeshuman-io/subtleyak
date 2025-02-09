@@ -62,6 +62,17 @@ function getRoutePath(moduleConfig: ModuleConfig, modelConfig: ModelConfig): str
   return modelConfig.parent?.routePrefix || `${moduleConfig.plural}/${modelConfig.plural}`;
 }
 
+// Helper function to get admin route path based on model config
+function getAdminRoutePath(moduleConfig: ModuleConfig, modelConfig: ModelConfig): string {
+  if (modelConfig.isParent) {
+    return moduleConfig.plural;
+  }
+  // For child models, use the parent's route path plus the child's route
+  const parentPath = modelConfig.parent?.routePrefix?.split('/')[0] || moduleConfig.plural;
+  const childPath = modelConfig.parent?.routePrefix?.split('/')[1] || modelConfig.plural;
+  return `${parentPath}/${childPath}`;
+}
+
 // Template types
 type TemplateMap = {
   model: (modelName: string, fields: ModelField[]) => string;
@@ -73,6 +84,7 @@ type TemplateMap = {
   pageComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => string;
   createComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => string;
   editComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig) => string;
+  types: (moduleConfig: ModuleConfig) => string;
 };
 
 // Helper function to get component name based on model config
@@ -312,11 +324,11 @@ const TEMPLATES: TemplateMap = {
     
     return `import { defineRouteConfig } from "@medusajs/admin-sdk";
     import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
-    import { ${className} } from "../../../types";
-    import { DataTablePage } from "../../../components/data-table-page";
+    import { ${className} } from "@/admin/types";
+    import { DataTablePage } from "@/admin/components/data-table-page";
     import { ${className}Create } from "./create/${componentName}-create";
     import { useState } from "react";
-    import { ActionMenu } from "../../../components/action-menu";
+    import { ActionMenu } from "@/admin/components/action-menu";
     import { Pencil } from "@medusajs/icons";
     import { ${className}Edit } from "./edit/${componentName}-edit";
 
@@ -414,13 +426,16 @@ const TEMPLATES: TemplateMap = {
     const className = toPascalCase(modelConfig.name);
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const componentName = getComponentName(modelConfig);
+    const importDepth = modelConfig.isParent ? 4 : 5; // One more level for child components
+    const apiPath = '../'.repeat(importDepth);
+    const componentPath = '../'.repeat(importDepth - 1);
     
     return `import { Form } from "@medusajs/forms";
     import { Button, FocusModal } from "@medusajs/ui";
     import { useForm } from "react-hook-form";
     import { zodResolver } from "@hookform/resolvers/zod";
-    import { PostAdminCreate${className} } from "../../../../api/admin/${routePath}/validators";
-    import { InputField, SelectField } from "../../../components/form";
+    import { PostAdminCreate${className} } from "@/api/admin/${routePath}/validators";
+    import { InputField, SelectField } from "@/admin/components/form";
 
     type Props = {
       onClose: () => void;
@@ -492,13 +507,16 @@ const TEMPLATES: TemplateMap = {
     const className = toPascalCase(modelConfig.name);
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const componentName = getComponentName(modelConfig);
+    const importDepth = modelConfig.isParent ? 4 : 5; // One more level for child components
+    const apiPath = '../'.repeat(importDepth);
+    const componentPath = '../'.repeat(importDepth - 1);
     
     return `import { Form } from "@medusajs/forms";
     import { Button, Drawer } from "@medusajs/ui";
     import { useForm } from "react-hook-form";
     import { zodResolver } from "@hookform/resolvers/zod";
-    import { PostAdminUpdate${className} } from "../../../../api/admin/${routePath}/validators";
-    import { InputField, SelectField } from "../../../components/form";
+    import { PostAdminUpdate${className} } from "@/api/admin/${routePath}/validators";
+    import { InputField, SelectField } from "@/admin/components/form";
 
     type Props = {
       item: any;
@@ -566,6 +584,55 @@ const TEMPLATES: TemplateMap = {
         </Drawer.Content>
       );
     };`;
+  },
+
+  types: (moduleConfig: ModuleConfig): string => {
+    const imports: string[] = [];
+    const types: string[] = [];
+    const listTypes: string[] = [];
+
+    moduleConfig.models.forEach(model => {
+      const className = toPascalCase(model.name);
+      const snakeName = toSnakeCase(model.name);
+
+      // Add type definition
+      types.push(`export type ${className} = {
+        id: string
+        ${model.fields.map(f => {
+          if (f.relation) {
+            switch (f.relation.type) {
+              case 'belongsTo':
+                return `${f.name}_id${f.required ? '' : '?'}: string
+                ${f.name}?: ${f.relation.model}`;
+              case 'hasMany':
+                return `${f.name}?: ${f.relation.model}[]`;
+              case 'manyToMany':
+                return `${f.name}?: ${f.relation.model}[]`;
+              default:
+                return `${f.name}${f.required ? '' : '?'}: string`;
+            }
+          }
+          return `${f.name}${f.required ? '' : '?'}: ${f.type}`;
+        }).join('\n        ')}
+        created_at: string
+        updated_at: string
+        deleted_at: string | null
+      }`);
+
+      // Add list response type
+      listTypes.push(`export type List${className}Res = {
+        ${snakeName}s: ${className}[]
+        count: number
+        limit: number
+        offset: number
+      }`);
+    });
+
+    return `${imports.join('\n')}
+
+${types.join('\n\n')}
+
+${listTypes.join('\n\n')}`;
   }
 };
 
@@ -687,8 +754,31 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
     await fs.writeFile(middlewarePath, middlewareContent);
   }
 
-  // Generate other files
+  // Generate files
   const changes: FileChange[] = [];
+
+  // Add types file
+  const typesPath = 'src/admin/types/index.ts';
+  const typesContent = TEMPLATES.types(moduleConfig);
+  
+  if (!dryRun) {
+    // If file exists, append new types
+    if (existsSync(typesPath) && addToExisting) {
+      const existingTypes = await fs.readFile(typesPath, 'utf-8');
+      await fs.writeFile(typesPath, `${existingTypes}\n\n${typesContent}`);
+    } else {
+      await fs.mkdir(path.dirname(typesPath), { recursive: true });
+      await fs.writeFile(typesPath, typesContent);
+    }
+  }
+  
+  changes.push({
+    path: typesPath,
+    type: addToExisting ? 'modify' : 'create',
+    content: typesContent
+  });
+
+  // Generate other files
   for (const model of moduleConfig.models) {
     const routePath = getRoutePath(moduleConfig, model);
     const className = toPascalCase(model.name);
@@ -716,15 +806,15 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
       },
       // Admin UI
       {
-        path: `src/admin/routes/${routePath}/page.tsx`,
+        path: `src/admin/routes/${getAdminRoutePath(moduleConfig, model)}/page.tsx`,
         content: TEMPLATES.pageComponent(moduleConfig, model)
       },
       {
-        path: `src/admin/routes/${routePath}/create/${componentName}-create.tsx`,
+        path: `src/admin/routes/${getAdminRoutePath(moduleConfig, model)}/create/${componentName}-create.tsx`,
         content: TEMPLATES.createComponent(moduleConfig, model)
       },
       {
-        path: `src/admin/routes/${routePath}/edit/${componentName}-edit.tsx`,
+        path: `src/admin/routes/${getAdminRoutePath(moduleConfig, model)}/edit/${componentName}-edit.tsx`,
         content: TEMPLATES.editComponent(moduleConfig, model)
       },
       // Workflows
