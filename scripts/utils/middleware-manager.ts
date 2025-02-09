@@ -119,18 +119,10 @@ export class MiddlewareManager {
         t.identifier('middlewares'),
         t.arrayExpression(
           route.middlewares.map(m => 
-            t.objectExpression([
-              t.objectProperty(
-                t.identifier('name'),
-                t.stringLiteral(m.name)
-              ),
-              t.objectProperty(
-                t.identifier('args'),
-                Array.isArray(m.args) 
-                  ? t.arrayExpression(m.args.map(arg => this.valueToAst(arg)))
-                  : this.valueToAst(m.args)
-              )
-            ])
+            t.callExpression(
+              t.identifier(m.name),
+              m.args.map(arg => this.valueToAst(arg))
+            )
           )
         )
       )

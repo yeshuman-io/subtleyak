@@ -3,6 +3,7 @@ import * as fs from 'fs/promises';
 import * as path from 'path';
 import { existsSync } from 'fs';
 import * as t from '@babel/types';
+import { validateAndTransformQuery, validateAndTransformBody } from '@medusajs/framework/http';
 
 // Core types
 type ModelField = {
@@ -95,10 +96,36 @@ const TEMPLATES: TemplateMap = {
       .join("\n");
 
     return `${imports}
+    import { model } from "@medusajs/medusa";
 
     const ${className} = model.define("${toSnakeCase(modelName)}", {
       id: model.id().primaryKey(),
-      ${fields.map(f => `${f.name}: model.text()`).join(",\n      ")}
+      ${fields.map(f => {
+        if (f.relation) {
+          switch (f.relation.type) {
+            case 'belongsTo':
+              return `${f.name}_id: model.string().references(() => ${f.relation.model}.id)${f.required ? '' : '.optional()'}`;
+            case 'hasMany':
+              return `${f.name}: model.array(() => ${f.relation.model})${f.required ? '' : '.optional()'}`;
+            case 'manyToMany':
+              return `${f.name}: model.array(() => ${f.relation.model}).through("${toSnakeCase(modelName)}_${toSnakeCase(f.name)}")${f.required ? '' : '.optional()'}`;
+            default:
+              return `${f.name}: model.text()${f.required ? '' : '.optional()'}`;
+          }
+        }
+        switch (f.type) {
+          case 'string':
+            return `${f.name}: model.text()${f.required ? '' : '.optional()'}`;
+          case 'number':
+            return `${f.name}: model.number()${f.required ? '' : '.optional()'}`;
+          case 'boolean':
+            return `${f.name}: model.boolean()${f.required ? '' : '.optional()'}`;
+          case 'date':
+            return `${f.name}: model.date()${f.required ? '' : '.optional()'}`;
+          default:
+            return `${f.name}: model.text()${f.required ? '' : '.optional()'}`;
+        }
+      }).join(",\n      ")}
     });
 
     export default ${className};`;
@@ -157,6 +184,9 @@ const TEMPLATES: TemplateMap = {
     return `import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
     import { z } from "zod";
     import { PostAdminCreate${className} } from "./validators";
+    import { create${className}Workflow } from "@/workflows/create-${modelConfig.name}";
+
+    type PostAdminCreate${className}Type = z.infer<typeof PostAdminCreate${className}>;
 
     export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
       const query = req.scope.resolve("query")
@@ -176,6 +206,17 @@ const TEMPLATES: TemplateMap = {
         limit: metadata.take,
         offset: metadata.skip,
       })
+    };
+
+    export const POST = async (
+      req: MedusaRequest<PostAdminCreate${className}Type>,
+      res: MedusaResponse
+    ) => {
+      const { result } = await create${className}Workflow.run({
+        input: req.validatedBody,
+      })
+
+      res.json({ ${toSnakeCase(modelConfig.name)}: result })
     };`;
   },
 
@@ -186,9 +227,15 @@ const TEMPLATES: TemplateMap = {
     return `import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
     import { z } from "zod";
     import { PostAdminUpdate${className} } from "../validators";
+    import { update${className}Workflow } from "@/workflows/update-${modelConfig.name}";
 
-    export const POST = async (req: MedusaRequest, res: MedusaResponse) => {
-      const { result } = await update${className}Workflow(req.scope).run({
+    type PostAdminUpdate${className}Type = z.infer<typeof PostAdminUpdate${className}>;
+
+    export const POST = async (
+      req: MedusaRequest<PostAdminUpdate${className}Type>,
+      res: MedusaResponse
+    ) => {
+      const { result } = await update${className}Workflow.run({
         input: {
           id: req.params.id,
           ...req.validatedBody,
@@ -200,25 +247,61 @@ const TEMPLATES: TemplateMap = {
   },
 
   workflow: (modelName: string, fields: ModelField[]): string => {
-    return `import { createStep, StepResponse, createWorkflow } from "@medusajs/framework/workflows-sdk";
+    const className = toPascalCase(modelName);
+    const variableName = toSnakeCase(modelName).replace(/-/g, '_');
+    return `import { createStep, StepResponse, createWorkflow, WorkflowResponse } from "@medusajs/framework/workflows-sdk";
 
-    export const create${toPascalCase(modelName)}Step = createStep(
+    export type Create${className}StepInput = {
+      ${fields.map(f => `${f.name}${f.required ? '' : '?'}: ${f.type}`).join(',\n      ')}
+    };
+
+    export const create${className}Step = createStep(
       "create-${modelName}-step",
-      async (input, { container }) => {
-        const moduleService = container.resolve("${modelName}")
+      async (input: Create${className}StepInput, { container }) => {
+        const service = container.resolve("${modelName}")
+        const result = await service.create(input)
+        return new StepResponse(result, result.id)
+      },
+      async (id: string, { container }) => {
+        const service = container.resolve("${modelName}")
+        await service.delete(id)
+      }
+    );
 
-        const result = await moduleService.create({
-          ...input,
-        })
+    export type Create${className}WorkflowInput = Create${className}StepInput;
 
+    export const create${className}Workflow = createWorkflow(
+      "create-${modelName}-workflow",
+      (input: Create${className}WorkflowInput) => {
+        const ${variableName} = create${className}Step(input)
+        return new WorkflowResponse(${variableName})
+      }
+    );
+
+    export type Update${className}StepInput = {
+      id: string;
+      ${fields.map(f => `${f.name}?: ${f.type}`).join(',\n      ')}
+    };
+
+    export const update${className}Step = createStep(
+      "update-${modelName}-step",
+      async (input: Update${className}StepInput, { container }) => {
+        const service = container.resolve("${modelName}")
+        const { id, ...data } = input
+        const result = await service.update(id, data)
         return new StepResponse(result, result.id)
       }
     );
 
-    export const create${toPascalCase(modelName)}Workflow = (container) =>
-      createWorkflow(container, {
-        steps: [create${toPascalCase(modelName)}Step],
-      });`;
+    export type Update${className}WorkflowInput = Update${className}StepInput;
+
+    export const update${className}Workflow = createWorkflow(
+      "update-${modelName}-workflow",
+      (input: Update${className}WorkflowInput) => {
+        const ${variableName} = update${className}Step(input)
+        return new WorkflowResponse(${variableName})
+      }
+    );`;
   },
 
   pageComponent: (moduleConfig: ModuleConfig, modelConfig: ModelConfig): string => {
@@ -564,7 +647,7 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
         {
           name: 'validateAndTransformQuery',
           args: [
-            { type: 'identifier', value: `Get${className}Schema` },
+            t.identifier(`Get${className}Schema`),
             {
               defaults: ['id', ...model.fields.map(f => f.name)],
               relations: model.fields.filter(f => f.relation).map(f => f.name),
@@ -581,7 +664,7 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
       middlewares: [
         {
           name: 'validateAndTransformBody',
-          args: [{ type: 'identifier', value: `PostAdminCreate${className}` }]
+          args: [t.identifier(`PostAdminCreate${className}`)]
         }
       ]
     });
@@ -592,7 +675,7 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
       middlewares: [
         {
           name: 'validateAndTransformBody',
-          args: [{ type: 'identifier', value: `PostAdminUpdate${className}` }]
+          args: [t.identifier(`PostAdminUpdate${className}`)]
         }
       ]
     });
