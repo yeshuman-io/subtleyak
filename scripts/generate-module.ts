@@ -321,14 +321,16 @@ const TEMPLATES: TemplateMap = {
     const snakeName = toSnakeCase(modelConfig.name);
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const componentName = getComponentName(modelConfig);
+    const importDepth = modelConfig.isParent ? 3 : 4;
+    const basePath = '../'.repeat(importDepth);
     
     return `import { defineRouteConfig } from "@medusajs/admin-sdk";
     import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
-    import { ${className} } from "@/admin/types";
-    import { DataTablePage } from "@/admin/components/data-table-page";
+    import { ${className} } from "${basePath}types";
+    import { DataTablePage } from "${basePath}components/data-table-page";
     import { ${className}Create } from "./create/${componentName}-create";
     import { useState } from "react";
-    import { ActionMenu } from "@/admin/components/action-menu";
+    import { ActionMenu } from "${basePath}components/action-menu";
     import { Pencil } from "@medusajs/icons";
     import { ${className}Edit } from "./edit/${componentName}-edit";
 
@@ -426,16 +428,15 @@ const TEMPLATES: TemplateMap = {
     const className = toPascalCase(modelConfig.name);
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const componentName = getComponentName(modelConfig);
-    const importDepth = modelConfig.isParent ? 4 : 5; // One more level for child components
-    const apiPath = '../'.repeat(importDepth);
-    const componentPath = '../'.repeat(importDepth - 1);
+    const importDepth = modelConfig.isParent ? 4 : 5;
+    const basePath = '../'.repeat(importDepth);
     
     return `import { Form } from "@medusajs/forms";
     import { Button, FocusModal } from "@medusajs/ui";
     import { useForm } from "react-hook-form";
     import { zodResolver } from "@hookform/resolvers/zod";
-    import { PostAdminCreate${className} } from "@/api/admin/${routePath}/validators";
-    import { InputField, SelectField } from "@/admin/components/form";
+    import { PostAdminCreate${className} } from "${basePath}api/admin/${routePath}/validators";
+    import { InputField, SelectField } from "${basePath}components/form";
 
     type Props = {
       onClose: () => void;
@@ -507,16 +508,16 @@ const TEMPLATES: TemplateMap = {
     const className = toPascalCase(modelConfig.name);
     const routePath = getRoutePath(moduleConfig, modelConfig);
     const componentName = getComponentName(modelConfig);
-    const importDepth = modelConfig.isParent ? 4 : 5; // One more level for child components
-    const apiPath = '../'.repeat(importDepth);
-    const componentPath = '../'.repeat(importDepth - 1);
+    const importDepth = modelConfig.isParent ? 4 : 5;
+    const basePath = '../'.repeat(importDepth);
     
     return `import { Form } from "@medusajs/forms";
     import { Button, Drawer } from "@medusajs/ui";
     import { useForm } from "react-hook-form";
     import { zodResolver } from "@hookform/resolvers/zod";
-    import { PostAdminUpdate${className} } from "@/api/admin/${routePath}/validators";
-    import { InputField, SelectField } from "@/admin/components/form";
+    import { PostAdminUpdate${className} } from "${basePath}api/admin/${routePath}/validators";
+    import { InputField, SelectField } from "${basePath}components/form";
+    import { ${className} } from "${basePath}types";
 
     type Props = {
       item: any;
