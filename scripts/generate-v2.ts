@@ -14,8 +14,14 @@ import Handlebars from 'handlebars';
 // Core types for minimal implementation
 export type ModelField = {
   name: string;
-  type: "string" | "number" | "boolean" | "date";
-  required?: boolean;
+  type: "text" | "number" | "boolean" | "date";
+  chainables?: string[];  // Array of chainable method names to apply
+  relation?: {
+    type: "belongsTo" | "hasMany" | "manyToMany";
+    model: string;
+    mappedBy?: string;
+    through?: string;
+  };
 };
 
 export type ModelConfig = {
@@ -32,6 +38,30 @@ export type ModuleConfig = {
   models: ModelConfig[];
 };
 
+// Helper to process field definitions
+function processField(field: ModelField): string {
+  if (field.relation) {
+    const relationConfig: string[] = [];
+    if (field.relation.mappedBy) {
+      relationConfig.push(`mappedBy: "${field.relation.mappedBy}"`);
+    }
+    if (field.relation.through) {
+      relationConfig.push(`through: "${field.relation.through}"`);
+    }
+    
+    return `${field.name}: model.${field.relation.type}(() => ${field.relation.model}, {
+      ${relationConfig.join(',\n      ')}
+    })`;
+  }
+
+  // Build the field definition with chainable methods
+  let fieldDef = `${field.name}: model.${field.type}()`;
+  if (field.chainables?.length) {
+    fieldDef += field.chainables.map(chain => `.${chain}()`).join('');
+  }
+  return fieldDef;
+}
+
 // Register Handlebars helpers
 Handlebars.registerHelper('toPascalCase', (str: string) => {
   if (!str) return '';
@@ -45,31 +75,18 @@ Handlebars.registerHelper('toSnakeCase', (str: string) => {
   return str.replace(/-/g, '_').toLowerCase();
 });
 
+Handlebars.registerHelper('type', function(value: string, type: string) {
+  return value === type;
+});
+
 // Helper to process field definitions
-function processFields(fields: ModelField[]): string {
-  if (fields.length === 0) return '';
-  
-  return fields.map(field => ({
-    name: field.name,
-    type: field.type,
-    required: field.required
-  })).map(field => 
-    `${field.name}: ${field.required ? `model.${field.type}()` : `model.${field.type}().optional()`}`
-  ).join(',\n  ');
-}
+Handlebars.registerHelper('processField', processField);
 
 // Process template using Handlebars
 async function processTemplate(templatePath: string, data: Record<string, any>): Promise<string> {
   const template = await fs.readFile(templatePath, 'utf-8');
-  
-  console.log('Processing template:', templatePath);
-  console.log('With data:', JSON.stringify(data, null, 2));
-  
   const compiledTemplate = Handlebars.compile(template);
-  const content = compiledTemplate(data);
-  
-  console.log('Final content:', content);
-  return content;
+  return compiledTemplate(data);
 }
 
 // Update formatOutput function
@@ -122,11 +139,23 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
       `${model.name}.ts`
     );
 
+    // Get unique relations for imports
+    const relations = model.fields
+      .filter(f => f.relation)
+      .map(f => ({
+        model: f.relation!.model,
+        path: `./${f.relation!.model.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase()}`
+      }))
+      .filter((rel, index, self) => 
+        index === self.findIndex(r => r.model === rel.model)
+      );
+
     // Process template data
     const templateData = {
       model: {
         name: model.name,
-        fields: model.fields
+        fields: model.fields,
+        relations
       }
     };
 
@@ -185,7 +214,7 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
 }
 
 // CLI interface
-if (import.meta.url === `file://${process.argv[1]}`) {
+if (import.meta.url.startsWith('file:') && process.argv[1] === import.meta.url.slice(5)) {
   const args = process.argv.slice(2);
   const configPath = args[0];
 

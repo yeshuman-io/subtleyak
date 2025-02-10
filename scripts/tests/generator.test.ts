@@ -46,6 +46,11 @@ beforeAll(async () => {
     if (!str) return '';
     return str.replace(/-/g, '_').toLowerCase();
   });
+
+  Handlebars.registerHelper('toKebabCase', (str: string) => {
+    if (!str) return '';
+    return str.replace(/([a-z])([A-Z])/g, '$1-$2').toLowerCase();
+  });
 });
 
 describe('Module Generator', () => {
@@ -55,29 +60,85 @@ describe('Module Generator', () => {
     plural: 'tests',
     models: [
       {
-        name: 'test-model',
-        singular: 'test',
-        plural: 'tests',
+        name: 'test-parent',
+        singular: 'parent',
+        plural: 'parents',
         fields: [
           {
             name: 'title',
-            type: 'string',
-            required: true
+            type: 'text'
           },
           {
             name: 'description',
-            type: 'string',
-            required: false
+            type: 'text',
+            chainables: ['nullable']
           },
           {
             name: 'active',
-            type: 'boolean',
-            required: true
+            type: 'boolean'
           },
           {
             name: 'count',
             type: 'number',
-            required: false
+            chainables: ['nullable']
+          },
+          {
+            name: 'children',
+            type: 'text',
+            relation: {
+              type: 'hasMany',
+              model: 'TestChild',
+              mappedBy: 'parent'
+            }
+          },
+          {
+            name: 'related_items',
+            type: 'text',
+            relation: {
+              type: 'manyToMany',
+              model: 'TestRelatedItem',
+              through: 'test_parent_related_items'
+            }
+          }
+        ]
+      },
+      {
+        name: 'test-child',
+        singular: 'child',
+        plural: 'children',
+        fields: [
+          {
+            name: 'name',
+            type: 'text'
+          },
+          {
+            name: 'parent',
+            type: 'text',
+            relation: {
+              type: 'belongsTo',
+              model: 'TestParent',
+              mappedBy: 'children'
+            }
+          }
+        ]
+      },
+      {
+        name: 'test-related-item',
+        singular: 'related-item',
+        plural: 'related-items',
+        fields: [
+          {
+            name: 'name',
+            type: 'text'
+          },
+          {
+            name: 'parents',
+            type: 'text',
+            relation: {
+              type: 'manyToMany',
+              model: 'TestParent',
+              through: 'test_parent_related_items'
+            }
           }
         ]
       }
@@ -121,10 +182,12 @@ describe('Module Generator', () => {
       const helpers = Handlebars.helpers;
       expect(helpers.toPascalCase).toBeDefined();
       expect(helpers.toSnakeCase).toBeDefined();
+      expect(helpers.toKebabCase).toBeDefined();
 
       // Test helper functions
       expect(helpers.toPascalCase('test-model')).toBe('TestModel');
       expect(helpers.toSnakeCase('test-model')).toBe('test_model');
+      expect(helpers.toKebabCase('test-model')).toBe('test-model');
     });
   });
 
@@ -132,35 +195,28 @@ describe('Module Generator', () => {
     it('should generate model file in correct location', async () => {
       await generateModule(TEST_CONFIG, { testMode: true });
       
-      const expectedPath = path.join('.test-output', 'src/modules/tests/models/test-model.ts');
+      const expectedPath = path.join('.test-output', 'src/modules/tests/models/test-parent.ts');
       expect(await TestUtils.fileExists(expectedPath)).toBe(true);
     });
 
     it('should generate model file with correct content', async () => {
       await generateModule(TEST_CONFIG, { testMode: true });
       
-      const modelPath = path.join('.test-output', 'src/modules/tests/models/test-model.ts');
+      const modelPath = path.join('.test-output', 'src/modules/tests/models/test-parent.ts');
       const content = await TestUtils.readGeneratedFile(modelPath);
       
-      console.log('Generated content:', content);
-      
       // Check basic structure
-      expect(content).toContain('const TestModel = model.define');
-      expect(content).toContain('test_model');
+      expect(content).toContain('const TestParent = model.define("test_parent"');
       
-      // Check required field
-      expect(content).toContain('title: model.string()');
-      
-      // Check optional field
-      expect(content).toContain('description: model.string().optional()');
-      
-      // Check boolean field
+      // Check fields with chainables
+      expect(content).toContain('title: model.text()');
+      expect(content).toContain('description: model.text().nullable()');
       expect(content).toContain('active: model.boolean()');
+      expect(content).toContain('count: model.number().nullable()');
       
-      // Check number field
-      expect(content).toContain('count: model.number().optional()');
-      
-      // No need to check timestamps as they're added by Medusa automatically
+      // Check relations
+      expect(content).toContain('children: model.hasMany(() => TestChild');
+      expect(content).toContain('related_items: model.manyToMany(() => TestRelatedItem');
     });
 
     it('should generate valid TypeScript files', async () => {
@@ -185,9 +241,9 @@ describe('Module Generator', () => {
       
       // Check service structure
       expect(content).toContain('import { MedusaService } from "@medusajs/framework/utils"');
-      expect(content).toContain('import TestModel from "./models/test-model"');
+      expect(content).toContain('import TestParent from "./models/test-parent"');
       expect(content).toContain('class TestsService extends MedusaService({');
-      expect(content).toContain('TestModel');
+      expect(content).toContain('TestParent');
       expect(content).toContain('export default TestsService');
     });
   });
@@ -205,6 +261,59 @@ describe('Module Generator', () => {
       expect(content).toContain('export const TESTS = "tests"');
       expect(content).toContain('export default Module(TESTS, {');
       expect(content).toContain('service: TestsService');
+    });
+  });
+
+  describe('Model Relations', () => {
+    it('should generate model with belongsTo relation', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const modelPath = path.join('.test-output', 'src/modules/tests/models/test-child.ts');
+      const content = await TestUtils.readGeneratedFile(modelPath);
+      
+      // Check belongsTo relation
+      expect(content).toContain('parent: model.belongsTo(() => TestParent, {');
+      expect(content).toContain('mappedBy: "children"');
+    });
+
+    it('should generate model with hasMany relation', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const modelPath = path.join('.test-output', 'src/modules/tests/models/test-parent.ts');
+      const content = await TestUtils.readGeneratedFile(modelPath);
+      
+      // Check hasMany relation
+      expect(content).toContain('children: model.hasMany(() => TestChild, {');
+      expect(content).toContain('mappedBy: "parent"');
+    });
+
+    it('should generate model with manyToMany relation', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const modelPath = path.join('.test-output', 'src/modules/tests/models/test-parent.ts');
+      const content = await TestUtils.readGeneratedFile(modelPath);
+      
+      // Check manyToMany relation
+      expect(content).toContain('related_items: model.manyToMany(() => TestRelatedItem, {');
+      expect(content).toContain('through: "test_parent_related_items"');
+    });
+
+    it('should import related models', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const modelPath = path.join('.test-output', 'src/modules/tests/models/test-parent.ts');
+      const content = await TestUtils.readGeneratedFile(modelPath);
+      
+      // Check imports
+      expect(content).toContain('import TestChild from "./test-child"');
+      expect(content).toContain('import TestRelatedItem from "./test-related-item"');
+
+      // Check import order
+      const lines = content.split('\n');
+      const importLines = lines.filter(line => line.startsWith('import'));
+      
+      expect(importLines[0]).toContain('@medusajs/framework/utils');
+      expect(importLines.length).toBe(3); // framework, TestChild, TestRelatedItem
     });
   });
 }); 
