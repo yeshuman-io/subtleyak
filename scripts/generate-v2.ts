@@ -181,6 +181,25 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
     await generateFile(modelTemplatePath, modelOutputPath, templateData);
   }
 
+  // Generate validators file
+  const validatorsTemplatePath = path.join(
+    templatesDir,
+    'src/api/admin/[module.plural]/validators.hbs'
+  );
+
+  const validatorsOutputPath = path.join(
+    outputDir,
+    'src/api/admin',
+    config.plural,
+    'validators.ts'
+  );
+
+  const validatorsData = {
+    models: config.models
+  };
+
+  await generateFile(validatorsTemplatePath, validatorsOutputPath, validatorsData);
+
   // Generate service file
   const serviceTemplatePath = path.join(
     templatesDir,

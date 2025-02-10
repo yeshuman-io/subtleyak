@@ -339,4 +339,26 @@ describe('Module Generator', () => {
       expect(content).toContain('count: model.number().nullable()');
     });
   });
+
+  describe('Validator Generation', () => {
+    it('should generate validators file with correct content', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const validatorsPath = path.join('.test-output', 'src/api/admin/tests/validators.ts');
+      const content = await TestUtils.readGeneratedFile(validatorsPath);
+      
+      // Check basic structure
+      expect(content).toContain('import { z } from "zod"');
+      expect(content).toContain('createFindParams');
+      
+      // Check validation rules
+      expect(content).toContain('title: z.string().min(1)'); // required field
+      expect(content).toContain('description: z.string().optional()'); // optional field
+      expect(content).toContain('code: z.string().optional().min(3).max(10)'); // with min/max
+      
+      // Check types are exported
+      expect(content).toContain('export type AdminCreateTestParentReq');
+      expect(content).toContain('export type AdminUpdateTestParentReq');
+    });
+  });
 }); 
