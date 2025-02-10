@@ -3,7 +3,8 @@ import { model } from "@medusajs/framework/utils";
 const {{toPascalCase model.name}} = model.define("{{toSnakeCase model.name}}", {
   id: model.id().primaryKey(),
   {{#each model.fields}}
-  {{name}}: {{#if required}}model.{{type}}(){{else}}model.{{type}}().optional(){{/if}},{{/each}}
+  {{name}}: {{#if required}}model.{{type}}(){{else}}model.{{type}}().optional(){{/if}}{{#unless @last}},{{/unless}}
+  {{/each}}
 });
 
-export default {{toPascalCase model.name}}; 
+export default {{toPascalCase model.name}};

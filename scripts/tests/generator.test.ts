@@ -3,11 +3,38 @@ import { TestUtils } from './test-utils';
 import path from 'path';
 import fs from 'fs/promises';
 import type { ModuleConfig } from '../generate-v2';
-import { describe, it, expect, beforeEach, beforeAll } from '@jest/globals';
+import { describe, it, expect, beforeEach, beforeAll, jest } from '@jest/globals';
 import Handlebars from 'handlebars';
 
-// Register Handlebars helpers before tests
-beforeAll(() => {
+// Load actual template content
+async function loadTemplates() {
+  const templateDir = path.join(process.cwd(), 'scripts/templates');
+  const modelTemplate = await fs.readFile(
+    path.join(templateDir, 'src/modules/[module.plural]/models/[model.name].hbs'),
+    'utf-8'
+  );
+  const serviceTemplate = await fs.readFile(
+    path.join(templateDir, 'src/modules/[module.plural]/service.hbs'),
+    'utf-8'
+  );
+  const indexTemplate = await fs.readFile(
+    path.join(templateDir, 'src/modules/[module.plural]/index.hbs'),
+    'utf-8'
+  );
+
+  return { modelTemplate, serviceTemplate, indexTemplate };
+}
+
+// Register Handlebars helpers and templates
+beforeAll(async () => {
+  const templates = await loadTemplates();
+
+  // Register templates
+  Handlebars.registerPartial('model', templates.modelTemplate);
+  Handlebars.registerPartial('service', templates.serviceTemplate);
+  Handlebars.registerPartial('index', templates.indexTemplate);
+
+  // Register helpers
   Handlebars.registerHelper('toPascalCase', (str: string) => {
     if (!str) return '';
     return str.split('-')
