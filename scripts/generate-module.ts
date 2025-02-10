@@ -117,26 +117,32 @@ const TEMPLATES: TemplateMap = {
         if (f.relation) {
           switch (f.relation.type) {
             case 'belongsTo':
-              return `${f.name}_id: model.string().references(() => ${f.relation.model}.id)${f.required ? '' : '.optional()'}`;
+              return `${f.name}: model.belongsTo(() => ${f.relation.model}, {
+                mappedBy: "${f.relation.inverse || toSnakeCase(modelName) + 's'}"
+              })`;
             case 'hasMany':
-              return `${f.name}: model.array(() => ${f.relation.model})${f.required ? '' : '.optional()'}`;
+              return `${f.name}: model.hasMany(() => ${f.relation.model}, {
+                mappedBy: "${f.relation.inverse || toSnakeCase(modelName)}"
+              })`;
             case 'manyToMany':
-              return `${f.name}: model.array(() => ${f.relation.model}).through("${toSnakeCase(modelName)}_${toSnakeCase(f.name)}")${f.required ? '' : '.optional()'}`;
+              return `${f.name}: model.manyToMany(() => ${f.relation.model}, {
+                through: "${toSnakeCase(modelName)}_${toSnakeCase(f.name)}"
+              })`;
             default:
-              return `${f.name}: model.text()${f.required ? '' : '.optional()'}`;
+              return `${f.name}: model.text()`;
           }
         }
         switch (f.type) {
           case 'string':
-            return `${f.name}: model.text()${f.required ? '' : '.optional()'}`;
+            return `${f.name}: model.text()`;
           case 'number':
-            return `${f.name}: model.number()${f.required ? '' : '.optional()'}`;
+            return `${f.name}: model.number()`;
           case 'boolean':
-            return `${f.name}: model.boolean()${f.required ? '' : '.optional()'}`;
+            return `${f.name}: model.boolean()`;
           case 'date':
-            return `${f.name}: model.date()${f.required ? '' : '.optional()'}`;
+            return `${f.name}: model.date()`;
           default:
-            return `${f.name}: model.text()${f.required ? '' : '.optional()'}`;
+            return `${f.name}: model.text()`;
         }
       }).join(",\n      ")}
     });
@@ -158,33 +164,35 @@ const TEMPLATES: TemplateMap = {
   validator: (modelName: string, fields: ModelField[]): string => {
     const className = toPascalCase(modelName);
     return `import { z } from "zod";
+    import { createFindParams } from "@medusajs/medusa/api/utils/validators";
 
-    // GET schema for querying
-    export const Get${className}Schema = z.object({
-      id: z.string().optional(),
-      ${fields
-        .filter(f => !f.relation)
-        .map(f => `${f.name}: z.${f.type}().optional()`)
-        .join(",\n      ")},
-      limit: z.number().optional(),
-      offset: z.number().optional()
-    }).strict();
+    export const Get${className}Schema = createFindParams();
 
-    // Create schema - all required fields must be present
     export const PostAdminCreate${className} = z.object({
       ${fields
         .filter(f => !f.relation)
-        .map(f => `${f.name}: z.${f.type}()${f.required ? "" : ".optional()"}`)
+        .map(f => {
+          const baseType = `z.${f.type}()`;
+          if (f.type === 'string') {
+            return `${f.name}: ${baseType}${f.required ? '.min(1)' : '.min(1).optional()'}`;
+          }
+          return `${f.name}: ${baseType}${f.required ? '' : '.optional()'}`;
+        })
         .join(",\n      ")}
-    }).strict();
+    });
 
-    // Update schema - all fields are optional
     export const PostAdminUpdate${className} = z.object({
       ${fields
         .filter(f => !f.relation)
-        .map(f => `${f.name}: z.${f.type}().optional()`)
+        .map(f => {
+          const baseType = `z.${f.type}()`;
+          if (f.type === 'string') {
+            return `${f.name}: ${baseType}.min(1).optional()`;
+          }
+          return `${f.name}: ${baseType}.optional()`;
+        })
         .join(",\n      ")}
-    }).strict();
+    });
 
     export type AdminCreate${className}Req = z.infer<typeof PostAdminCreate${className}>;
     export type AdminUpdate${className}Req = z.infer<typeof PostAdminUpdate${className}>;`;
@@ -804,9 +812,9 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
         {
           name: 'validateAndTransformQuery',
           args: [
-            t.identifier(`Get${className}Schema`),
+            { type: 'Identifier', name: `Get${className}Schema` },
             {
-              defaults: ['id', ...model.fields.map(f => f.name)],
+              defaults: ['id', ...model.fields.filter(f => !f.relation).map(f => f.name)],
               relations: model.fields.filter(f => f.relation).map(f => f.name),
               isList: true
             }
@@ -821,7 +829,7 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
       middlewares: [
         {
           name: 'validateAndTransformBody',
-          args: [t.identifier(`PostAdminCreate${className}`)]
+          args: [{ type: 'Identifier', name: `PostAdminCreate${className}` }]
         }
       ]
     });
@@ -832,7 +840,7 @@ export async function generateModule(moduleConfig: ModuleConfig, options: { addT
       middlewares: [
         {
           name: 'validateAndTransformBody',
-          args: [t.identifier(`PostAdminUpdate${className}`)]
+          args: [{ type: 'Identifier', name: `PostAdminUpdate${className}` }]
         }
       ]
     });
