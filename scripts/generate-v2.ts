@@ -15,7 +15,17 @@ import Handlebars from 'handlebars';
 export type ModelField = {
   name: string;
   type: "text" | "number" | "boolean" | "date";
-  chainables?: string[];  // Array of chainable method names to apply
+  chainables?: Array<{
+    name: "nullable" | "unique" | "index" | "primaryKey";  // Only database-level chainables
+    args?: Array<string | number | boolean>;
+  }>;
+  validation?: {  // Separate validation rules for Zod schemas
+    min?: number;
+    max?: number;
+    email?: boolean;
+    regex?: string;
+    required?: boolean;
+  };
   relation?: {
     type: "belongsTo" | "hasMany" | "manyToMany";
     model: string;
@@ -54,10 +64,19 @@ function processField(field: ModelField): string {
     })`;
   }
 
-  // Build the field definition with chainable methods
+  // Build the field definition with only database-level chainables
   let fieldDef = `${field.name}: model.${field.type}()`;
   if (field.chainables?.length) {
-    fieldDef += field.chainables.map(chain => `.${chain}()`).join('');
+    fieldDef += field.chainables.map(chain => {
+      if (chain.args?.length) {
+        const args = chain.args.map(arg => {
+          if (typeof arg === 'string') return `"${arg}"`;
+          return arg;
+        }).join(', ');
+        return `.${chain.name}(${args})`;
+      }
+      return `.${chain.name}()`;
+    }).join('');
   }
   return fieldDef;
 }

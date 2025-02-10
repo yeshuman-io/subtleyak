@@ -66,12 +66,19 @@ describe('Module Generator', () => {
         fields: [
           {
             name: 'title',
-            type: 'text'
+            type: 'text',
+            validation: { min: 1, required: true }
           },
           {
             name: 'description',
             type: 'text',
-            chainables: ['nullable']
+            chainables: [{ name: 'nullable' }]
+          },
+          {
+            name: 'code',
+            type: 'text',
+            chainables: [{ name: 'unique' }],
+            validation: { min: 3, max: 10 }
           },
           {
             name: 'active',
@@ -80,7 +87,7 @@ describe('Module Generator', () => {
           {
             name: 'count',
             type: 'number',
-            chainables: ['nullable']
+            chainables: [{ name: 'nullable' }]
           },
           {
             name: 'children',
@@ -211,6 +218,7 @@ describe('Module Generator', () => {
       // Check fields with chainables
       expect(content).toContain('title: model.text()');
       expect(content).toContain('description: model.text().nullable()');
+      expect(content).toContain('code: model.text().unique()');
       expect(content).toContain('active: model.boolean()');
       expect(content).toContain('count: model.number().nullable()');
       
@@ -314,6 +322,21 @@ describe('Module Generator', () => {
       
       expect(importLines[0]).toContain('@medusajs/framework/utils');
       expect(importLines.length).toBe(3); // framework, TestChild, TestRelatedItem
+    });
+  });
+
+  describe('Field Generation', () => {
+    it('should generate fields with database-level chainables', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const modelPath = path.join('.test-output', 'src/modules/tests/models/test-parent.ts');
+      const content = await TestUtils.readGeneratedFile(modelPath);
+      
+      // Check fields with chainables
+      expect(content).toContain('title: model.text()');  // No validation in model
+      expect(content).toContain('description: model.text().nullable()');
+      expect(content).toContain('code: model.text().unique()');
+      expect(content).toContain('count: model.number().nullable()');
     });
   });
 }); 
