@@ -54,7 +54,7 @@ export type ModuleConfig = {
 };
 
 // Helper to process field definitions
-function processField(field: ModelField): string {
+function processField(field: ModelField): string | Handlebars.SafeString {
   if (field.relation) {
     const relationConfig: string[] = [];
     if (field.relation.mappedBy) {
@@ -64,9 +64,9 @@ function processField(field: ModelField): string {
       relationConfig.push(`through: "${field.relation.through}"`);
     }
     
-    return `${field.name}: model.${field.relation.type}(() => ${field.relation.model}, {
+    return new Handlebars.SafeString(`${field.name}: model.${field.relation.type}(() => ${field.relation.model}, {
       ${relationConfig.join(',\n      ')}
-    })`;
+    })`);
   }
 
   // Build the field definition with only database-level chainables
@@ -83,7 +83,7 @@ function processField(field: ModelField): string {
       return `.${chain.name}()`;
     }).join('');
   }
-  return fieldDef;
+  return new Handlebars.SafeString(fieldDef);
 }
 
 // Register Handlebars helpers
@@ -126,6 +126,64 @@ Handlebars.registerHelper('type', function(value: string, type: string) {
   return value === type;
 });
 
+// Enhanced React component helper
+Handlebars.registerHelper('reactComponent', function(options: any) {
+  const content = options.fn(this);
+  return new Handlebars.SafeString(
+    content
+      // Handle JSX expressions
+      .replace(/\{\{([^}]+)\}\}/g, (match, p1) => {
+        if (p1.startsWith('#') || p1.startsWith('/')) return match;
+        if (p1.includes('&&') || p1.includes('||') || p1.includes('?')) {
+          return `{${p1}}`;
+        }
+        return `{${p1}}`;
+      })
+      // Handle JSX attributes
+      .replace(/(\w+)=\{\{([^}]+)\}\}/g, (match, attr, value) => {
+        return `${attr}={${value}}`;
+      })
+  );
+});
+
+// JSX-specific conditional helper
+Handlebars.registerHelper('jsx-if', function(condition: string, options: any) {
+  // First evaluate any nested Handlebars expressions in the condition
+  const evaluatedCondition = Handlebars.compile(condition)(this);
+  // Remove extra whitespace and wrap content tightly
+  const content = options.fn(this).trim();
+  return new Handlebars.SafeString(
+    `{${evaluatedCondition} && (${content})}`
+  );
+});
+
+// JSX-specific list rendering helper
+Handlebars.registerHelper('jsx-each', function(items: string, options: any) {
+  // First evaluate any nested Handlebars expressions in items
+  const evaluatedItems = Handlebars.compile(items)(this);
+  return new Handlebars.SafeString(
+    `{${evaluatedItems}.map((item, index) => (${options.fn(this).trim()}))}`
+  );
+});
+
+// JSX-specific ternary helper
+Handlebars.registerHelper('jsx-ternary', function(condition: string, truthy: string, falsy: string) {
+  // First evaluate any nested expressions
+  const evaluatedCondition = Handlebars.compile(condition)(this);
+  const evaluatedTruthy = Handlebars.compile(truthy)(this);
+  const evaluatedFalsy = Handlebars.compile(falsy)(this);
+  return new Handlebars.SafeString(
+    `{${evaluatedCondition} ? ${evaluatedTruthy} : ${evaluatedFalsy}}`
+  );
+});
+
+// JSX-specific raw expression helper
+Handlebars.registerHelper('jsx-expr', function(expression: string) {
+  // First evaluate any nested Handlebars expressions
+  const evaluatedExpr = Handlebars.compile(expression)(this);
+  return new Handlebars.SafeString(`{${evaluatedExpr}}`);
+});
+
 // Helper to process field definitions
 Handlebars.registerHelper('processField', processField);
 
@@ -141,7 +199,7 @@ async function formatOutput(content: string): Promise<string> {
   const config = await resolveConfig(process.cwd());
   return format(content, {
     ...config,
-    parser: 'typescript',
+    parser: content.includes('jsx') || content.includes('tsx') ? 'typescript-react' : 'typescript',
     trailingComma: 'all',
   });
 }

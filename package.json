@@ -28,7 +28,8 @@
     "test:generate:keep": "KEEP_TEST_OUTPUT=1 NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts",
     "test:generate:keep:watchAll": "KEEP_TEST_OUTPUT=1 NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts --watchAll",
     "watch:module": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/watch-all.ts",
-    "test:generate:quiet": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts --silent --json --outputFile=.test-results.json || (cat .test-results.json | grep -A 5 '\"failureMessages\"')"
+    "test:generate:quiet": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts --silent --json --outputFile=.test-results.json || (cat .test-results.json | grep -A 5 '\"failureMessages\"')",
+    "test:generate:quiet:fileonly": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts --silent --json --outputFile=.test-results.json > /dev/null 2>&1"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.4.0",

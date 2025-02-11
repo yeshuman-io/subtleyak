@@ -1,9 +1,10 @@
 import * as zod from "zod";
+import { Drawer } from "@medusajs/ui";
 import { FormProvider, useForm } from "react-hook-form";
 import { PostAdminUpdate{{toPascalCase model.name}} } from "../../../../../api/admin/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}/validators";
 import { sdk } from "../../../../lib/sdk";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SelectField } from "../../../../components/form/select-field";
 import { InputField } from "../../../../components/form/input-field";
@@ -23,27 +24,38 @@ type Edit{{toPascalCase model.name}}FormData = zod.infer<typeof schema>;
 type {{toPascalCase model.name}}EditProps = {
   {{toCamelCase model.name}}: {
     id: string;
-    name: string;
     {{#each model.fields}}
+    {{#if (eq type "text")}}
+    {{toSnakeCase name}}: string;
+    {{/if}}
     {{#if (eq type "relation")}}
     {{toSnakeCase name}}_id: string;
-    {{toSnakeCase name}}?: { id?: string; name: string };
+    {{toSnakeCase name}}?: { id: string; name: string };
+    {{/if}}
+    {{#if (eq type "number")}}
+    {{toSnakeCase name}}: number;
     {{/if}}
     {{/each}}
   };
   onClose: () => void;
 };
 
-export function {{toPascalCase model.name}}Edit({ {{toCamelCase model.name}}, onClose }: {{toPascalCase model.name}}EditProps) {
+function {{toPascalCase model.name}}EditForm({ {{toCamelCase model.name}}, onClose }: {{toPascalCase model.name}}EditProps) {
   const navigate = useNavigate();
-  const drawer = useDrawer();
+  const { close } = useDrawer();
+  const queryClient = useQueryClient();
 
   const form = useForm<Edit{{toPascalCase model.name}}FormData>({
     defaultValues: {
-      name: {{toCamelCase model.name}}.name,
       {{#each model.fields}}
+      {{#if (eq type "text")}}
+      {{toSnakeCase name}}: {{toCamelCase ../model.name}}.{{toSnakeCase name}},
+      {{/if}}
       {{#if (eq type "relation")}}
       {{toSnakeCase name}}_id: {{toCamelCase ../model.name}}.{{toSnakeCase name}}_id,
+      {{/if}}
+      {{#if (eq type "number")}}
+      {{toSnakeCase name}}: {{toCamelCase ../model.name}}.{{toSnakeCase name}},
       {{/if}}
       {{/each}}
     },
@@ -68,7 +80,14 @@ export function {{toPascalCase model.name}}Edit({ {{toCamelCase model.name}}, on
         body: data,
       });
 
-      onClose();
+      // Invalidate and refetch queries
+      await queryClient.invalidateQueries(["{{toSnakeCase model.plural}}"]);
+      
+      // Reset form
+      form.reset();
+      
+      // Close drawer and navigate
+      close();
       navigate("/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}");
     } catch (error) {
       console.error("Failed to update {{toLowerCase model.name}}:", error);
@@ -80,27 +99,44 @@ export function {{toPascalCase model.name}}Edit({ {{toCamelCase model.name}}, on
       <DrawerFormLayout
         title="Edit {{toTitleCase model.name}}"
         onSubmit={handleSubmit}
-        onClose={onClose}
       >
         <FormLayout>
-          <InputField
-            name="name"
-            control={form.control}
-            label="Name"
-          />
           {{#each model.fields}}
+          {{#if (eq type "text")}}
+          <InputField
+            name="{{toSnakeCase name}}"
+            control={form.control}
+            label="{{toTitleCase name}}"
+          />
+          {{/if}}
           {{#if (eq type "relation")}}
           <SelectField
             name="{{toSnakeCase name}}_id"
             control={form.control}
             label="{{toTitleCase name}}"
-            placeholder="Select a {{toLowerCase name}}..."
+            placeholder="Select {{toLowerCase name}}..."
             options={ {{toCamelCase name}}s }
+          />
+          {{/if}}
+          {{#if (eq type "number")}}
+          <InputField
+            name="{{toSnakeCase name}}"
+            control={form.control}
+            label="{{toTitleCase name}}"
+            type="number"
           />
           {{/if}}
           {{/each}}
         </FormLayout>
       </DrawerFormLayout>
     </FormProvider>
+  );
+}
+
+export function {{toPascalCase model.name}}Edit(props: {{toPascalCase model.name}}EditProps) {
+  return (
+    <Drawer.Content aria-describedby="edit-{{toLowerCase model.name}}-description">
+      <{{toPascalCase model.name}}EditForm {...props} />
+    </Drawer.Content>
   );
 } 

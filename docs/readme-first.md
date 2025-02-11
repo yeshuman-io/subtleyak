@@ -57,3 +57,66 @@ Previous work completed:
 - AI to observe available test commands in package.json with the prefix `test:generate` for their use.
 
 - AI will be given YOLO permissions to run any appropriate commands to work on iterations of tasks and should observe test results and resulting .test-output directory
+
+## Progress Notes - JSX Template Handling
+
+### Current Status (Session Summary)
+
+1. **Initial Problem**
+- Failing tests in module generator
+- Focus on JSX Template Handling and related test failures
+- Issues with Handlebars template parsing and Prettier formatting
+
+2. **Key Changes Made**
+- Fixed state variable naming in page template (`editing{{ModelName}}` → `editing`)
+- Modified `formatOutput` function for JSX/TSX support:
+  ```typescript
+  parser: content.includes('jsx') || content.includes('tsx') ? 'typescript-react' : 'typescript'
+  ```
+
+3. **Current Issues**
+- Test failures with `SyntaxError: Identifier expected` in various components
+- Prettier formatting challenges with JSX/TSX content
+
+4. **Next Steps**
+1. Template Syntax Review:
+   - Model relations templates
+   - Service generation templates
+   - Field generation templates
+   - Validator generation templates
+   - API route templates
+   - Admin UI templates
+
+2. Alternative Approaches:
+   - Consider bypassing Prettier for JSX/TSX files
+   - Add pre-processing step for Handlebars templates
+   - Review JSX helper functions
+
+3. Focus Areas:
+   - Model relation generation
+   - Field type handling
+   - TypeScript/React code validation
+   - Service file generation
+
+4. Testing Strategy:
+   - Run tests in smaller batches
+   - Add granular test cases
+   - Improve error reporting
+
+### Testing Commands
+```bash
+# Full test suite
+npm run test:generate
+
+# Watch mode for development
+npm run test:generate:watch
+
+# Keep test output and watch
+npm run test:generate:keep:watchAll
+
+# Quiet mode (minimal output)
+npm run test:generate:quiet
+
+# File-only output
+npm run test:generate:quiet:fileonly
+```

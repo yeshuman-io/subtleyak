@@ -1,30 +1,39 @@
+{{#with (toPascalCase model.name) as |ModelName|}}
 import { defineRouteConfig } from "@medusajs/admin-sdk";
 import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
-import { {{toPascalCase model.name}} } from "../../../types";
+import { {{ModelName}} } from "../../../types";
 import { DataTablePage } from "../../../components/data-table-page";
-import { {{toPascalCase model.name}}Create } from "./create/{{toKebabCase model.name}}-create";
+import { {{ModelName}}Create } from "./create/{{toKebabCase model.name}}-create";
 import { useState } from "react";
 import { ActionMenu } from "../../../components/action-menu";
 import { Pencil } from "@medusajs/icons";
-import { {{toPascalCase model.name}}Edit } from "./edit/{{toKebabCase model.name}}-edit";
+import { {{ModelName}}Edit } from "./edit/{{toKebabCase model.name}}-edit";
 
-const columnHelper = createDataTableColumnHelper<{{toPascalCase model.name}}>();
+const columnHelper = createDataTableColumnHelper<{{ModelName}}>();
 
-const {{toPascalCase model.name}}Page = () => {
+const {{ModelName}}Page = () => {
   const [showCreate, setShowCreate] = useState(false);
-  const [editing{{toPascalCase model.name}}, setEditing{{toPascalCase model.name}}] = useState<{{toPascalCase model.name}} | null>(null);
+  const [editing, setEditing] = useState<{{ModelName}} | null>(null);
 
   const columns = [
     columnHelper.accessor("id", {
       header: "ID",
     }),
-    columnHelper.accessor("name", {
-      header: "Name",
+    {{#each model.fields}}
+    {{#if (eq type "text")}}
+    columnHelper.accessor("{{toSnakeCase name}}", {
+      header: "{{toTitleCase name}}",
       enableSorting: true,
     }),
-    {{#each model.fields}}
+    {{/if}}
     {{#if (eq type "relation")}}
     columnHelper.accessor("{{toSnakeCase name}}.name", {
+      header: "{{toTitleCase name}}",
+      enableSorting: true,
+    }),
+    {{/if}}
+    {{#if (eq type "number")}}
+    columnHelper.accessor("{{toSnakeCase name}}", {
       header: "{{toTitleCase name}}",
       enableSorting: true,
     }),
@@ -42,7 +51,7 @@ const {{toPascalCase model.name}}Page = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditing{{toPascalCase model.name}}(item),
+                    onClick: () => setEditing(item),
                   },
                 ],
               },
@@ -55,7 +64,7 @@ const {{toPascalCase model.name}}Page = () => {
 
   return (
     <>
-      <DataTablePage<{{toPascalCase model.name}}>
+      <DataTablePage<{{ModelName}}>
         title="{{toTitleCase model.plural}}"
         subtitle="Manage your {{toLowerCase model.plural}}"
         endpoint="/admin/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}"
@@ -68,31 +77,52 @@ const {{toPascalCase model.name}}Page = () => {
             props: {
               variant: "secondary",
               size: "small",
+              children: "Export",
+              disabled: true,
+            },
+          },
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Import",
+              disabled: true,
+            },
+          },
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
               children: "Create",
               onClick: () => setShowCreate(true),
             },
           },
         ]}
       />
+
       {showCreate && (
         <FocusModal open={showCreate} onOpenChange={setShowCreate}>
-          <{{toPascalCase model.name}}Create onClose={() => setShowCreate(false)} />
+          <{{ModelName}}Create onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
-      {editing{{toPascalCase model.name}} && (
-        <Drawer open onOpenChange={() => setEditing{{toPascalCase model.name}}(null)}>
-          <{{toPascalCase model.name}}Edit 
-            {{toCamelCase model.name}}={editing{{toPascalCase model.name}}} 
-            onClose={() => setEditing{{toPascalCase model.name}}(null)} 
+
+      {editing && (
+        <Drawer open onOpenChange={() => setEditing(null)}>
+          <{{ModelName}}Edit 
+            {{toCamelCase model.name}}={editing}
+            onClose={() => setEditing(null)}
           />
         </Drawer>
       )}
     </>
   );
-}
+};
 
 export const config = defineRouteConfig({
   label: "{{toTitleCase model.plural}}",
 });
 
-export default {{toPascalCase model.name}}Page; 
+export default {{ModelName}}Page;
+{{/with}} 

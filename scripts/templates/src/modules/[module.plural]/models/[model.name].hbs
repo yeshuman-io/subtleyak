@@ -6,7 +6,7 @@ import {{this.model}} from "./{{toKebabCase this.model}}";
 const {{toPascalCase model.name}} = model.define("{{toSnakeCase model.name}}", {
   id: model.id().primaryKey(),
   {{#each model.fields}}
-  {{{processField this}}}{{#unless @last}},{{/unless}}
+  {{processField this}}{{#unless @last}},{{/unless}}
   {{/each}}
 });
 

@@ -437,4 +437,272 @@ describe('Module Generator', () => {
       expect(content).toContain('select: ["id", "title", "description", "code", "active", "count"]');
     });
   });
+
+  describe('Admin UI Template Generation', () => {
+    describe('List Page Generation', () => {
+      it('should generate list page with correct structure', async () => {
+        await generateModule(TEST_CONFIG, { testMode: true });
+        
+        const pagePath = path.join('.test-output', 'src/admin/routes/tests/parents/page.tsx');
+        const content = await TestUtils.readGeneratedFile(pagePath);
+        
+        // Check imports
+        expect(content).toContain('import { defineRouteConfig } from "@medusajs/admin-sdk"');
+        expect(content).toContain('import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui"');
+        expect(content).toContain('import { TestParent } from "../../../types"');
+        
+        // Check component structure
+        expect(content).toContain('const TestParentPage = () => {');
+        expect(content).toContain('const [showCreate, setShowCreate] = useState(false)');
+        expect(content).toContain('const [editingTestParent, setEditingTestParent] = useState<TestParent | null>(null)');
+        
+        // Check DataTable setup
+        expect(content).toContain('columnHelper.accessor("title"');
+        expect(content).toContain('columnHelper.accessor("description"');
+        
+        // Check actions
+        expect(content).toContain('<ActionMenu');
+        expect(content).toContain('onClick: () => setEditingTestParent(item)');
+      });
+
+      it('should handle modal and drawer states correctly', async () => {
+        await generateModule(TEST_CONFIG, { testMode: true });
+        
+        const pagePath = path.join('.test-output', 'src/admin/routes/tests/parents/page.tsx');
+        const content = await TestUtils.readGeneratedFile(pagePath);
+        
+        // Check create modal
+        expect(content).toContain('<FocusModal open={showCreate} onOpenChange={setShowCreate}>');
+        expect(content).toContain('<TestParentCreate onClose={() => setShowCreate(false)} />');
+        
+        // Check edit drawer
+        expect(content).toContain('<Drawer open onOpenChange={() => setEditingTestParent(null)}>');
+        expect(content).toContain('<TestParentEdit');
+      });
+    });
+
+    describe('Create Form Generation', () => {
+      it('should generate create form with correct fields', async () => {
+        await generateModule(TEST_CONFIG, { testMode: true });
+        
+        const createPath = path.join('.test-output', 'src/admin/routes/tests/parents/create/test-parent-create.tsx');
+        const content = await TestUtils.readGeneratedFile(createPath);
+        
+        // Check imports and types
+        expect(content).toContain('import { PostAdminCreateTestParent } from "../../../../../api/admin/tests/parents/validators"');
+        expect(content).toContain('type CreateTestParentFormData = zod.infer<typeof schema>');
+        
+        // Check form fields
+        expect(content).toContain('<InputField name="title"');
+        expect(content).toContain('<InputField name="description"');
+        expect(content).toContain('<InputField name="code"');
+        expect(content).toContain('<SwitchField name="active"');
+        expect(content).toContain('<InputField name="count" type="number"');
+        
+        // Check data fetching for relations
+        expect(content).toContain('const { data: childrenData } = useQuery<ListTestChildrenRes>');
+        expect(content).toContain('queryKey: ["test-children"]');
+      });
+
+      it('should handle form submission correctly', async () => {
+        await generateModule(TEST_CONFIG, { testMode: true });
+        
+        const createPath = path.join('.test-output', 'src/admin/routes/tests/parents/create/test-parent-create.tsx');
+        const content = await TestUtils.readGeneratedFile(createPath);
+        
+        // Check form submission
+        expect(content).toContain('const handleSubmit = form.handleSubmit(async (data) => {');
+        expect(content).toContain('await sdk.client.fetch("/admin/tests/parents"');
+        expect(content).toContain('method: "POST"');
+        expect(content).toContain('navigate("/tests/parents")');
+      });
+    });
+
+    describe('Edit Form Generation', () => {
+      it('should generate edit form with correct fields', async () => {
+        await generateModule(TEST_CONFIG, { testMode: true });
+        
+        const editPath = path.join('.test-output', 'src/admin/routes/tests/parents/edit/test-parent-edit.tsx');
+        const content = await TestUtils.readGeneratedFile(editPath);
+        
+        // Check imports and types
+        expect(content).toContain('import { PostAdminUpdateTestParent } from "../../../../../api/admin/tests/parents/validators"');
+        expect(content).toContain('type EditTestParentFormData = zod.infer<typeof schema>');
+        
+        // Check props type
+        expect(content).toContain('type TestParentEditProps = {');
+        expect(content).toContain('testParent: {');
+        expect(content).toContain('id: string');
+        
+        // Check form fields
+        expect(content).toContain('<InputField name="title"');
+        expect(content).toContain('<InputField name="description"');
+        expect(content).toContain('<InputField name="code"');
+        expect(content).toContain('<SwitchField name="active"');
+        expect(content).toContain('<InputField name="count" type="number"');
+      });
+
+      it('should handle form submission correctly', async () => {
+        await generateModule(TEST_CONFIG, { testMode: true });
+        
+        const editPath = path.join('.test-output', 'src/admin/routes/tests/parents/edit/test-parent-edit.tsx');
+        const content = await TestUtils.readGeneratedFile(editPath);
+        
+        // Check form submission
+        expect(content).toContain('const handleSubmit = form.handleSubmit(async (data) => {');
+        expect(content).toContain('await sdk.client.fetch(`/admin/tests/parents/${testParent.id}`');
+        expect(content).toContain('method: "POST"');
+        expect(content).toContain('navigate("/tests/parents")');
+      });
+    });
+  });
+
+  describe('JSX Template Handling', () => {
+    beforeAll(() => {
+      // Register JSX-specific helpers
+      Handlebars.registerHelper('jsx-expr', function(expression) {
+        return new Handlebars.SafeString(`{${expression}}`);
+      });
+
+      Handlebars.registerHelper('jsx-if', function(condition, options) {
+        const content = options.fn(this).trim();
+        return new Handlebars.SafeString(`{${condition} && (${content})}`);
+      });
+
+      // Helper to pre-process expressions
+      Handlebars.registerHelper('preprocess', function(expression) {
+        return Handlebars.compile(expression)(this);
+      });
+
+      // Helper for JSX spread attributes
+      Handlebars.registerHelper('jsx-spread', function(expression) {
+        return new Handlebars.SafeString(`{...${expression}}`);
+      });
+    });
+
+    it('should handle simple JSX expressions', () => {
+      const template = Handlebars.compile('<div>{{jsx-expr "hello"}}</div>');
+      const result = template({});
+      expect(result).toBe('<div>{hello}</div>');
+    });
+
+    it('should handle JSX attributes', () => {
+      const template = Handlebars.compile('<Button onClick={{jsx-expr "() => handleClick()"}}>Click</Button>');
+      const result = template({});
+      expect(result).toBe('<Button onClick={() => handleClick()}>Click</Button>');
+    });
+
+    it('should handle conditional rendering', () => {
+      const template = Handlebars.compile(`
+        {{#jsx-if "showModal"}}
+          <Modal onClose={{jsx-expr "() => setShowModal(false)"}}>Content</Modal>
+        {{/jsx-if}}
+      `);
+      const result = template({}).replace(/\s+/g, ' ').trim();
+      expect(result).toBe('{showModal && (<Modal onClose={() => setShowModal(false)}>Content</Modal>)}');
+    });
+
+    it('should handle dynamic values in attributes', () => {
+      const template = Handlebars.compile(`
+        <Form 
+          defaultValues={{jsx-expr "{ name: user.name }"}}
+          onSubmit={{jsx-expr "handleSubmit"}}
+        />
+      `);
+      const result = template({}).replace(/\s+/g, ' ').trim();
+      expect(result).toBe('<Form defaultValues={{ name: user.name }} onSubmit={handleSubmit} />');
+    });
+
+    it('should handle nested expressions', () => {
+      // First compile and evaluate the nested expressions
+      const preTemplate = Handlebars.compile(`editing{{toPascalCase model.name}}`);
+      const evaluatedCondition = preTemplate({ model: { name: 'test-model' } });
+
+      const preTemplate2 = Handlebars.compile(`setEditing{{toPascalCase model.name}}`);
+      const evaluatedSetter = preTemplate2({ model: { name: 'test-model' } });
+
+      // Then use the evaluated expressions in the JSX template
+      const template = Handlebars.compile(`{{#jsx-if "${evaluatedCondition}"}}<Drawer open onOpenChange={{jsx-expr "() => ${evaluatedSetter}(null)"}}>Content</Drawer>{{/jsx-if}}`);
+      const result = template({});
+      expect(result).toBe('{editingTestModel && (<Drawer open onOpenChange={() => setEditingTestModel(null)}>Content</Drawer>)}');
+    });
+
+    it('should handle SafeString in nested JSX expressions', () => {
+      const template = Handlebars.compile(`
+        <Button onClick={{jsx-expr "() => { setOpen(true); setValue('test'); }"}}>Click Me</Button>
+      `);
+      const result = template({}).replace(/\s+/g, ' ').trim();
+      expect(result).toBe('<Button onClick={() => { setOpen(true); setValue(\'test\'); }}>Click Me</Button>');
+    });
+
+    it('should handle multiple JSX expressions in the same attribute', () => {
+      const template = Handlebars.compile(`
+        <Component
+          className={{jsx-expr "clsx(isActive && 'active', isDisabled && 'disabled')"}}
+        />
+      `);
+      const result = template({}).replace(/\s+/g, ' ').trim();
+      expect(result).toBe('<Component className={clsx(isActive && \'active\', isDisabled && \'disabled\')} />');
+    });
+
+    it('should handle JSX spread attributes', () => {
+      const template = Handlebars.compile(`
+        <Component {{jsx-spread "props"}} onClick={{jsx-expr "handleClick"}} />
+      `);
+      const result = template({}).replace(/\s+/g, ' ').trim();
+      expect(result).toBe('<Component {...props} onClick={handleClick} />');
+    });
+
+    it('should handle nested components with multiple attributes', () => {
+      const template = Handlebars.compile(`
+        <Parent value={{jsx-expr "parentValue"}} onChange={{jsx-expr "handleParentChange"}}><Child value={{jsx-expr "childValue"}} onChange={{jsx-expr "handleChildChange"}}/></Parent>
+      `);
+      const result = template({}).replace(/\s+/g, ' ').trim();
+      expect(result).toBe('<Parent value={parentValue} onChange={handleParentChange}><Child value={childValue} onChange={handleChildChange}/></Parent>');
+    });
+
+    it('should handle array and object literals in JSX expressions', () => {
+      const template = Handlebars.compile(`
+        <Component
+          items={{jsx-expr "[1, 2, 3].map(n => ({ id: n, value: n * 2 }))"}}
+          config={{jsx-expr "{ enabled: true, mode: 'test' }"}}
+        />
+      `);
+      const result = template({}).replace(/\s+/g, ' ').trim();
+      expect(result).toBe(
+        '<Component ' +
+        'items={[1, 2, 3].map(n => ({ id: n, value: n * 2 }))} ' +
+        'config={{ enabled: true, mode: \'test\' }} ' +
+        '/>'
+      );
+    });
+
+    it('should handle helper isolation with createFrame', () => {
+      const template = Handlebars.compile(`
+        {{#with item}}
+          <Component
+            value={{jsx-expr "this.value"}}
+            parent={{jsx-expr "../parentValue"}}
+          />
+        {{/with}}
+      `);
+      const data = {
+        item: { value: 'child' },
+        parentValue: 'parent',
+      };
+      const result = template(data).replace(/\s+/g, ' ').trim();
+      expect(result).toBe('<Component value={this.value} parent={../parentValue} />');
+    });
+
+    it('should handle template string expressions', () => {
+      const template = Handlebars.compile(`
+        <Component
+          path={{jsx-expr "\`/api/\${entityId}/\${action}\`"}}
+          label={{jsx-expr "\`Item \${itemIndex + 1}\`"}}
+        />
+      `);
+      const result = template({}).replace(/\s+/g, ' ').trim();
+      expect(result).toBe('<Component path={`/api/${entityId}/${action}`} label={`Item ${itemIndex + 1}`} />');
+    });
+  });
 }); 

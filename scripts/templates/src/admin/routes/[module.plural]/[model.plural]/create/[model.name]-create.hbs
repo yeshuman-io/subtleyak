@@ -3,7 +3,7 @@ import { FormProvider, useForm } from "react-hook-form";
 import { PostAdminCreate{{toPascalCase model.name}} } from "../../../../../api/admin/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}/validators";
 import { sdk } from "../../../../lib/sdk";
 import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { SelectField } from "../../../../components/form/select-field";
 import { InputField } from "../../../../components/form/input-field";
@@ -22,15 +22,22 @@ type {{toPascalCase model.name}}CreateProps = {
   onClose: () => void;
 };
 
+{{#reactComponent}}
 export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase model.name}}CreateProps) {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
   const form = useForm<Create{{toPascalCase model.name}}FormData>({
     defaultValues: {
-      name: "",
       {{#each model.fields}}
+      {{#if (eq type "text")}}
+      {{toSnakeCase name}}: "",
+      {{/if}}
       {{#if (eq type "relation")}}
       {{toSnakeCase name}}_id: "",
+      {{/if}}
+      {{#if (eq type "number")}}
+      {{toSnakeCase name}}: 0,
       {{/if}}
       {{/each}}
     },
@@ -44,7 +51,7 @@ export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase mo
     queryFn: () => sdk.client.fetch("/admin/{{toKebabCase ../module.plural}}/{{toKebabCase name}}s"),
   });
 
-  const {{toCamelCase name}}s = {{toCamelCase name}}Data?.{{toSnakeCase name}}s || [];
+  const {{toCamelCase name}}s = {{jsx-expr "{{toCamelCase name}}Data?.{{toSnakeCase name}}s || []"}};
   {{/if}}
   {{/each}}
 
@@ -55,6 +62,13 @@ export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase mo
         body: data,
       });
 
+      // Invalidate and refetch queries
+      await queryClient.invalidateQueries(["{{toSnakeCase model.plural}}"]);
+      
+      // Reset form
+      form.reset();
+      
+      // Close modal and navigate
       onClose();
       navigate("/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}");
     } catch (error) {
@@ -70,19 +84,29 @@ export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase mo
         onClose={onClose}
       >
         <FormLayout>
-          <InputField
-            name="name"
-            control={form.control}
-            label="Name"
-          />
           {{#each model.fields}}
+          {{#if (eq type "text")}}
+          <InputField
+            name="{{toSnakeCase name}}"
+            control={form.control}
+            label="{{toTitleCase name}}"
+          />
+          {{/if}}
           {{#if (eq type "relation")}}
           <SelectField
             name="{{toSnakeCase name}}_id"
             control={form.control}
             label="{{toTitleCase name}}"
-            placeholder="Select a {{toLowerCase name}}..."
+            placeholder="Select {{toLowerCase name}}..."
             options={ {{toCamelCase name}}s }
+          />
+          {{/if}}
+          {{#if (eq type "number")}}
+          <InputField
+            name="{{toSnakeCase name}}"
+            control={form.control}
+            label="{{toTitleCase name}}"
+            type="number"
           />
           {{/if}}
           {{/each}}
@@ -90,4 +114,5 @@ export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase mo
       </ModalForm>
     </FormProvider>
   );
-} 
+}
+{{/reactComponent}} 
