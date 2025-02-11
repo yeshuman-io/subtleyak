@@ -1,0 +1,93 @@
+import * as zod from "zod";
+import { FormProvider, useForm } from "react-hook-form";
+import { PostAdminCreate{{toPascalCase model.name}} } from "../../../../../api/admin/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}/validators";
+import { sdk } from "../../../../lib/sdk";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { SelectField } from "../../../../components/form/select-field";
+import { InputField } from "../../../../components/form/input-field";
+import { FormLayout } from "../../../../components/form/form-layout";
+import { ModalForm } from "../../../../components/form/modal-form";
+{{#each model.fields}}
+{{#if (eq type "relation")}}
+import { List{{toPascalCase name}}sRes } from "../../../../types";
+{{/if}}
+{{/each}}
+
+const schema = PostAdminCreate{{toPascalCase model.name}};
+type Create{{toPascalCase model.name}}FormData = zod.infer<typeof schema>;
+
+type {{toPascalCase model.name}}CreateProps = {
+  onClose: () => void;
+};
+
+export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase model.name}}CreateProps) {
+  const navigate = useNavigate();
+
+  const form = useForm<Create{{toPascalCase model.name}}FormData>({
+    defaultValues: {
+      name: "",
+      {{#each model.fields}}
+      {{#if (eq type "relation")}}
+      {{toSnakeCase name}}_id: "",
+      {{/if}}
+      {{/each}}
+    },
+    resolver: zodResolver(schema),
+  });
+
+  {{#each model.fields}}
+  {{#if (eq type "relation")}}
+  const { data: {{toCamelCase name}}Data } = useQuery<List{{toPascalCase name}}sRes>({
+    queryKey: ["{{toSnakeCase name}}s"],
+    queryFn: () => sdk.client.fetch("/admin/{{toKebabCase ../module.plural}}/{{toKebabCase name}}s"),
+  });
+
+  const {{toCamelCase name}}s = {{toCamelCase name}}Data?.{{toSnakeCase name}}s || [];
+  {{/if}}
+  {{/each}}
+
+  const handleSubmit = form.handleSubmit(async (data) => {
+    try {
+      await sdk.client.fetch("/admin/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}", {
+        method: "POST",
+        body: data,
+      });
+
+      onClose();
+      navigate("/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}");
+    } catch (error) {
+      console.error("Failed to create {{toLowerCase model.name}}:", error);
+    }
+  });
+
+  return (
+    <FormProvider {...form}>
+      <ModalForm
+        title="Create {{toTitleCase model.name}}"
+        onSubmit={handleSubmit}
+        onClose={onClose}
+      >
+        <FormLayout>
+          <InputField
+            name="name"
+            control={form.control}
+            label="Name"
+          />
+          {{#each model.fields}}
+          {{#if (eq type "relation")}}
+          <SelectField
+            name="{{toSnakeCase name}}_id"
+            control={form.control}
+            label="{{toTitleCase name}}"
+            placeholder="Select a {{toLowerCase name}}..."
+            options={ {{toCamelCase name}}s }
+          />
+          {{/if}}
+          {{/each}}
+        </FormLayout>
+      </ModalForm>
+    </FormProvider>
+  );
+} 

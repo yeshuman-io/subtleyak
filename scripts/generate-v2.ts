@@ -38,6 +38,11 @@ export type ModelConfig = {
   name: string;
   singular: string;
   plural: string;
+  isParent?: boolean;
+  parent?: {
+    model: string;
+    routePrefix: string;
+  };
   fields: ModelField[];
 };
 
@@ -94,6 +99,29 @@ Handlebars.registerHelper('toSnakeCase', (str: string) => {
   return str.replace(/-/g, '_').toLowerCase();
 });
 
+Handlebars.registerHelper('toTitleCase', (str: string) => {
+  if (!str) return '';
+  return str.split(/[-_]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+});
+
+Handlebars.registerHelper('toLowerCase', (str: string) => {
+  if (!str) return '';
+  return str.toLowerCase();
+});
+
+Handlebars.registerHelper('toCamelCase', (str: string) => {
+  if (!str) return '';
+  return str.split(/[-_]/)
+    .map((word, i) => i === 0 ? word.toLowerCase() : word.charAt(0).toUpperCase() + word.slice(1))
+    .join('');
+});
+
+Handlebars.registerHelper('eq', function(a: any, b: any) {
+  return a === b;
+});
+
 Handlebars.registerHelper('type', function(value: string, type: string) {
   return value === type;
 });
@@ -145,6 +173,7 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
 
   // Generate model files
   for (const model of config.models) {
+    // Model file generation
     const modelTemplatePath = path.join(
       templatesDir,
       'src/modules/[module.plural]/models/[model.name].hbs'
@@ -179,26 +208,136 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
     };
 
     await generateFile(modelTemplatePath, modelOutputPath, templateData);
+
+    // Determine route path based on parent/child relationship
+    const routeBasePath = model.parent ? 
+      path.join(config.plural, ...model.parent.routePrefix.split('/')) :
+      path.join(config.plural, model.plural);
+
+    // Generate route-level validators file
+    const validatorsTemplatePath = path.join(
+      templatesDir,
+      'src/api/admin/[module.plural]/[model.plural]/validators.hbs'
+    );
+
+    const validatorsOutputPath = path.join(
+      outputDir,
+      'src/api/admin',
+      routeBasePath,
+      'validators.ts'
+    );
+
+    const validatorsData = {
+      model: {
+        name: model.name,
+        fields: model.fields
+      }
+    };
+
+    await generateFile(validatorsTemplatePath, validatorsOutputPath, validatorsData);
+
+    // Generate API route files
+    const routeTemplatePath = path.join(
+      templatesDir,
+      'src/api/admin/[module.plural]/[model.plural]/route.hbs'
+    );
+
+    const routeOutputPath = path.join(
+      outputDir,
+      'src/api/admin',
+      routeBasePath,
+      'route.ts'
+    );
+
+    const routeData = {
+      module: {
+        plural: config.plural
+      },
+      model: {
+        name: model.name,
+        fields: model.fields,
+        parent: model.parent
+      }
+    };
+
+    await generateFile(routeTemplatePath, routeOutputPath, routeData);
+
+    // Generate [id] route files
+    const idRouteTemplatePath = path.join(
+      templatesDir,
+      'src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs'
+    );
+
+    const idRouteOutputPath = path.join(
+      outputDir,
+      'src/api/admin',
+      routeBasePath,
+      '[id]',
+      'route.ts'
+    );
+
+    await generateFile(idRouteTemplatePath, idRouteOutputPath, routeData);
+
+    // Generate Admin UI files
+    const adminRoutesDir = path.join(
+      outputDir,
+      'src/admin/routes',
+      config.plural,
+      model.plural
+    );
+
+    // List page
+    const listPageTemplatePath = path.join(
+      templatesDir,
+      'src/admin/routes/[module.plural]/[model.plural]/page.hbs'
+    );
+
+    const listPageOutputPath = path.join(adminRoutesDir, 'page.tsx');
+
+    const listPageData = {
+      module: {
+        name: config.moduleName,
+        singular: config.singular,
+        plural: config.plural
+      },
+      model: {
+        name: model.name,
+        singular: model.singular,
+        plural: model.plural,
+        fields: model.fields
+      }
+    };
+
+    await generateFile(listPageTemplatePath, listPageOutputPath, listPageData);
+
+    // Create form
+    const createFormTemplatePath = path.join(
+      templatesDir,
+      'src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs'
+    );
+
+    const createFormOutputPath = path.join(
+      adminRoutesDir,
+      'create',
+      `${model.name}-create.tsx`
+    );
+
+    await generateFile(createFormTemplatePath, createFormOutputPath, listPageData);
+
+    // Edit form
+    const editFormTemplatePath = path.join(
+      templatesDir,
+      'src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs'
+    );
+
+    const editFormOutputPath = path.join(
+      adminRoutesDir,
+      'edit',
+      `${model.name}-edit.tsx`
+    );
+
+    await generateFile(editFormTemplatePath, editFormOutputPath, listPageData);
   }
-
-  // Generate validators file
-  const validatorsTemplatePath = path.join(
-    templatesDir,
-    'src/api/admin/[module.plural]/validators.hbs'
-  );
-
-  const validatorsOutputPath = path.join(
-    outputDir,
-    'src/api/admin',
-    config.plural,
-    'validators.ts'
-  );
-
-  const validatorsData = {
-    models: config.models
-  };
-
-  await generateFile(validatorsTemplatePath, validatorsOutputPath, validatorsData);
 
   // Generate service file
   const serviceTemplatePath = path.join(

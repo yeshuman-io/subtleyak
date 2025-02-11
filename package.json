@@ -27,7 +27,8 @@
     "test:generate:coverage": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts --coverage",
     "test:generate:keep": "KEEP_TEST_OUTPUT=1 NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts",
     "test:generate:keep:watchAll": "KEEP_TEST_OUTPUT=1 NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts --watchAll",
-    "watch:module": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/watch-all.ts"
+    "watch:module": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/watch-all.ts",
+    "test:generate:quiet": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/tests/jest.config.ts --silent --json --outputFile=.test-results.json || (cat .test-results.json | grep -A 5 '\"failureMessages\"')"
   },
   "dependencies": {
     "@medusajs/admin-sdk": "2.4.0",
@@ -50,7 +51,7 @@
     "@types/glob": "^8.1.0",
     "@types/handlebars": "^4.0.40",
     "@types/jest": "^29.5.13",
-    "@types/node": "^20.0.0",
+    "@types/node": "^20.17.17",
     "@types/react": "^18.3.2",
     "@types/react-dom": "^18.2.25",
     "glob": "^11.0.1",
@@ -66,7 +67,7 @@
     "rimraf": "^6.0.1",
     "ts-jest": "^29.2.5",
     "ts-node": "^10.9.2",
-    "typescript": "^5.6.2",
+    "typescript": "^5.7.3",
     "vite": "^5.2.11",
     "yalc": "^1.0.0-pre.53"
   },

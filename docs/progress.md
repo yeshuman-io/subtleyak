@@ -59,17 +59,19 @@
    - Field validation rules
    - Required/optional handling
    - Type exports
+   - Route-level validators pattern
+   - Local validator imports
+
+3. **API Layer**
+   - Basic CRUD route templates
+   - Request/Response types
+   - Route handlers with local validators
+   - Parent/child route nesting
+   - Validation middleware integration
 
 ### 🚧 Pending
 
-1. **API Layer**
-   ```
-   ⚠️ Not Started:
-   - src/api/admin/[module]/[model]/route.ts
-   - src/api/admin/[module]/[model]/[id]/route.ts
-   ```
-
-2. **Admin UI Layer**
+1. **Admin UI Layer**
    ```
    ⚠️ Not Started:
    - src/admin/routes/[module]/[model]/page.tsx
@@ -77,14 +79,14 @@
    - src/admin/routes/[module]/[model]/edit/[model]-edit.tsx
    ```
 
-3. **Workflow Layer**
+2. **Workflow Layer**
    ```
    ⚠️ Not Started:
    - src/workflows/create-[model].ts
    - src/workflows/update-[model].ts
    ```
 
-4. **Test Layer**
+3. **Test Layer**
    ```
    ⚠️ Not Started:
    - integration-tests/http/[module]/[model].spec.ts
@@ -92,7 +94,7 @@
    - integration-tests/http/[module]/__fixtures__/[model].json
    ```
 
-5. **Seed Layer**
+4. **Seed Layer**
    ```
    ⚠️ Not Started:
    - scripts/seed/[module]/seed-[model].ts
@@ -106,6 +108,7 @@
    - Module generator specification
    - Watch system documentation
    - Progress tracking
+   - Validator pattern documentation
 
 ### 🚧 Pending
 
@@ -127,7 +130,6 @@
 ## Next Steps Priority
 
 1. **High Priority**
-   - [ ] API route generation
    - [ ] Admin UI components
    - [ ] Workflow templates
    - [ ] Incremental generation in watch system
@@ -147,14 +149,14 @@
 ## Recent Changes
 
 ### Latest Updates (2024-02-10)
-1. ✅ Separated validation rules from model definitions
-2. ✅ Implemented Zod schema generation
-3. ✅ Added watch system documentation
-4. ✅ Fixed template type mapping
-5. ✅ Added progress tracking
+1. ✅ Clarified route-level validator pattern
+2. ✅ Implemented local validator imports
+3. ✅ Fixed parent/child route nesting
+4. ✅ Added validator pattern documentation
+5. ✅ Updated test coverage for validators
 
 ### Next Planned (Week of 2024-02-12)
-1. 🎯 API route generation
-2. 🎯 Admin UI components
-3. 🎯 Workflow templates
-4. 🎯 Integration test templates 
+1. 🎯 Admin UI components
+2. 🎯 Workflow templates
+3. 🎯 Integration test templates
+4. 🎯 Incremental generation 

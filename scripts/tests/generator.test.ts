@@ -63,6 +63,7 @@ describe('Module Generator', () => {
         name: 'test-parent',
         singular: 'parent',
         plural: 'parents',
+        isParent: true,
         fields: [
           {
             name: 'title',
@@ -113,6 +114,10 @@ describe('Module Generator', () => {
         name: 'test-child',
         singular: 'child',
         plural: 'children',
+        parent: {
+          model: 'TestParent',
+          routePrefix: 'parents/children'
+        },
         fields: [
           {
             name: 'name',
@@ -344,7 +349,7 @@ describe('Module Generator', () => {
     it('should generate validators file with correct content', async () => {
       await generateModule(TEST_CONFIG, { testMode: true });
       
-      const validatorsPath = path.join('.test-output', 'src/api/admin/tests/validators.ts');
+      const validatorsPath = path.join('.test-output', 'src/api/admin/tests/parents/validators.ts');
       const content = await TestUtils.readGeneratedFile(validatorsPath);
       
       // Check basic structure
@@ -359,6 +364,77 @@ describe('Module Generator', () => {
       // Check types are exported
       expect(content).toContain('export type AdminCreateTestParentReq');
       expect(content).toContain('export type AdminUpdateTestParentReq');
+    });
+  });
+
+  describe('API Route Generation', () => {
+    it('should generate parent list/create route file with correct content', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const routePath = path.join('.test-output', 'src/api/admin/tests/parents/route.ts');
+      const content = await TestUtils.readGeneratedFile(routePath);
+      
+      // Check imports
+      expect(content).toContain('import { z } from "zod"');
+      expect(content).toContain('import { createFindParams, AdminCreateTestParentReq } from "./validators"');
+      
+      // Check route handlers
+      expect(content).toContain('export async function GET(');
+      expect(content).toContain('export async function POST(');
+      
+      // Check service usage
+      expect(content).toContain('const service = container.resolve("tests")');
+      expect(content).toContain('const result = await service.list(');
+      expect(content).toContain('const result = await service.create(');
+    });
+
+    it('should generate parent update/delete route file with correct content', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const routePath = path.join('.test-output', 'src/api/admin/tests/parents/[id]/route.ts');
+      const content = await TestUtils.readGeneratedFile(routePath);
+      
+      // Check imports
+      expect(content).toContain('import { z } from "zod"');
+      expect(content).toContain('import { AdminUpdateTestParentReq } from "../validators"');
+      
+      // Check route handlers
+      expect(content).toContain('export async function GET(');
+      expect(content).toContain('export async function PUT(');
+      expect(content).toContain('export async function DELETE(');
+      
+      // Check service usage
+      expect(content).toContain('const service = container.resolve("tests")');
+      expect(content).toContain('const result = await service.retrieve(');
+      expect(content).toContain('const result = await service.update(');
+      expect(content).toContain('const result = await service.delete(');
+    });
+
+    it('should generate child routes using parent routePrefix', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      // Child routes should be under parent route prefix
+      const listRoutePath = path.join('.test-output', 'src/api/admin/tests/parents/children/route.ts');
+      const updateRoutePath = path.join('.test-output', 'src/api/admin/tests/parents/children/[id]/route.ts');
+      
+      expect(await TestUtils.fileExists(listRoutePath)).toBe(true);
+      expect(await TestUtils.fileExists(updateRoutePath)).toBe(true);
+
+      // Check child route content
+      const content = await TestUtils.readGeneratedFile(listRoutePath);
+      expect(content).toContain('import { createFindParams, AdminCreateTestChildReq } from "./validators"');
+      expect(content).toContain('const service = container.resolve("tests")');
+    });
+
+    it('should handle relations in route responses', async () => {
+      await generateModule(TEST_CONFIG, { testMode: true });
+      
+      const routePath = path.join('.test-output', 'src/api/admin/tests/parents/route.ts');
+      const content = await TestUtils.readGeneratedFile(routePath);
+      
+      // Check relation handling
+      expect(content).toContain('relations: ["children", "related_items"]');
+      expect(content).toContain('select: ["id", "title", "description", "code", "active", "count"]');
     });
   });
 }); 
