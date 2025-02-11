@@ -1,122 +1,308 @@
-# Module Generator Context - Quick Start
+# Medusa Module Generator v2
 
-## Key Files to Read (in this order):
+A powerful code generator for creating consistent Medusa modules with models, services, API routes, and admin UI components.
 
-1. `docs/module-generator-spec.md`
-   - Overview of entire system
-   - File structure and patterns
-   - Required patterns and success criteria
+## Directory Structure
 
-2. `docs/progress.md`
-   - Current implementation status
-   - What's completed vs pending
-   - Next priority items
+```
+scripts/module-generator/
+├── src/
+│   ├── generate-v2.ts         # Core generator implementation
+│   └── utils/                 # Utility functions
+├── configs/
+│   ├── production-modules.ts  # Production module configurations
+│   └── test-modules.ts       # Test module configurations
+├── tests/
+│   ├── generator.test.ts     # Test suite
+│   ├── test-utils.ts        # Test utilities
+│   ├── setup.ts            # Test setup
+│   └── jest.config.ts      # Jest configuration
+└── templates/              # Handlebars templates
+    └── src/
+        ├── modules/        # Backend module templates
+        │   └── [module.plural]/
+        │       ├── models/
+        │       │   └── [model.name].hbs
+        │       ├── service.hbs
+        │       └── index.hbs
+        ├── api/           # API route templates
+        │   └── admin/
+        │       └── [module.plural]/
+        │           └── [model.plural]/
+        │               ├── route.hbs
+        │               ├── [id]/route.hbs
+        │               └── validators.hbs
+        └── admin/         # Admin UI templates
+            └── routes/
+                └── [module.plural]/
+                    └── [model.plural]/
+                        ├── page.hbs
+                        ├── create/
+                        │   └── [model.name]-create.hbs
+                        └── edit/
+                            └── [model.name]-edit.hbs
 
-3. `scripts/generate-v2.ts`
-   - Current implementation
-   - Core types and generation logic
-   - Basic model generation focus
+```
 
-4. `scripts/tests/generator.test.ts`
-   - Test coverage
-   - Example configurations
-   - Validation patterns
+## Module Configuration
 
-## Current Focus
-API Route Generation including:
-- CRUD endpoint templates
-- Request/Response types
-- Route handlers with local validators
-- Integration with existing model layer
-- Validation middleware using Zod schemas
+Define your module using TypeScript configurations:
 
-Key patterns:
-- Each route directory has its own `validators.ts` file
-- Route files import from local `"./validators"`
-- Child routes follow same pattern in nested directories
-- Validators use Zod for request/response schemas
+```typescript
+type ModuleConfig = {
+  moduleName: string;  // kebab-case module name
+  singular: string;    // Singular display name
+  plural: string;      // Plural display name
+  models: ModelConfig[];
+};
 
-Previous work completed:
-- Model definitions
-- Field types and relations
-- Service registration
-- Module index files
+type ModelConfig = {
+  name: string;        // kebab-case model name
+  singular: string;    // Singular display name
+  plural: string;      // Plural display name
+  isParent?: boolean;  // Mark as parent model
+  parent?: {           // Configure child model
+    model: string;     // Parent model name
+    routePrefix: string; // URL path structure
+  };
+  fields: ModelField[];
+};
 
-## Development & Testing (v2)
-- User will run tests in watch mode in separate terminal:
-  ```bash
-  npm run test:generate:keep:watchAll
-  ```
+type ModelField = {
+  name: string;
+  type: "text" | "number" | "boolean" | "date";
+  chainables?: Array<{
+    name: "nullable" | "unique" | "index" | "primaryKey";
+    args?: Array<string | number | boolean>;
+  }>;
+  validation?: {
+    min?: number;
+    max?: number;
+    email?: boolean;
+    regex?: string;
+    required?: boolean;
+  };
+  relation?: {
+    type: "belongsTo" | "hasMany" | "manyToMany";
+    model: string;
+    mappedBy?: string;
+    through?: string;
+  };
+};
+```
 
-- AI should use quiet test runner to avoid context pollution:
-  ```bash
-  npm run test:generate:quiet
-  ```
-  This command outputs only test failures in a compact format.
+## Generated Output Structure
 
-- AI to observe available test commands in package.json with the prefix `test:generate` for their use.
+```
+src/
+├── modules/[module]/
+│   ├── models/
+│   │   └── [model].ts        # Model definitions
+│   ├── service.ts           # Service registration
+│   └── index.ts            # Module registration
+├── api/admin/[module]/
+│   └── [model]/
+│       ├── route.ts        # List/Create endpoints
+│       ├── [id]/route.ts   # Get/Update/Delete endpoints
+│       └── validators.ts   # Request/Response schemas
+└── admin/routes/[module]/
+    └── [model]/
+        ├── page.tsx        # List page
+        ├── create/
+        │   └── [model]-create.tsx  # Create form
+        └── edit/
+            └── [model]-edit.tsx    # Edit form
+```
 
-- AI will be given YOLO permissions to run any appropriate commands to work on iterations of tasks and should observe test results and resulting .test-output directory
+## Usage
 
-## Progress Notes - JSX Template Handling
+### Development
 
-### Current Status (Session Summary)
-
-1. **Initial Problem**
-- Failing tests in module generator
-- Focus on JSX Template Handling and related test failures
-- Issues with Handlebars template parsing and Prettier formatting
-
-2. **Key Changes Made**
-- Fixed state variable naming in page template (`editing{{ModelName}}` → `editing`)
-- Modified `formatOutput` function for JSX/TSX support:
-  ```typescript
-  parser: content.includes('jsx') || content.includes('tsx') ? 'typescript-react' : 'typescript'
-  ```
-
-3. **Current Issues**
-- Test failures with `SyntaxError: Identifier expected` in various components
-- Prettier formatting challenges with JSX/TSX content
-
-4. **Next Steps**
-1. Template Syntax Review:
-   - Model relations templates
-   - Service generation templates
-   - Field generation templates
-   - Validator generation templates
-   - API route templates
-   - Admin UI templates
-
-2. Alternative Approaches:
-   - Consider bypassing Prettier for JSX/TSX files
-   - Add pre-processing step for Handlebars templates
-   - Review JSX helper functions
-
-3. Focus Areas:
-   - Model relation generation
-   - Field type handling
-   - TypeScript/React code validation
-   - Service file generation
-
-4. Testing Strategy:
-   - Run tests in smaller batches
-   - Add granular test cases
-   - Improve error reporting
-
-### Testing Commands
 ```bash
-# Full test suite
-npm run test:generate
-
-# Watch mode for development
+# Run tests with watch mode
 npm run test:generate:watch
 
-# Keep test output and watch
-npm run test:generate:keep:watchAll
+# Run tests once
+npm run test:generate
 
-# Quiet mode (minimal output)
+# Run tests with preserved output
+npm run test:generate:keep
+
+# Run tests quietly (CI friendly)
 npm run test:generate:quiet
-
-# File-only output
-npm run test:generate:quiet:fileonly
 ```
+
+### Generating Modules
+
+1. Create a module configuration:
+
+```typescript
+// configs/my-module.ts
+export const config: ModuleConfig = {
+  moduleName: "products",
+  singular: "product",
+  plural: "products",
+  models: [
+    {
+      name: "product",
+      singular: "product",
+      plural: "products",
+      fields: [
+        {
+          name: "title",
+          type: "text",
+          chainables: [{ name: "unique" }],
+          validation: { required: true }
+        },
+        {
+          name: "category",
+          type: "text",
+          relation: {
+            type: "belongsTo",
+            model: "Category",
+            mappedBy: "products"
+          }
+        }
+      ]
+    }
+  ]
+};
+```
+
+2. Run the generator:
+
+```bash
+npx ts-node scripts/module-generator/src/generate-v2.ts configs/my-module.ts
+```
+
+## Key Features
+
+### Parent-Child Relationships
+
+```typescript
+{
+  models: [
+    {
+      name: "category",
+      isParent: true,
+      // ...
+    },
+    {
+      name: "product",
+      parent: {
+        model: "Category",
+        routePrefix: "categories/products"
+      },
+      // ...
+    }
+  ]
+}
+```
+
+### Many-to-Many Relationships
+
+```typescript
+{
+  fields: [
+    {
+      name: "tags",
+      type: "text",
+      relation: {
+        type: "manyToMany",
+        model: "Tag",
+        through: "product_tags",
+        mappedBy: "products"
+      }
+    }
+  ]
+}
+```
+
+### Field Validation
+
+```typescript
+{
+  fields: [
+    {
+      name: "email",
+      type: "text",
+      validation: {
+        required: true,
+        email: true
+      }
+    },
+    {
+      name: "age",
+      type: "number",
+      validation: {
+        min: 0,
+        max: 150
+      }
+    }
+  ]
+}
+```
+
+### Database Constraints
+
+```typescript
+{
+  fields: [
+    {
+      name: "code",
+      type: "text",
+      chainables: [
+        { name: "unique" },
+        { name: "index", args: ["asc"] }
+      ]
+    }
+  ]
+}
+```
+
+## Template Helpers
+
+The generator includes several Handlebars helpers for template generation:
+
+### Case Conversion
+- `toPascalCase`: Convert to PascalCase
+- `toSnakeCase`: Convert to snake_case
+- `toKebabCase`: Convert to kebab-case
+- `toCamelCase`: Convert to camelCase
+
+### JSX Helpers
+- `jsx-if`: Conditional rendering
+- `jsx-expr`: Expression interpolation
+- `jsx-ternary`: Ternary expressions
+- `reactComponent`: React component wrapper
+
+### Property Access
+- `propAccess`: Safe property access with optional template literal mode
+
+## Testing
+
+The generator includes a comprehensive test suite covering:
+
+1. Template System
+   - Template file validation
+   - Template syntax validation
+   - Handlebars helpers
+
+2. Module Generation
+   - File structure
+   - Model fields and relations
+   - Parent-child routing
+   - Import generation
+
+3. Code Generation
+   - Field chainables
+   - Relation options
+   - Many-to-many relationships
+   - Validator schemas
+
+## Contributing
+
+1. Write tests for new features
+2. Ensure all tests pass
+3. Follow existing code style
+4. Update documentation as needed

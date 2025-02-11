@@ -1,0 +1,51 @@
+import { z } from "zod";
+import { createFindParams } from "@medusajs/medusa/api/utils/validators";
+
+export const Get{{toPascalCase model.name}}Schema = createFindParams();
+
+export const AdminCreate{{toPascalCase model.name}}Req = z.object({
+  {{#each model.fields}}
+  {{#if relation}}
+  {{#if (eq relation.type "belongsTo")}}
+  {{toSnakeCase name}}_id: z.string().optional(),
+  {{/if}}
+  {{#if (eq relation.type "hasMany")}}
+  {{toSnakeCase name}}_ids: z.array(z.string()).optional(),
+  {{/if}}
+  {{#if (eq relation.type "manyToMany")}}
+  {{toSnakeCase name}}_ids: z.array(z.string()).optional(),
+  {{/if}}
+  {{else}}
+  {{toSnakeCase name}}: z.{{#if (type type "text")}}string(){{else if (type type "number")}}number(){{else if (type type "boolean")}}boolean(){{else if (type type "date")}}date(){{else}}string(){{/if}}{{#if validation.required}}.min(1){{else}}.optional(){{/if}}
+    {{#if validation.min}}.min({{validation.min}}){{/if}}
+    {{#if validation.max}}.max({{validation.max}}){{/if}}
+    {{#if validation.email}}.email(){{/if}}
+    {{#if validation.regex}}.regex(new RegExp('{{validation.regex}}')){{/if}},
+  {{/if}}
+  {{/each}}
+});
+
+export const AdminUpdate{{toPascalCase model.name}}Req = z.object({
+  {{#each model.fields}}
+  {{#if relation}}
+  {{#if (eq relation.type "belongsTo")}}
+  {{toSnakeCase name}}_id: z.string().optional(),
+  {{/if}}
+  {{#if (eq relation.type "hasMany")}}
+  {{toSnakeCase name}}_ids: z.array(z.string()).optional(),
+  {{/if}}
+  {{#if (eq relation.type "manyToMany")}}
+  {{toSnakeCase name}}_ids: z.array(z.string()).optional(),
+  {{/if}}
+  {{else}}
+  {{toSnakeCase name}}: z.{{#if (type type "text")}}string(){{else if (type type "number")}}number(){{else if (type type "boolean")}}boolean(){{else if (type type "date")}}date(){{else}}string(){{/if}}.optional()
+    {{#if validation.min}}.min({{validation.min}}){{/if}}
+    {{#if validation.max}}.max({{validation.max}}){{/if}}
+    {{#if validation.email}}.email(){{/if}}
+    {{#if validation.regex}}.regex(new RegExp('{{validation.regex}}')){{/if}},
+  {{/if}}
+  {{/each}}
+});
+
+export type AdminCreate{{toPascalCase model.name}}Req = z.infer<typeof AdminCreate{{toPascalCase model.name}}Req>;
+export type AdminUpdate{{toPascalCase model.name}}Req = z.infer<typeof AdminUpdate{{toPascalCase model.name}}Req>; 

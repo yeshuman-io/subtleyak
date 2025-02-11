@@ -1,0 +1,8 @@
+import {{serviceName}}Service from "./service";
+import { Module } from "@medusajs/framework/utils";
+
+export const {{moduleConstName}} = "{{moduleName}}";
+
+export default Module({{moduleConstName}}, {
+  service: {{serviceName}}Service,
+}); 
