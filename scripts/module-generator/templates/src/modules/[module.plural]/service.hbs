@@ -1,12 +1,15 @@
 import { MedusaService } from "@medusajs/framework/utils";
-import  from "./";
+import {{toPascalCase module.modelName}} from "./models/{{toKebabCase module.modelName}}";
 {{#each module.models}}
-import {{toPascalCase name}} from "./models/{{name}}";
+import {{toPascalCase name}} from "./models/{{toKebabCase name}}";
 {{/each}}
 
-class Service extends MedusaService({
-  ,
-  {{#each module.models}}{{toPascalCase name}}{{#unless @last}},{{/unless}}{{/each}}
+// Combine all models into a single service
+class {{toPascalCase module.name}}Service extends MedusaService({
+  {{toPascalCase module.modelName}},
+  {{#each module.models}}
+  {{toPascalCase name}}{{#unless @last}},{{/unless}}
+  {{/each}}
 }) {}
 
-export default Service; 
+export default {{toPascalCase module.name}}Service; 

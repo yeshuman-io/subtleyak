@@ -93,14 +93,14 @@ describe('Module Generator', () => {
           const template = Handlebars.compile('{{processField field}}');
           expect(template({ 
             field: { name: 'name', type: 'string', required: true }
-          })).toBe('name: model.string().required()');
+          })).toBe('name: model.text().required()');
         });
 
         it('should handle optional fields', () => {
           const template = Handlebars.compile('{{processField field}}');
           expect(template({ 
             field: { name: 'description', type: 'string' }
-          })).toBe('description: model.string()');
+          })).toBe('description: model.text()');
         });
 
         it('should handle relationships with inverse', () => {
@@ -252,10 +252,10 @@ describe('Module Generator', () => {
         const modelPath = path.join('.test-output', 'src/modules/field-types/models/all-types.ts');
         const content = await TestUtils.readGeneratedFile(modelPath);
         
-        expect(content).toContain('string_field: model.string().required()');
-        expect(content).toContain('number_field: model.number().required()');
-        expect(content).toContain('boolean_field: model.boolean()');
-        expect(content).toContain('date_field: model.date()');
+        expect(content).toMatch(/string_field:\s*model\.text\(\)\.required\(\)/);
+        expect(content).toMatch(/number_field:\s*model\.number\(\)\.required\(\)/);
+        expect(content).toMatch(/boolean_field:\s*model\.boolean\(\)/);
+        expect(content).toMatch(/date_field:\s*model\.date\(\)/);
       });
     });
   });
