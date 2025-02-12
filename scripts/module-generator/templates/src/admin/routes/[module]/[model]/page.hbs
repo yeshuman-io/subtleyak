@@ -1,0 +1,128 @@
+{{#with (toPascalCase model.name) as |ModelName|}}
+import { defineRouteConfig } from "@medusajs/admin-sdk";
+import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
+import { {{ModelName}} } from "../../../types";
+import { DataTablePage } from "../../../components/data-table-page";
+import { {{ModelName}}Create } from "./create/{{toKebabCase ../model.name}}-create";
+import { useState } from "react";
+import { ActionMenu } from "../../../components/action-menu";
+import { Pencil } from "@medusajs/icons";
+import { {{ModelName}}Edit } from "./edit/{{toKebabCase ../model.name}}-edit";
+
+const columnHelper = createDataTableColumnHelper<{{ModelName}}>();
+
+const {{ModelName}}Page = () => {
+  const [showCreate, setShowCreate] = useState(false);
+  const [editing, setEditing] = useState<{{ModelName}} | null>(null);
+
+  const columns = [
+    columnHelper.accessor("id", {
+      header: "ID",
+    }),
+    {{#each model.fields}}
+    {{#if (eq type "text")}}
+    columnHelper.accessor("{{toSnakeCase name}}", {
+      header: "{{toTitleCase name}}",
+      enableSorting: true,
+    }),
+    {{/if}}
+    {{#if (eq type "relation")}}
+    columnHelper.accessor("{{toSnakeCase name}}.name", {
+      header: "{{toTitleCase name}}",
+      enableSorting: true,
+    }),
+    {{/if}}
+    {{#if (eq type "number")}}
+    columnHelper.accessor("{{toSnakeCase name}}", {
+      header: "{{toTitleCase name}}",
+      enableSorting: true,
+    }),
+    {{/if}}
+    {{/each}}
+    columnHelper.accessor("actions", {
+      header: "",
+      cell: ({ row }) => {
+        const item = row.original;
+        return (
+          <ActionMenu
+            groups={[
+              {
+                actions: [
+                  {
+                    label: "Edit",
+                    icon: <Pencil />,
+                    onClick: () => setEditing(item),
+                  },
+                ],
+              },
+            ]}
+          />
+        );
+      },
+    }),
+  ];
+
+  return (
+    <>
+      <DataTablePage<{{ModelName}}>
+        title="{{toTitleCase model.plural}}"
+        subtitle="Manage your {{toLowerCase model.plural}}"
+        endpoint="/admin/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}"
+        columns={columns}
+        queryKey="{{toSnakeCase model.plural}}"
+        dataKey="{{toSnakeCase model.plural}}"
+        actions={[
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Export",
+              disabled: true,
+            },
+          },
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Import",
+              disabled: true,
+            },
+          },
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Create",
+              onClick: () => setShowCreate(true),
+            },
+          },
+        ]}
+      />
+
+      {showCreate && (
+        <FocusModal open={showCreate} onOpenChange={setShowCreate}>
+          <{{ModelName}}Create onClose={() => setShowCreate(false)} />
+        </FocusModal>
+      )}
+
+      {editing && (
+        <Drawer open onOpenChange={() => setEditing(null)}>
+          <{{ModelName}}Edit 
+            {{toCamelCase ModelName}}={{jsx-expr "editing"}}
+            onClose={() => setEditing(null)}
+          />
+        </Drawer>
+      )}
+    </>
+  );
+};
+
+export const config = defineRouteConfig({
+  label: "{{toTitleCase model.plural}}",
+});
+
+export default {{ModelName}}Page;
+{{/with}} 

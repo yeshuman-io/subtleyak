@@ -1,9 +1,4 @@
-import { model } from "@medusajs/framework/utils";
-{{#each model.fields}}
-{{#if relation}}
-import {{relation.model}} from "./{{toKebabCase relation.model}}";
-{{/if}}
-{{/each}}
+import { model } from "@medusajs/framework";
 
 const {{toPascalCase model.name}} = model.define("{{toSnakeCase model.name}}", {
   id: model.id().primaryKey(),
@@ -12,4 +7,4 @@ const {{toPascalCase model.name}} = model.define("{{toSnakeCase model.name}}", {
   {{/each}}
 });
 
-export default {{toPascalCase model.name}};
+export default {{toPascalCase model.name}}; 

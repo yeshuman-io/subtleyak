@@ -132,7 +132,7 @@ npm run test:generate:keep
 npm run test:generate:quiet
 
 # Run a single test
-npm run test:generate:single -t "test name"
+npm run test:generate:single -- -t "test name"
 ```
 
 IMPORTANT FOR AI COMPOSER SESSION TESTING:

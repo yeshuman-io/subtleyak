@@ -1,8 +1,19 @@
-import {{serviceName}}Service from "./service";
-import { Module } from "@medusajs/framework/utils";
+import {{toPascalCase module.modelName}} from "./{{module.modelName}}";
+{{#each module.models}}
+import {{toPascalCase name}} from "./models/{{name}}";
+{{/each}}
+import {{toPascalCase module.name}}Service from "./service";
 
-export const {{moduleConstName}} = "{{moduleName}}";
+export const {{toUpperCase module.name}}_MODULE_KEY = "{{module.name}}";
 
-export default Module({{moduleConstName}}, {
-  service: {{serviceName}}Service,
-}); 
+export default {
+  models: [
+    {{toPascalCase module.modelName}},
+    {{#each module.models}}
+    {{toPascalCase name}}{{#unless @last}},{{/unless}}
+    {{/each}}
+  ],
+  services: [
+    {{toPascalCase module.name}}Service
+  ]
+}; 

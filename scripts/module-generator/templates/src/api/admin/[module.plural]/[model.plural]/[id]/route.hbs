@@ -1,46 +1,32 @@
-import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http"
-import { z } from "zod"
-import { container } from "@medusajs/framework/utils"
-import { AdminUpdate{{toPascalCase model.name}}Req } from "../validators"
-import { update{{toPascalCase model.name}}Workflow } from "../../../../../workflows/update-{{toKebabCase model.name}}"
+import { Request, Response } from "express";
+import { AdminUpdateReq } from "../validators";
 
-export type {{toPascalCase model.name}}UpdateParams = z.infer<typeof AdminUpdate{{toPascalCase model.name}}Req>
-
-export async function GET(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const service = container.resolve("{{module.plural}}")
-  
-  const result = await service.retrieve(params.id, {
-    relations: [{{#each model.fields}}{{#if relation}}"{{name}}"{{#unless @last}}, {{/unless}}{{/if}}{{/each}}],
-    select: ["id"{{#each model.fields}}{{#unless relation}}, "{{name}}"{{/unless}}{{/each}}]
-  })
-
-  return Response.json(result)
+export async function GET(req: Request, res: Response) {
+  const service = req.scope.resolve("{{module.name}}");
+  {{#if (isModuleModel model module)}}
+  const result = await service.retrieve(req.params.id);
+  {{else}}
+  const result = await service.retrieve{{toPascalCase model.singular}}(req.params.id);
+  {{/if}}
+  res.json(result);
 }
 
-export async function PUT(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const service = container.resolve("{{module.plural}}")
-  const json = await req.json()
-  
-  const validatedBody = AdminUpdate{{toPascalCase model.name}}Req.parse(json)
-  
-  const result = await service.update(params.id, validatedBody)
-  
-  return Response.json(result)
+export async function PUT(req: Request<AdminUpdateReq>, res: Response) {
+  const service = req.scope.resolve("{{module.name}}");
+  {{#if (isModuleModel model module)}}
+  const result = await service.update(req.params.id, req.body);
+  {{else}}
+  const result = await service.update{{toPascalCase model.singular}}(req.params.id, req.body);
+  {{/if}}
+  res.json(result);
 }
 
-export async function DELETE(
-  req: Request,
-  { params }: { params: { id: string } }
-) {
-  const service = container.resolve("{{module.plural}}")
-  
-  const result = await service.delete(params.id)
-  
-  return Response.json(result)
+export async function DELETE(req: Request, res: Response) {
+  const service = req.scope.resolve("{{module.name}}");
+  {{#if (isModuleModel model module)}}
+  await service.delete(req.params.id);
+  {{else}}
+  await service.delete{{toPascalCase model.singular}}(req.params.id);
+  {{/if}}
+  res.status(204).end();
 } 

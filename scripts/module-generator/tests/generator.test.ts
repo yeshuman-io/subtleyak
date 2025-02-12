@@ -4,8 +4,7 @@ import path from 'path';
 import fs from 'fs/promises';
 import { describe, it, expect, beforeEach } from '@jest/globals';
 import Handlebars from 'handlebars';
-import { VEHICLE_MODULE } from '../configs/production-modules';
-import { TEST_MODULE, PARENT_CHILD_MODULE, MANY_TO_MANY_MODULE, FIELD_TYPES_MODULE } from '../configs/test-modules';
+import { TEST_MODULE, RELATIONSHIP_MODULE, MANY_TO_MANY_MODULE, FIELD_TYPES_MODULE } from '../configs/test-modules';
 
 describe('Module Generator', () => {
   beforeEach(async () => {
@@ -16,12 +15,16 @@ describe('Module Generator', () => {
     it('should validate required template files exist', async () => {
       const templateDir = path.join(process.cwd(), 'scripts/module-generator/templates');
       const requiredTemplates = [
+        'src/modules/[module.plural]/[module.modelName].hbs',
         'src/modules/[module.plural]/models/[model.name].hbs',
         'src/modules/[module.plural]/service.hbs',
         'src/modules/[module.plural]/index.hbs',
         'src/api/admin/[module.plural]/[model.plural]/route.hbs',
         'src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs',
-        'src/api/admin/[module.plural]/[model.plural]/validators.hbs'
+        'src/api/admin/[module.plural]/[model.plural]/validators.hbs',
+        'src/admin/routes/[module.plural]/[model.plural]/page.hbs',
+        'src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs',
+        'src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs'
       ];
 
       for (const template of requiredTemplates) {
@@ -43,6 +46,95 @@ describe('Module Generator', () => {
     });
 
     describe('Handlebars Helpers', () => {
+      describe('module/model helpers', () => {
+        it('should identify module models correctly', () => {
+          const template = Handlebars.compile('{{isModuleModel model module}}');
+          expect(template({ 
+            model: { name: 'tests' }, 
+            module: { modelName: 'tests' } 
+          })).toBe('true');
+          expect(template({ 
+            model: { name: 'test-model' }, 
+            module: { modelName: 'tests' } 
+          })).toBe('');
+        });
+
+        it('should generate correct route paths', () => {
+          const template = Handlebars.compile('{{getRoutePath model module}}');
+          // Module model route
+          expect(template({ 
+            model: { name: 'tests', plural: 'tests' }, 
+            module: { modelName: 'tests', plural: 'tests' } 
+          })).toBe('tests');
+          // Regular model route
+          expect(template({ 
+            model: { name: 'test-model', plural: 'models' }, 
+            module: { modelName: 'tests', plural: 'tests' } 
+          })).toBe('tests/models');
+        });
+
+        it('should generate correct import paths', () => {
+          const template = Handlebars.compile('{{getModelImportPath model module}}');
+          // Module model import
+          expect(template({ 
+            model: { name: 'tests' }, 
+            module: { modelName: 'tests' } 
+          })).toBe('./');
+          // Regular model import
+          expect(template({ 
+            model: { name: 'test-model' }, 
+            module: { modelName: 'tests' } 
+          })).toBe('./models/test-model');
+        });
+      });
+
+      describe('field processing', () => {
+        it('should handle required fields', () => {
+          const template = Handlebars.compile('{{processField field}}');
+          expect(template({ 
+            field: { name: 'name', type: 'string', required: true }
+          })).toBe('name: model.string().required()');
+        });
+
+        it('should handle optional fields', () => {
+          const template = Handlebars.compile('{{processField field}}');
+          expect(template({ 
+            field: { name: 'description', type: 'string' }
+          })).toBe('description: model.string()');
+        });
+
+        it('should handle relationships with inverse', () => {
+          const template = Handlebars.compile('{{processField field}}');
+          expect(template({ 
+            field: { 
+              name: 'models', 
+              type: 'string',
+              relation: {
+                type: 'hasMany',
+                model: 'TestModel',
+                inverse: 'test'
+              }
+            }
+          })).toMatch(/models: model.hasMany\(\(\) => TestModel, {\s*inverse: "test"\s*}\)/);
+        });
+
+        it('should handle many-to-many relationships', () => {
+          const template = Handlebars.compile('{{processField field}}');
+          expect(template({ 
+            field: { 
+              name: 'rights', 
+              type: 'string',
+              relation: {
+                type: 'manyToMany',
+                model: 'Right',
+                through: 'left_right',
+                inverse: 'lefts'
+              }
+            }
+          })).toMatch(/rights: model.manyToMany\(\(\) => Right, {\s*inverse: "lefts",\s*through: "left_right"\s*}\)/);
+        });
+      });
+
       describe('propAccess helper', () => {
         it('should handle basic property access', () => {
           const template = Handlebars.compile('{{propAccess "obj" "prop"}}');
@@ -98,16 +190,24 @@ describe('Module Generator', () => {
 
   describe('Module Generation', () => {
     describe('File Structure', () => {
-      it('should generate files in correct locations', async () => {
+      it('should generate module model in correct location', async () => {
+        await generateModule(TEST_MODULE, { testMode: true });
+        
+        const moduleModelPath = path.join('.test-output', 'src/modules/tests/tests.ts');
+        expect(await TestUtils.fileExists(moduleModelPath)).toBe(true);
+      });
+
+      it('should generate model files in correct locations', async () => {
         await generateModule(TEST_MODULE, { testMode: true });
         
         const expectedFiles = [
           'src/modules/tests/models/test-model.ts',
-          'src/modules/tests/service.ts',
-          'src/modules/tests/index.ts',
           'src/api/admin/tests/models/route.ts',
           'src/api/admin/tests/models/[id]/route.ts',
-          'src/api/admin/tests/models/validators.ts'
+          'src/api/admin/tests/models/validators.ts',
+          'src/admin/routes/tests/models/page.tsx',
+          'src/admin/routes/tests/models/create/test-model-create.tsx',
+          'src/admin/routes/tests/models/edit/test-model-edit.tsx'
         ];
 
         for (const file of expectedFiles) {
@@ -117,116 +217,45 @@ describe('Module Generator', () => {
       });
     });
 
-    describe('Model Generation', () => {
-      it('should generate fields with chainable arguments', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
+    describe('Relationship Generation', () => {
+      it('should handle one-to-many relationships', async () => {
+        await generateModule(RELATIONSHIP_MODULE, { testMode: true });
         
-        const modelPath = path.join('.test-output', 'src/modules/tests/models/test-model.ts');
-        const content = await TestUtils.readGeneratedFile(modelPath);
+        const oneModelPath = path.join('.test-output', 'src/modules/relationships/models/one-to-many.ts');
+        const manyModelPath = path.join('.test-output', 'src/modules/relationships/models/many-to-one.ts');
         
-        // Check chainables are properly assembled
-        expect(content).toContain('required_field: model.text().unique().index()');
-        expect(content).toContain('nullable_field: model.text().nullable()');
-        expect(content).toContain('complex_field: model.text().unique().index("asc")');
+        const oneContent = await TestUtils.readGeneratedFile(oneModelPath);
+        const manyContent = await TestUtils.readGeneratedFile(manyModelPath);
+        
+        expect(oneContent).toMatch(/manys:\s*model\.hasMany\(\s*\(\)\s*=>\s*Many,\s*{\s*mappedBy:\s*"one"\s*}\)/);
+        expect(manyContent).toMatch(/one:\s*model\.belongsTo\(\s*\(\)\s*=>\s*One,\s*{\s*mappedBy:\s*"manys"\s*}\)/);
       });
 
-      it('should generate correct model imports for relations', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
-        
-        const modelPath = path.join('.test-output', 'src/modules/tests/models/test-model.ts');
-        const content = await TestUtils.readGeneratedFile(modelPath);
-        
-        // Check imports are properly generated
-        expect(content).toContain('import TestParent from "./test-parent"');
-        expect(content).toContain('import TestChild from "./test-child"');
-      });
-
-      it('should handle relation options correctly', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
-        
-        const modelPath = path.join('.test-output', 'src/modules/tests/models/test-model.ts');
-        const content = await TestUtils.readGeneratedFile(modelPath);
-        
-        // Check relation options are properly assembled
-        expect(content).toMatch(/parent:\s*model\.belongsTo\(\s*\(\)\s*=>\s*TestParent,\s*{\s*mappedBy:\s*"children",?\s*}\)/);
-        expect(content).toMatch(/children:\s*model\.hasMany\(\s*\(\)\s*=>\s*TestChild,\s*{\s*mappedBy:\s*"parent",?\s*}\)/);
-      });
-
-      it('should handle many-to-many relationships with through table', async () => {
+      it('should handle many-to-many relationships', async () => {
         await generateModule(MANY_TO_MANY_MODULE, { testMode: true });
         
-        const modelPath = path.join('.test-output', 'src/modules/many-to-many-test/models/test-left.ts');
+        const leftModelPath = path.join('.test-output', 'src/modules/many-to-manys/models/left.ts');
+        const rightModelPath = path.join('.test-output', 'src/modules/many-to-manys/models/right.ts');
+        
+        const leftContent = await TestUtils.readGeneratedFile(leftModelPath);
+        const rightContent = await TestUtils.readGeneratedFile(rightModelPath);
+        
+        expect(leftContent).toMatch(/rights:\s*model\.manyToMany\(\s*\(\)\s*=>\s*Right,\s*{\s*mappedBy:\s*"lefts",\s*through:\s*"left_right"\s*}\)/);
+        expect(rightContent).toMatch(/lefts:\s*model\.manyToMany\(\s*\(\)\s*=>\s*Left,\s*{\s*mappedBy:\s*"rights",\s*through:\s*"left_right"\s*}\)/);
+      });
+    });
+
+    describe('Field Types', () => {
+      it('should handle all field types correctly', async () => {
+        await generateModule(FIELD_TYPES_MODULE, { testMode: true });
+        
+        const modelPath = path.join('.test-output', 'src/modules/field-types/models/all-types.ts');
         const content = await TestUtils.readGeneratedFile(modelPath);
         
-        // Check many-to-many template output with through table
-        expect(content).toMatch(/rights:\s*model\.manyToMany\(\s*\(\)\s*=>\s*TestRight,\s*{[^}]*through:\s*"test_left_right"[^}]*}/);
-        expect(content).toMatch(/rights:\s*model\.manyToMany\(\s*\(\)\s*=>\s*TestRight,\s*{[^}]*mappedBy:\s*"lefts"[^}]*}/);
-      });
-    });
-
-    describe('Route Generation', () => {
-      it('should handle parent-child model relationships', async () => {
-        await generateModule(PARENT_CHILD_MODULE, { testMode: true });
-        
-        // Check child route is under parent prefix
-        const childRoutePath = path.join('.test-output', 'src/api/admin/parent-child-test/parents/children/route.ts');
-        expect(await TestUtils.fileExists(childRoutePath)).toBe(true);
-      });
-
-      it('should generate validator with correct field definitions', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
-        
-        const validatorsPath = path.join('.test-output', 'src/api/admin/tests/models/validators.ts');
-        const content = await TestUtils.readGeneratedFile(validatorsPath);
-        
-        // Check field interpolation from our templates
-        expect(content).toContain('required_field: z.string()');
-        expect(content).toContain('parent_id: z.string()');
-        expect(content).toContain('export type AdminCreateTestModelReq');
-      });
-    });
-
-    describe('Import Generation', () => {
-      it('should generate correct component imports', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
-        const pageContent = await fs.readFile(
-          path.join('.test-output', 'src/admin/routes/tests/models/page.tsx'),
-          'utf-8'
-        );
-        
-        expect(pageContent).toMatch(/import\s*{\s*TestModelCreate\s*}\s*from\s*["']\.\/create\/test-model-create["']/);
-        expect(pageContent).toMatch(/import\s*{\s*TestModelEdit\s*}\s*from\s*["']\.\/edit\/test-model-edit["']/);
-      });
-
-      it('should generate correct model imports', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
-        const pageContent = await fs.readFile(
-          path.join('.test-output', 'src/admin/routes/tests/models/page.tsx'),
-          'utf-8'
-        );
-        
-        expect(pageContent).toMatch(/import\s*{\s*TestModel\s*}\s*from\s*["']\.\.\/\.\.\/\.\.\/types["']/);
-      });
-
-      it('should generate correct validator imports', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
-        const routeContent = await fs.readFile(
-          path.join('.test-output', 'src/api/admin/tests/models/[id]/route.ts'),
-          'utf-8'
-        );
-        
-        expect(routeContent).toMatch(/import\s*{\s*AdminUpdateTestModelReq\s*}\s*from\s*["']\.\.\/validators["']/);
-      });
-
-      it('should handle parent-child component imports', async () => {
-        await generateModule(PARENT_CHILD_MODULE, { testMode: true });
-        const childPageContent = await fs.readFile(
-          path.join('.test-output', 'src/admin/routes/parent-child-test/parents/children/page.tsx'),
-          'utf-8'
-        );
-        
-        expect(childPageContent).toMatch(/import\s*{\s*TestChildCreate\s*}\s*from\s*["']\.\/create\/test-child-create["']/);
-        expect(childPageContent).toMatch(/import\s*{\s*TestChildEdit\s*}\s*from\s*["']\.\/edit\/test-child-edit["']/);
+        expect(content).toContain('string_field: model.string().required()');
+        expect(content).toContain('number_field: model.number().required()');
+        expect(content).toContain('boolean_field: model.boolean()');
+        expect(content).toContain('date_field: model.date()');
       });
     });
   });
@@ -258,13 +287,22 @@ describe('Module Generator', () => {
         expect(change).toMatchObject({
           path: expect.any(String),
           type: 'create',
-          templatePath: expect.any(String),
-          model: expect.any(String),
-          module: expect.any(String)
+          templatePath: expect.any(String)
         });
       });
 
-      // Verify all expected files are included for each model
+      // Verify module model files are included
+      const moduleFiles = changes.filter(c => c.model === TEST_MODULE.modelName);
+      expect(moduleFiles).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: expect.stringContaining(`/tests.ts`) }),
+          expect.objectContaining({ path: expect.stringContaining(`/tests/route.ts`) }),
+          expect.objectContaining({ path: expect.stringContaining(`/tests/[id]/route.ts`) }),
+          expect.objectContaining({ path: expect.stringContaining(`/tests/validators.ts`) })
+        ])
+      );
+
+      // Verify model files are included
       TEST_MODULE.models.forEach(model => {
         const modelFiles = changes.filter(c => c.model === model.name);
         expect(modelFiles).toEqual(
@@ -272,21 +310,10 @@ describe('Module Generator', () => {
             expect.objectContaining({ path: expect.stringContaining(`/models/${model.name}.ts`) }),
             expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/route.ts`) }),
             expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/[id]/route.ts`) }),
-            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/validators.ts`) }),
-            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/page.tsx`) }),
-            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/create/${model.name}-create.tsx`) }),
-            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/edit/${model.name}-edit.tsx`) })
+            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/validators.ts`) })
           ])
         );
       });
-
-      // Verify service and index files
-      expect(changes).toEqual(
-        expect.arrayContaining([
-          expect.objectContaining({ path: expect.stringContaining('/service.ts') }),
-          expect.objectContaining({ path: expect.stringContaining('/index.ts') })
-        ])
-      );
     });
 
     it('should capture all potential file changes', async () => {

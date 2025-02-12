@@ -1,0 +1,36 @@
+import { z } from "zod"
+import { container } from "@medusajs/framework/utils"
+import { createFindParams, AdminCreate{{toPascalCase model.name}}Req } from "./validators"
+
+export type {{toPascalCase model.name}}ListParams = z.infer<typeof createFindParams>
+
+export async function GET(
+  req: Request
+) {
+  const service = container.resolve("{{module.plural}}")
+  const { searchParams } = new URL(req.url)
+  
+  const validatedParams = createFindParams.parse(
+    Object.fromEntries(searchParams.entries())
+  )
+
+  const result = await service.list(validatedParams, {
+    relations: [{{#each model.fields}}{{#if relation}}"{{name}}"{{#unless @last}}, {{/unless}}{{/if}}{{/each}}],
+    select: ["id"{{#each model.fields}}{{#unless relation}}, "{{name}}"{{/unless}}{{/each}}]
+  })
+
+  return Response.json(result)
+}
+
+export async function POST(
+  req: Request
+) {
+  const service = container.resolve("{{module.plural}}")
+  const json = await req.json()
+  
+  const validatedBody = AdminCreate{{toPascalCase model.name}}Req.parse(json)
+  
+  const result = await service.create(validatedBody)
+  
+  return Response.json(result)
+} 

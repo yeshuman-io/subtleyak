@@ -13,7 +13,8 @@ const config: Config.InitialOptions = {
   testEnvironment: 'node',
   roots: [
     '<rootDir>/scripts/module-generator/tests',
-    '<rootDir>/scripts/module-generator/templates'
+    '<rootDir>/scripts/module-generator/templates',
+    '<rootDir>/scripts/module-generator/src'
   ],
   testMatch: ['**/*.test.ts'],
   moduleNameMapper: {

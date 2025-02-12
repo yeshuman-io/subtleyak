@@ -1,36 +1,45 @@
-import { z } from "zod"
-import { container } from "@medusajs/framework/utils"
-import { createFindParams, AdminCreate{{toPascalCase model.name}}Req } from "./validators"
+import { Request, Response } from "express";
+import { Get{{toPascalCase model.name}}Schema, AdminCreate{{toPascalCase model.name}}Req } from "./validators";
 
-export type {{toPascalCase model.name}}ListParams = z.infer<typeof createFindParams>
+export async function GET(req: Request, res: Response) {
+  const service = req.scope.resolve("{{module.name}}");
+  const validated = await Get{{toPascalCase model.name}}Schema.parseAsync(req.query);
 
-export async function GET(
-  req: Request
-) {
-  const service = container.resolve("{{module.plural}}")
-  const { searchParams } = new URL(req.url)
-  
-  const validatedParams = createFindParams.parse(
-    Object.fromEntries(searchParams.entries())
-  )
+  {{#if (isModuleModel model module)}}
+  const [items, count] = await Promise.all([
+    service.list(validated.where, {
+      skip: validated.offset,
+      take: validated.limit,
+    }),
+    service.count(validated.where),
+  ]);
+  {{else}}
+  const [items, count] = await Promise.all([
+    service.list{{toPascalCase model.plural}}(validated.where, {
+      skip: validated.offset,
+      take: validated.limit,
+    }),
+    service.count{{toPascalCase model.plural}}(validated.where),
+  ]);
+  {{/if}}
 
-  const result = await service.list(validatedParams, {
-    relations: [{{#each model.fields}}{{#if relation}}"{{name}}"{{#unless @last}}, {{/unless}}{{/if}}{{/each}}],
-    select: ["id"{{#each model.fields}}{{#unless relation}}, "{{name}}"{{/unless}}{{/each}}]
-  })
-
-  return Response.json(result)
+  res.json({
+    items,
+    count,
+    offset: validated.offset,
+    limit: validated.limit,
+  });
 }
 
-export async function POST(
-  req: Request
-) {
-  const service = container.resolve("{{module.plural}}")
-  const json = await req.json()
-  
-  const validatedBody = AdminCreate{{toPascalCase model.name}}Req.parse(json)
-  
-  const result = await service.create(validatedBody)
-  
-  return Response.json(result)
+export async function POST(req: Request<AdminCreate{{toPascalCase model.name}}Req>, res: Response) {
+  const service = req.scope.resolve("{{module.name}}");
+  const validated = await AdminCreate{{toPascalCase model.name}}Req.parseAsync(req.body);
+
+  {{#if (isModuleModel model module)}}
+  const result = await service.create(validated);
+  {{else}}
+  const result = await service.create{{toPascalCase model.singular}}(validated);
+  {{/if}}
+
+  res.json(result);
 } 

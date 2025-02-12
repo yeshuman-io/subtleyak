@@ -1,13 +1,30 @@
-import type { ModuleConfig } from '../src/generate-v2';
+import type { ModuleConfig } from '../src/generate-v2.js';
 
 /**
  * Test Module Configuration
  * Used to test specific generator features
  */
 export const TEST_MODULE: ModuleConfig = {
-  moduleName: 'tests',
+  name: 'tests',
+  modelName: 'tests',
   singular: 'test',
   plural: 'tests',
+  fields: [
+    {
+      name: 'name',
+      type: 'string',
+      required: true
+    },
+    {
+      name: 'models',
+      type: 'string',
+      relation: {
+        type: 'hasMany',
+        model: 'TestModel',
+        mappedBy: 'test'
+      }
+    }
+  ],
   models: [
     {
       name: 'test-model',
@@ -15,87 +32,22 @@ export const TEST_MODULE: ModuleConfig = {
       plural: 'models',
       fields: [
         {
-          name: 'required_field',
-          type: 'text',
-          chainables: [
-            { name: 'unique' },
-            { name: 'index' }
-          ]
+          name: 'name',
+          type: 'string',
+          required: true
         },
         {
-          name: 'nullable_field',
-          type: 'text',
-          chainables: [
-            { name: 'nullable' }
-          ]
+          name: 'code',
+          type: 'string',
+          required: true
         },
         {
-          name: 'complex_field',
-          type: 'text',
-          chainables: [
-            { name: 'unique' },
-            { name: 'index', args: ['asc'] }
-          ]
-        },
-        {
-          name: 'parent',
-          type: 'text',
+          name: 'test',
+          type: 'string',
           relation: {
             type: 'belongsTo',
-            model: 'TestParent',
-            mappedBy: 'children'
-          }
-        },
-        {
-          name: 'children',
-          type: 'text',
-          relation: {
-            type: 'hasMany',
-            model: 'TestChild',
-            mappedBy: 'parent'
-          }
-        }
-      ]
-    },
-    {
-      name: 'test-parent',
-      singular: 'parent',
-      plural: 'parents',
-      fields: [
-        {
-          name: 'name',
-          type: 'text',
-          chainables: [
-            { name: 'unique' }
-          ]
-        },
-        {
-          name: 'children',
-          type: 'text',
-          relation: {
-            type: 'hasMany',
-            model: 'TestModel',
-            mappedBy: 'parent'
-          }
-        }
-      ]
-    },
-    {
-      name: 'test-child',
-      singular: 'child',
-      plural: 'children',
-      fields: [
-        {
-          name: 'name',
-          type: 'text'
-        },
-        {
-          name: 'parent',
-          type: 'text',
-          relation: {
-            type: 'belongsTo',
-            model: 'TestModel',
-            mappedBy: 'children'
+            model: 'Test',
+            mappedBy: 'models'
           }
         }
       ]
@@ -104,45 +56,60 @@ export const TEST_MODULE: ModuleConfig = {
 };
 
 /**
- * Parent-Child Test Module Configuration
- * Used to test parent-child relationships in routes
+ * Relationship Test Module Configuration
+ * Used to test different types of relationships
  */
-export const PARENT_CHILD_MODULE: ModuleConfig = {
-  moduleName: 'parent-child-test',
-  singular: 'test',
-  plural: 'parent-child-test',
+export const RELATIONSHIP_MODULE: ModuleConfig = {
+  name: 'relationships',
+  modelName: 'relationships',
+  singular: 'relationship',
+  plural: 'relationships',
+  fields: [
+    {
+      name: 'name',
+      type: 'string',
+      required: true
+    }
+  ],
   models: [
     {
-      name: 'test-parent',
-      singular: 'parent',
-      plural: 'parents',
-      isParent: true,
+      name: 'one-to-many',
+      singular: 'one',
+      plural: 'ones',
       fields: [
         {
           name: 'name',
-          type: 'text'
+          type: 'string',
+          required: true
+        },
+        {
+          name: 'manys',
+          type: 'string',
+          relation: {
+            type: 'hasMany',
+            model: 'Many',
+            mappedBy: 'one'
+          }
         }
       ]
     },
     {
-      name: 'test-child',
-      singular: 'child',
-      plural: 'children',
-      parent: {
-        model: 'TestParent',
-        routePrefix: 'parents/children'
-      },
+      name: 'many-to-one',
+      singular: 'many',
+      plural: 'manys',
       fields: [
         {
           name: 'name',
-          type: 'text'
+          type: 'string',
+          required: true
         },
         {
-          name: 'parent',
-          type: 'text',
+          name: 'one',
+          type: 'string',
           relation: {
             type: 'belongsTo',
-            model: 'TestParent'
+            model: 'One',
+            mappedBy: 'manys'
           }
         }
       ]
@@ -155,47 +122,57 @@ export const PARENT_CHILD_MODULE: ModuleConfig = {
  * Used to test many-to-many relationships
  */
 export const MANY_TO_MANY_MODULE: ModuleConfig = {
-  moduleName: 'many-to-many-test',
-  singular: 'test',
-  plural: 'many-to-many-test',
+  name: 'many-to-many',
+  modelName: 'many-to-many',
+  singular: 'many-to-many',
+  plural: 'many-to-manys',
+  fields: [
+    {
+      name: 'name',
+      type: 'string',
+      required: true
+    }
+  ],
   models: [
     {
-      name: 'test-left',
+      name: 'left',
       singular: 'left',
       plural: 'lefts',
       fields: [
         {
           name: 'name',
-          type: 'text'
+          type: 'string',
+          required: true
         },
         {
           name: 'rights',
-          type: 'text',
+          type: 'string',
           relation: {
             type: 'manyToMany',
-            model: 'TestRight',
-            through: 'test_left_right',
+            model: 'Right',
+            through: 'left_right',
             mappedBy: 'lefts'
           }
         }
       ]
     },
     {
-      name: 'test-right',
+      name: 'right',
       singular: 'right',
       plural: 'rights',
       fields: [
         {
           name: 'name',
-          type: 'text'
+          type: 'string',
+          required: true
         },
         {
           name: 'lefts',
-          type: 'text',
+          type: 'string',
           relation: {
             type: 'manyToMany',
-            model: 'TestLeft',
-            through: 'test_left_right',
+            model: 'Left',
+            through: 'left_right',
             mappedBy: 'rights'
           }
         }
@@ -206,39 +183,45 @@ export const MANY_TO_MANY_MODULE: ModuleConfig = {
 
 /**
  * Field Types Test Module Configuration
- * Used to test different field types and chainables
+ * Used to test different field types
  */
 export const FIELD_TYPES_MODULE: ModuleConfig = {
-  moduleName: 'field-types-test',
-  singular: 'test',
-  plural: 'tests',
+  name: 'field-types',
+  modelName: 'field-types',
+  singular: 'field-type',
+  plural: 'field-types',
+  fields: [
+    {
+      name: 'name',
+      type: 'string',
+      required: true
+    }
+  ],
   models: [
     {
-      name: 'test-fields',
-      singular: 'field',
-      plural: 'fields',
+      name: 'all-types',
+      singular: 'type',
+      plural: 'types',
       fields: [
         {
-          name: 'text_field',
-          type: 'text',
-          chainables: [
-            { name: 'unique' },
-            { name: 'nullable' }
-          ]
+          name: 'string_field',
+          type: 'string',
+          required: true
         },
         {
           name: 'number_field',
           type: 'number',
-          chainables: [
-            { name: 'index' }
-          ]
+          required: true
         },
         {
           name: 'boolean_field',
           type: 'boolean',
-          chainables: [
-            { name: 'nullable' }
-          ]
+          required: false
+        },
+        {
+          name: 'date_field',
+          type: 'date',
+          required: false
         }
       ]
     }
@@ -251,9 +234,9 @@ export const FIELD_TYPES_MODULE: ModuleConfig = {
  */
 export const MODULES = {
   tests: TEST_MODULE,
-  'parent-child-test': PARENT_CHILD_MODULE,
-  'many-to-many-test': MANY_TO_MANY_MODULE,
-  'field-types-test': FIELD_TYPES_MODULE,
+  relationships: RELATIONSHIP_MODULE,
+  'many-to-many': MANY_TO_MANY_MODULE,
+  'field-types': FIELD_TYPES_MODULE,
 } as const;
 
 /**

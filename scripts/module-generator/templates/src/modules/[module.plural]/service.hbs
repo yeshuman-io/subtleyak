@@ -1,8 +1,12 @@
 import { MedusaService } from "@medusajs/framework/utils";
-{{#each models}}import {{pascalName}} from "./models/{{name}}";{{/each}}
+import  from "./";
+{{#each module.models}}
+import {{toPascalCase name}} from "./models/{{name}}";
+{{/each}}
 
-class {{serviceName}}Service extends MedusaService({
-{{#each models}}  {{pascalName}},{{/each}}
+class Service extends MedusaService({
+  ,
+  {{#each module.models}}{{toPascalCase name}}{{#unless @last}},{{/unless}}{{/each}}
 }) {}
 
-export default {{serviceName}}Service; 
+export default Service; 

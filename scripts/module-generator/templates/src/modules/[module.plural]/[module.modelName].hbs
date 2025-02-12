@@ -1,0 +1,10 @@
+import { model } from "@medusajs/framework";
+
+const {{toPascalCase module.modelName}} = model.define("{{toSnakeCase module.modelName}}", {
+  id: model.id().primaryKey(),
+  {{#each module.fields}}
+  {{processField this}}{{#unless @last}},{{/unless}}
+  {{/each}}
+});
+
+export default {{toPascalCase module.modelName}}; 

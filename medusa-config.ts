@@ -11,7 +11,9 @@ module.exports = defineConfig({
       authCors: process.env.AUTH_CORS!,
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
-    }
+    },
+    redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
+    redisPrefix: "medusa:",
   },
   modules: [
     {
