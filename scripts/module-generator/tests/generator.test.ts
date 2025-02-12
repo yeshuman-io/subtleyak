@@ -219,4 +219,101 @@ describe('Module Generator', () => {
       });
     });
   });
+
+  describe('Dry Run', () => {
+    beforeEach(async () => {
+      // For dry run tests, ensure directory doesn't exist
+      try {
+        await fs.rm(TestUtils.TEST_OUTPUT_DIR, { recursive: true, force: true });
+      } catch (error) {
+        // Ignore if directory doesn't exist
+      }
+    });
+
+    it('should not create files during dry run', async () => {
+      const testDir = path.join(process.cwd(), '.test-output');
+      await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
+      
+      // Verify test directory wasn't created
+      expect(await TestUtils.fileExists(testDir)).toBe(false);
+    });
+
+    it('should return correct FileChange array', async () => {
+      const changes = await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
+      
+      // Verify structure of changes
+      expect(changes.length).toBeGreaterThan(0);
+      changes.forEach(change => {
+        expect(change).toMatchObject({
+          path: expect.any(String),
+          type: 'create',
+          templatePath: expect.any(String),
+          model: expect.any(String),
+          module: expect.any(String)
+        });
+      });
+
+      // Verify all expected files are included for each model
+      TEST_MODULE.models.forEach(model => {
+        const modelFiles = changes.filter(c => c.model === model.name);
+        expect(modelFiles).toEqual(
+          expect.arrayContaining([
+            expect.objectContaining({ path: expect.stringContaining(`/models/${model.name}.ts`) }),
+            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/route.ts`) }),
+            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/[id]/route.ts`) }),
+            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/validators.ts`) }),
+            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/page.tsx`) }),
+            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/create/${model.name}-create.tsx`) }),
+            expect.objectContaining({ path: expect.stringContaining(`/${model.plural}/edit/${model.name}-edit.tsx`) })
+          ])
+        );
+      });
+
+      // Verify service and index files
+      expect(changes).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({ path: expect.stringContaining('/service.ts') }),
+          expect.objectContaining({ path: expect.stringContaining('/index.ts') })
+        ])
+      );
+    });
+
+    it('should capture all potential file changes', async () => {
+      // Run both dry-run and actual generation
+      const dryRunChanges = await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
+      
+      // Clean up and run actual generation
+      await TestUtils.cleanTestDir();
+      await generateModule(TEST_MODULE, { testMode: true });
+
+      // Get actual generated files
+      const testDir = path.join(process.cwd(), '.test-output');
+      const actualFiles = await TestUtils.getAllFiles(testDir);
+
+      // Compare counts
+      expect(dryRunChanges.length).toBe(actualFiles.length);
+
+      // Normalize and sort paths for comparison
+      const dryRunPaths = dryRunChanges
+        .map(c => path.normalize(c.path))
+        .sort();
+      const actualPaths = actualFiles
+        .map(f => path.normalize(path.join('.test-output', f)))
+        .sort();
+      
+      // Compare full arrays
+      expect(dryRunPaths).toEqual(actualPaths);
+    });
+
+    it('should work in both test and production modes', async () => {
+      // Test mode
+      const testChanges = await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
+      expect(testChanges.every(c => c.path.includes('.test-output'))).toBe(true);
+
+      // Production mode
+      const prodChanges = await generateModule(TEST_MODULE, { testMode: false, dryRun: true });
+      expect(prodChanges.every(c => !c.path.includes('.test-output'))).toBe(true);
+      expect(prodChanges.every(c => c.path.startsWith('src/'))).toBe(true);
+    });
+  });
 }); 

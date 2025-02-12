@@ -6,15 +6,16 @@ export class TestUtils {
   static readonly TEST_OUTPUT_DIR = '.test-output';
 
   static async cleanTestDir(): Promise<void> {
-    // Only clean if KEEP_TEST_OUTPUT is not set
-    if (!process.env.KEEP_TEST_OUTPUT) {
-      try {
-        await fs.rm(this.TEST_OUTPUT_DIR, { recursive: true, force: true });
-      } catch (error) {
-        // Ignore if directory doesn't exist
-      }
+    try {
+      await fs.rm(this.TEST_OUTPUT_DIR, { recursive: true, force: true });
+    } catch (error) {
+      // Ignore if directory doesn't exist
     }
-    await fs.mkdir(this.TEST_OUTPUT_DIR, { recursive: true });
+    
+    // Create directory unless explicitly in dry run mode
+    if (!process.env.DRY_RUN) {
+      await fs.mkdir(this.TEST_OUTPUT_DIR, { recursive: true });
+    }
   }
 
   static async fileExists(relativePath: string): Promise<boolean> {
@@ -41,6 +42,14 @@ export class TestUtils {
     return glob('**/*.ts', { 
       cwd: outputDir,
       absolute: false // Return relative paths
+    });
+  }
+
+  static async getAllFiles(dir: string): Promise<string[]> {
+    return glob('**/*.*', { 
+      cwd: dir,
+      absolute: false, // Return relative paths
+      ignore: ['**/*.map', '**/*.d.ts'] // Ignore source maps and declaration files
     });
   }
 } 

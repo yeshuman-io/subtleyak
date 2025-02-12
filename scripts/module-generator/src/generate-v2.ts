@@ -72,6 +72,14 @@ export type ModuleConfig = {
   models: ModelConfig[];
 };
 
+export type FileChange = {
+  path: string;
+  type: 'create' | 'modify';
+  templatePath: string;
+  model?: string;
+  module?: string;
+};
+
 // Helper to process field definitions
 function processField(field: ModelField): string | Handlebars.SafeString {
   if (field.relation) {
@@ -259,39 +267,58 @@ async function formatOutput(content: string): Promise<string> {
 async function generateFile(
   templatePath: string,
   outputPath: string,
-  data: Record<string, any>
+  data: Record<string, any>,
+  options: { dryRun?: boolean } = {}
 ): Promise<void> {
-  try {
-    const content = await processTemplate(templatePath, data);
-    const formattedContent = await formatOutput(content);
-    
-    // Create directory if it doesn't exist
-    const outputDir = path.dirname(outputPath);
-    await fs.mkdir(outputDir, { recursive: true });
-    
-    // Write formatted file
-    await fs.writeFile(outputPath, formattedContent, 'utf-8');
-    console.log(`Generated: ${outputPath}`);
-  } catch (error) {
-    console.error(`Error generating file at ${outputPath}:`, error);
-    throw error;
+  const { dryRun = process.env.DRY_RUN === '1' } = options;
+  
+  // Process template
+  const content = await processTemplate(templatePath, data);
+  const formattedContent = await formatOutput(content);
+
+  if (dryRun) {
+    console.log(`Would generate: ${outputPath}`);
+    console.log(`From template: ${templatePath}`);
+    if (data.model) {
+      console.log(`For model: ${data.model.name}`);
+    }
+    console.log('---');
+    return;
   }
+
+  // Create directory if it doesn't exist
+  const dir = path.dirname(outputPath);
+  await fs.mkdir(dir, { recursive: true });
+
+  // Write file
+  await fs.writeFile(outputPath, formattedContent);
+  console.log(`Generated: ${outputPath}`);
 }
 
 // Helper function to get admin route path based on model config
 function getAdminRoutePath(moduleConfig: ModuleConfig, modelConfig: ModelConfig): string {
   if (modelConfig.parent) {
-    return `${moduleConfig.plural}/${modelConfig.parent.routePrefix}`;
+    // Use the parent's route prefix if specified
+    return modelConfig.parent.routePrefix;
   }
   if (modelConfig.isParent) {
-    return `${moduleConfig.plural}/${modelConfig.plural}`;
+    // For parent models, use their plural form
+    return `${modelConfig.plural}`;
   }
-  return `${moduleConfig.plural}/${modelConfig.plural}`;
+  // For regular models, use the model's plural form
+  return `${modelConfig.plural}`;
 }
 
 // Main generation function
-export async function generateModule(config: ModuleConfig, options: { testMode?: boolean } = {}): Promise<void> {
-  const { testMode = false } = options;
+export async function generateModule(
+  config: ModuleConfig, 
+  options: { 
+    testMode?: boolean;
+    dryRun?: boolean;
+  } = {}
+): Promise<FileChange[]> {
+  const { testMode = false, dryRun = false } = options;
+  const changes: FileChange[] = [];
   const baseDir = testMode ? '.test-output/src' : 'src';
   const templateDir = path.join(process.cwd(), 'scripts/module-generator/templates');
 
@@ -308,7 +335,8 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
     await generateFile(
       path.join(templateDir, 'src/modules/[module.plural]/models/[model.name].hbs'),
       modelOutputPath,
-      { model, module: config }
+      { model, module: config },
+      { dryRun }
     );
 
     // Generate admin route files
@@ -318,19 +346,22 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
     const routeOutputPath = path.join(
       baseDir,
       'api/admin',
+      config.plural,
       adminRoutePath,
       'route.ts'
     );
     await generateFile(
       path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/route.hbs'),
       routeOutputPath,
-      { model, module: config }
+      { model, module: config },
+      { dryRun }
     );
 
     // ID route
     const idRouteOutputPath = path.join(
       baseDir,
       'api/admin',
+      config.plural,
       adminRoutePath,
       '[id]',
       'route.ts'
@@ -338,26 +369,30 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
     await generateFile(
       path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs'),
       idRouteOutputPath,
-      { model, module: config }
+      { model, module: config },
+      { dryRun }
     );
 
     // Generate validator file
     const validatorOutputPath = path.join(
       baseDir,
       'api/admin',
+      config.plural,
       adminRoutePath,
       'validators.ts'
     );
     await generateFile(
       path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/validators.hbs'),
       validatorOutputPath,
-      { model, module: config }
+      { model, module: config },
+      { dryRun }
     );
 
     // Generate admin UI files
     const adminUIPath = path.join(
       baseDir,
       'admin/routes',
+      config.plural,
       adminRoutePath
     );
 
@@ -365,22 +400,88 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
     await generateFile(
       path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/page.hbs'),
       path.join(adminUIPath, 'page.tsx'),
-      { model, module: config }
+      { model, module: config },
+      { dryRun }
     );
 
     // Create form
     await generateFile(
       path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs'),
       path.join(adminUIPath, 'create', `${model.name}-create.tsx`),
-      { model, module: config }
+      { model, module: config },
+      { dryRun }
     );
 
     // Edit form
     await generateFile(
       path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs'),
       path.join(adminUIPath, 'edit', `${model.name}-edit.tsx`),
-      { model, module: config }
+      { model, module: config },
+      { dryRun }
     );
+
+    changes.push({
+      path: modelOutputPath,
+      type: 'create',
+      templatePath: path.join(templateDir, 'src/modules/[module.plural]/models/[model.name].hbs'),
+      model: model.name,
+      module: config.moduleName
+    });
+    changes.push({
+      path: routeOutputPath,
+      type: 'create',
+      templatePath: path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/route.hbs'),
+      model: model.name,
+      module: config.moduleName
+    });
+    changes.push({
+      path: idRouteOutputPath,
+      type: 'create',
+      templatePath: path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs'),
+      model: model.name,
+      module: config.moduleName
+    });
+    changes.push({
+      path: validatorOutputPath,
+      type: 'create',
+      templatePath: path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/validators.hbs'),
+      model: model.name,
+      module: config.moduleName
+    });
+    changes.push({
+      path: path.join(adminUIPath, 'page.tsx'),
+      type: 'create',
+      templatePath: path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/page.hbs'),
+      model: model.name,
+      module: config.moduleName
+    });
+    changes.push({
+      path: path.join(adminUIPath, 'create', `${model.name}-create.tsx`),
+      type: 'create',
+      templatePath: path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs'),
+      model: model.name,
+      module: config.moduleName
+    });
+    changes.push({
+      path: path.join(adminUIPath, 'edit', `${model.name}-edit.tsx`),
+      type: 'create',
+      templatePath: path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs'),
+      model: model.name,
+      module: config.moduleName
+    });
+
+    if (dryRun) {
+      console.log(`\nModule: ${config.moduleName}`);
+      console.log(`Model: ${model.name}`);
+      console.log('Files to be generated:');
+      console.log(`  ${modelOutputPath}`);
+      console.log(`  ${routeOutputPath}`);
+      console.log(`  ${idRouteOutputPath}`);
+      console.log(`  ${validatorOutputPath}`);
+      console.log(`  ${path.join(adminUIPath, 'page.tsx')}`);
+      console.log(`  ${path.join(adminUIPath, 'create', `${model.name}-create.tsx`)}`);
+      console.log(`  ${path.join(adminUIPath, 'edit', `${model.name}-edit.tsx`)}`);
+    }
   }
 
   // Generate service file
@@ -403,7 +504,8 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
       serviceName: config.moduleName.split('-')
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join('')
-    }
+    },
+    { dryRun }
   );
 
   // Generate index file
@@ -422,6 +524,30 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
       serviceName: config.moduleName.split('-')
         .map(part => part.charAt(0).toUpperCase() + part.slice(1))
         .join('')
-    }
+    },
+    { dryRun }
   );
+
+  changes.push({
+    path: serviceOutputPath,
+    type: 'create',
+    templatePath: path.join(templateDir, 'src/modules/[module.plural]/service.hbs'),
+    model: config.moduleName,
+    module: config.moduleName
+  });
+  changes.push({
+    path: indexOutputPath,
+    type: 'create',
+    templatePath: path.join(templateDir, 'src/modules/[module.plural]/index.hbs'),
+    model: config.moduleName,
+    module: config.moduleName
+  });
+
+  if (dryRun) {
+    console.log(`\nService and Index files:`);
+    console.log(`  ${serviceOutputPath}`);
+    console.log(`  ${indexOutputPath}`);
+  }
+
+  return changes;
 } 

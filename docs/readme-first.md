@@ -128,9 +128,18 @@ npm run test:generate
 # Run tests with preserved output
 npm run test:generate:keep
 
-# Run tests quietly (CI friendly)
+# Run tests quietly (AI friendly; run these in Cursor AI composer sessions to keep output minimal and to reduce context window)
 npm run test:generate:quiet
+
+# Run a single test
+npm run test:generate:single -t "test name"
 ```
+
+IMPORTANT FOR AI COMPOSER SESSION TESTING:
+
+- Run `npm run test:generate:quiet` to keep output minimal and to reduce context window.
+- THEN run individual failing tests and repair one-by-one until all tests pass.
+- OPTIONALLY run `npm run test:generate:quiet:fileonly` to produce a list of failing tests that can be reffered to in the AI composer session in order to not need to re-run all tests AND to reduce the context window.
 
 ### Generating Modules
 
