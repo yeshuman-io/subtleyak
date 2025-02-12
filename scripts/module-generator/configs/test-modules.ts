@@ -243,4 +243,20 @@ export const FIELD_TYPES_MODULE: ModuleConfig = {
       ]
     }
   ]
-}; 
+};
+
+/**
+ * All test module configurations
+ * Add new test modules here as they are created
+ */
+export const MODULES = {
+  tests: TEST_MODULE,
+  'parent-child-test': PARENT_CHILD_MODULE,
+  'many-to-many-test': MANY_TO_MANY_MODULE,
+  'field-types-test': FIELD_TYPES_MODULE,
+} as const;
+
+/**
+ * Helper type to get all test module names
+ */
+export type ModuleName = keyof typeof MODULES; 

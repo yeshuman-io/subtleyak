@@ -424,30 +424,4 @@ export async function generateModule(config: ModuleConfig, options: { testMode?:
         .join('')
     }
   );
-}
-
-// CLI interface
-const isRunningDirectly = process.argv[1]?.endsWith('generate-v2.ts');
-
-if (isRunningDirectly) {
-  const args = process.argv.slice(2);
-  const configPath = args[0];
-
-  if (!configPath) {
-    console.error('Please provide a config file path');
-    process.exit(1);
-  }
-
-  if (!existsSync(configPath)) {
-    console.error(`Config file not found: ${configPath}`);
-    process.exit(1);
-  }
-
-  import(path.resolve(configPath))
-    .then(({ config }) => generateModule(config))
-    .then(() => console.log('Generation complete'))
-    .catch(err => {
-      console.error('Generation failed:', err);
-      process.exit(1);
-    });
 } 
