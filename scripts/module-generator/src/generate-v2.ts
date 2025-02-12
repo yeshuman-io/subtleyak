@@ -277,12 +277,16 @@ async function generateFile(
   const formattedContent = await formatOutput(content);
 
   if (dryRun) {
-    console.log(`Would generate: ${outputPath}`);
-    console.log(`From template: ${templatePath}`);
+    console.log(`\nWould generate file:`);
+    console.log(`  Path: ${outputPath}`);
+    console.log(`  Template: ${path.basename(templatePath)}`);
     if (data.model) {
-      console.log(`For model: ${data.model.name}`);
+      console.log(`  Model: ${data.model.name}`);
     }
-    console.log('---');
+    if (data.module) {
+      console.log(`  Module: ${data.module.moduleName}`);
+    }
+    console.log('-'.repeat(50));
     return;
   }
 
@@ -317,10 +321,21 @@ export async function generateModule(
     dryRun?: boolean;
   } = {}
 ): Promise<FileChange[]> {
-  const { testMode = false, dryRun = false } = options;
+  const { testMode = false, dryRun = process.env.DRY_RUN === '1' } = options;
+  
+  console.log('Debug: Starting module generation');
+  console.log('Debug: DRY_RUN =', process.env.DRY_RUN);
+  console.log('Debug: Options =', JSON.stringify(options));
+  console.log('Debug: Config =', JSON.stringify(config));
+
   const changes: FileChange[] = [];
   const baseDir = testMode ? '.test-output/src' : 'src';
   const templateDir = path.join(process.cwd(), 'scripts/module-generator/templates');
+
+  if (dryRun) {
+    console.log(`\nDry run for module: ${config.moduleName}`);
+    console.log('='.repeat(50));
+  }
 
   // Process each model
   for (const model of config.models) {
@@ -550,4 +565,29 @@ export async function generateModule(
   }
 
   return changes;
+}
+
+// Main entry point
+if (require.main === module) {
+  const configPath = process.argv[2];
+  if (!configPath) {
+    console.error('Error: No config file specified');
+    process.exit(1);
+  }
+
+  console.log('Debug: Loading config from', configPath);
+  
+  import(configPath).then(async (config) => {
+    console.log('Debug: Config loaded');
+    
+    // Generate each module
+    for (const moduleName of Object.keys(config.MODULES)) {
+      const moduleConfig = config.MODULES[moduleName];
+      console.log(`\nProcessing module: ${moduleName}`);
+      await generateModule(moduleConfig, { dryRun: true });
+    }
+  }).catch(error => {
+    console.error('Error loading config:', error);
+    process.exit(1);
+  });
 } 

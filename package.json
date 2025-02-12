@@ -33,8 +33,8 @@
     "test:generate:quiet:fileonly": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/module-generator/tests/jest.config.ts --silent --noStackTrace --json --outputFile=.test-results.json > /dev/null 2>&1",
     "test:generate:single": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/module-generator/tests/jest.config.ts --silent --noStackTrace",
     "test:generate:titles": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/module-generator/tests/jest.config.ts --silent --noStackTrace --json --outputFile=.test-results.json && node scripts/process-test-titles.js",
-    "src:generate": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/generate-v2.ts configs/production-modules.ts",
-    "src:generate:dry-run": "DRY_RUN=1 NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/generate-v2.ts configs/production-modules.ts",
+    "src:generate": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/cli.ts",
+    "src:generate:dry-run": "DEBUG=1 DRY_RUN=1 NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/cli.ts",
     "src:generate:watch": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/utils/watch.ts configs/production-modules.ts"
   },
   "dependencies": {
