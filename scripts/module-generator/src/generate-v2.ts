@@ -568,7 +568,7 @@ export async function generateModule(
 }
 
 // Main entry point
-if (require.main === module) {
+if (import.meta.url === `file://${process.argv[1]}`) {
   const configPath = process.argv[2];
   if (!configPath) {
     console.error('Error: No config file specified');

@@ -1,8 +1,8 @@
 import * as chokidar from 'chokidar';
 import * as path from 'path';
 import debounce from 'lodash/debounce';
-import { generateModule } from './generate-v2';
-import type { ModuleConfig } from './generate-v2';
+import { generateModule } from '../generate-v2';
+import type { ModuleConfig } from '../generate-v2';
 
 export type WatchOptions = {
   templatesDir: string;
@@ -12,7 +12,7 @@ export type WatchOptions = {
 };
 
 const DEFAULT_OPTIONS: WatchOptions = {
-  templatesDir: path.join(process.cwd(), 'scripts/templates'),
+  templatesDir: path.join(process.cwd(), 'scripts/module-generator/templates'),
   outputDir: path.join(process.cwd(), 'src'),
   debounceMs: 300
 };
@@ -24,22 +24,29 @@ export async function watchTemplates(
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const { templatesDir, debounceMs, onError } = opts;
 
+  console.log('Setting up watch for module:', moduleConfig.moduleName);
+  console.log('Templates directory:', templatesDir);
+
   // Define patterns to watch
   const patterns = [
     // Module templates
-    path.join(templatesDir, 'src/modules/[module.plural]/**/*.hbs'),
+    path.join(templatesDir, 'src', 'modules', '[module.plural]', 'models', '[model.name].hbs'),
+    path.join(templatesDir, 'src', 'modules', '[module.plural]', '**', '*.hbs'),
     // API templates
-    path.join(templatesDir, 'src/api/admin/**/*.hbs'),
+    path.join(templatesDir, 'src', 'api', 'admin', '**', '*.hbs'),
     // Admin UI templates
-    path.join(templatesDir, 'src/admin/routes/**/*.hbs'),
+    path.join(templatesDir, 'src', 'admin', 'routes', '**', '*.hbs'),
     // Workflow templates
-    path.join(templatesDir, 'src/workflows/**/*.hbs')
+    path.join(templatesDir, 'src', 'workflows', '**', '*.hbs')
   ];
+
+  console.log('Watching patterns:', patterns);
 
   // Create watcher
   const watcher = chokidar.watch(patterns, {
     ignored: /(^|[\/\\])\../, // ignore dotfiles
-    persistent: true
+    persistent: true,
+    ignoreInitial: true // Don't trigger events for existing files
   });
 
   // Debounced regeneration function
@@ -56,6 +63,9 @@ export async function watchTemplates(
 
   // Setup event handlers
   watcher
+    .on('ready', () => {
+      console.log('Initial scan complete. Ready for changes.');
+    })
     .on('add', path => {
       console.log(`Template added: ${path}`);
       regenerate();
@@ -74,9 +84,7 @@ export async function watchTemplates(
     });
 
   // Return cleanup function
-  return () => {
-    watcher.close();
-  };
+  return () => watcher.close();
 }
 
 // Multi-module watch function
@@ -93,23 +101,51 @@ export async function watchAll(
   };
 }
 
-// CLI interface
-if (import.meta.url === `file://${process.argv[1]}`) {
-  const args = process.argv.slice(2);
-  const configPath = args[0];
+// Main function
+async function main() {
+  const configPath = process.argv[2];
 
   if (!configPath) {
     console.error('Please provide a config file path');
     process.exit(1);
   }
 
-  import(path.resolve(configPath))
-    .then(({ config }) => {
-      console.log('Starting template watch mode...');
-      return watchTemplates(config);
-    })
-    .catch(err => {
-      console.error('Watch failed:', err);
-      process.exit(1);
+  console.log('Loading config from:', configPath);
+  
+  try {
+    const imported = await import(path.resolve(configPath));
+    const config = imported.default || imported;
+    console.log('Config loaded:', config);
+    console.log('Starting template watch mode...');
+    const modules = Object.values(config.MODULES) as ModuleConfig[];
+    console.log(`Found ${modules.length} modules:`, modules.map(m => m.moduleName).join(', '));
+    
+    const cleanup = await watchAll(modules);
+    
+    // Keep the process alive
+    process.stdin.resume();
+
+    // Handle cleanup on exit
+    process.on('SIGINT', () => {
+      console.log('\nReceived SIGINT. Cleaning up...');
+      cleanup();
+      process.exit(0);
     });
+
+    process.on('exit', () => {
+      console.log('\nCleaning up...');
+      cleanup();
+    });
+  } catch (err) {
+    console.error('Watch failed:', err);
+    process.exit(1);
+  }
+}
+
+// Run if this is the main module
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(err => {
+    console.error('Fatal error:', err);
+    process.exit(1);
+  });
 } 

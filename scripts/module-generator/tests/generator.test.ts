@@ -130,6 +130,17 @@ describe('Module Generator', () => {
         expect(content).toContain('complex_field: model.text().unique().index("asc")');
       });
 
+      it('should generate correct model imports for relations', async () => {
+        await generateModule(TEST_MODULE, { testMode: true });
+        
+        const modelPath = path.join('.test-output', 'src/modules/tests/models/test-model.ts');
+        const content = await TestUtils.readGeneratedFile(modelPath);
+        
+        // Check imports are properly generated
+        expect(content).toContain('import TestParent from "./test-parent"');
+        expect(content).toContain('import TestChild from "./test-child"');
+      });
+
       it('should handle relation options correctly', async () => {
         await generateModule(TEST_MODULE, { testMode: true });
         
