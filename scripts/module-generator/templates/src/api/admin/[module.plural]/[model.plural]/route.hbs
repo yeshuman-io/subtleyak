@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { create{{toPascalCase model.name}}Workflow } from "../../../../workflows/create-{{toKebabCase model.name}}";
-import { PostAdminCreate{{toPascalCase model.name}} } from "./validators";
+import { create{{toPascalCase module.moduleName}}Workflow } from "../../../workflows/create-{{toKebabCase module.moduleName}}-workflow";
+import { PostAdminCreate{{toPascalCase module.moduleName}} } from "./validators";
 
 type QueryResponse = {
   data: any[];
@@ -11,7 +11,7 @@ type QueryResponse = {
     skip: number;
   };
 };
-//asdfasdf
+//asdfasdfasdfd
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
 
@@ -35,24 +35,24 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   )) as QueryResponse;
 
   res.json({
-    {{toSnakeCase model.plural}},
+    {{toSnakeCase module.moduleName}},
     count: metadata.count,
     limit: metadata.take,
     offset: metadata.skip,
   });
 };
 
-type PostAdminCreate{{toPascalCase model.name}}Type = z.infer<
-  typeof PostAdminCreate{{toPascalCase model.name}}
+type PostAdminCreate{{toPascalCase module.moduleName}}Type = z.infer<
+  typeof PostAdminCreate{{toPascalCase module.moduleName}}
 >;
 
 export const POST = async (
-  req: MedusaRequest<PostAdminCreate{{toPascalCase model.name}}Type>,
+  req: MedusaRequest<PostAdminCreate{{toPascalCase module.moduleName}}Type>,
   res: MedusaResponse
 ) => {
-  const { result } = await create{{toPascalCase model.name}}Workflow(req.scope).run({
+  const { result } = await create{{toPascalCase module.moduleName}}Workflow(req.scope).run({
     input: req.validatedBody,
   });
 
-  res.json({ {{toCamelCase model.name}}: result });
+  res.json({ {{toCamelCase module.moduleName}}: result });
 }; 
