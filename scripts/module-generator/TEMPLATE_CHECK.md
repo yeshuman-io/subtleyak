@@ -102,27 +102,52 @@ src/
 - [x] New: `templates/src/api/admin/[module.plural]/[model.plural]/route.hbs`
 - [x] Reference: `src/api/admin/vehicles/models/route.ts`
 
-### 6. ID Route
-- [ ] Old: `templates/src/api/admin/[module]/[id]/route.hbs`
-- [ ] New: `templates/src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs`
-- [ ] Reference: `src/api/admin/vehicles/models/[id]/route.ts`
+### 6. Module ID Route ✅
+- [x] Old: `templates/src/api/admin/[module]/[id]/route.hbs`
+- [x] New: `templates/src/api/admin/[module.plural]/[id]/route.hbs`
+- [x] Reference: `src/api/admin/vehicles/[id]/route.ts`
 
-### 7. Validators
+### 6.1 Model ID Route ✅
+- [x] Old: `templates/src/api/admin/[module]/models/[id]/route.hbs`
+- [x] New: `templates/src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs`
+- [x] Reference: `src/api/admin/vehicles/models/[id]/route.ts`
+
+### 7. Module Validators
 - [ ] Old: `templates/src/api/admin/[module]/validators.hbs`
+- [ ] New: `templates/src/api/admin/[module.plural]/validators.hbs`
+- [ ] Reference: `src/api/admin/vehicles/validators.ts`
+
+### 7.1 Model Validators
+- [ ] Old: `templates/src/api/admin/[module]/models/validators.hbs`
 - [ ] New: `templates/src/api/admin/[module.plural]/[model.plural]/validators.hbs`
 - [ ] Reference: `src/api/admin/vehicles/models/validators.ts`
 
-### 8. List Page ✅
+### 8. Module List Page ✅
 - [x] Old: `templates/src/admin/routes/[module]/page.hbs`
+- [x] New: `templates/src/admin/routes/[module.plural]/page.hbs`
+- [x] Reference: `src/admin/routes/vehicles/page.tsx`
+
+### 8.1 Model List Page ✅
+- [x] Old: `templates/src/admin/routes/[module]/models/page.hbs`
 - [x] New: `templates/src/admin/routes/[module.plural]/[model.plural]/page.hbs`
 - [x] Reference: `src/admin/routes/vehicles/models/page.tsx`
 
-### 9. Create Form
+### 9. Module Create Form
+- [ ] Old: `templates/src/admin/routes/[module]/create/[module]-create.hbs`
+- [ ] New: `templates/src/admin/routes/[module.plural]/create/[module.moduleName]-create.hbs`
+- [ ] Reference: `src/admin/routes/vehicles/create/vehicle-create.tsx`
+
+### 9.1 Model Create Form
 - [ ] Old: `templates/src/admin/routes/[module]/create/[model]-create.hbs`
 - [ ] New: `templates/src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs`
 - [ ] Reference: `src/admin/routes/vehicles/models/create/vehicle-model-create.tsx`
 
-### 10. Edit Form
+### 10. Module Edit Form
+- [ ] Old: `templates/src/admin/routes/[module]/edit/[module]-edit.hbs`
+- [ ] New: `templates/src/admin/routes/[module.plural]/edit/[module.moduleName]-edit.hbs`
+- [ ] Reference: `src/admin/routes/vehicles/edit/vehicle-edit.tsx`
+
+### 10.1 Model Edit Form
 - [ ] Old: `templates/src/admin/routes/[module]/edit/[model]-edit.hbs`
 - [ ] New: `templates/src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs`
 - [ ] Reference: `src/admin/routes/vehicles/models/edit/vehicle-model-edit.tsx`

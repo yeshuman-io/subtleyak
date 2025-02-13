@@ -3,22 +3,37 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { createVehicleMakeWorkflow } from "../../../../workflows/create-vehicle-make";
 import { PostAdminCreateVehicleMake } from "./validators";
 
+
+//asdfsadfs
+type QueryResponse = {
+  data: any[];
+  metadata: {
+    count: number;
+    take: number;
+    skip: number;
+  };//asdf
+};
+//asdfasdfasdfd
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
 
-  const {
-    data: vehicle_makes,
-    metadata: { count, take, skip },
-  } = await query.graph({
+  const queryOptions = {
     entity: "vehicle_make",
     ...req.queryConfig,
-  });
+    filters: {
+      ...req.queryConfig?.filters,
+    },
+  };
+
+  const { data: makes, metadata } = (await query.graph(
+    queryOptions
+  )) as QueryResponse;
 
   res.json({
-    vehicle_makes,
-    count,
-    limit: take,
-    offset: skip,
+    makes,
+    count: metadata.count,
+    limit: metadata.take,
+    offset: metadata.skip,
   });
 };
 
@@ -35,4 +50,4 @@ export const POST = async (
   });
 
   res.json({ vehicleMake: result });
-};
+}; 

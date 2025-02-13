@@ -19,4 +19,4 @@ export const POST = async (
   });
 
   res.json({ vehicle_body: result });
-}; 
+};

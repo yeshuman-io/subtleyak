@@ -3,15 +3,17 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { createVehicleModelWorkflow } from "../../../../workflows/create-vehicle-model";
 import { PostAdminCreateVehicleModel } from "./validators";
 
+
+//asdfsadfs
 type QueryResponse = {
   data: any[];
   metadata: {
     count: number;
     take: number;
     skip: number;
-  };
+  };//asdf
 };
-
+//asdfasdfasdfd
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
 
@@ -24,12 +26,12 @@ export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
     },
   };
 
-  const { data: vehicle_models, metadata } = (await query.graph(
+  const { data: models, metadata } = (await query.graph(
     queryOptions
   )) as QueryResponse;
 
   res.json({
-    vehicle_models,
+    models,
     count: metadata.count,
     limit: metadata.take,
     offset: metadata.skip,
@@ -49,4 +51,4 @@ export const POST = async (
   });
 
   res.json({ vehicleModel: result });
-};
+}; 

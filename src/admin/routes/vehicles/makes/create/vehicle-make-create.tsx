@@ -1,72 +1,30 @@
-import * as zod from "zod"
-import { 
-  FocusModal,
-  Heading,
-  Label,
-  Input,
-  Button,
-} from "@medusajs/ui"
-import { 
-  FormProvider,
-  Controller,
-  useForm,
-} from "react-hook-form"
-import { PostAdminCreateVehicleMake } from "../../../../../api/admin/vehicles/makes/validators"
-import { sdk } from "../../../../lib/sdk"
-import { useNavigate } from "react-router-dom"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { InputField } from "../../../../components/form/input-field"
-import { FormLayout } from "../../../../components/form/form-layout"
-import { ModalForm } from "../../../../components/form/modal-form"
+import { useAdminCreateMutation } from "@medusajs/admin";
+import { Form } from "@medusajs/admin-ui";
 
-// We can reuse our existing validator schema
-const schema = PostAdminCreateVehicleMake;
-type CreateVehicleMakeFormData = zod.infer<typeof schema>;
+export const VehicleMakeCreate = () => {
+  const { mutate, isLoading } = useAdminCreateMutation(
+    "vehicles/makes"
+  );
 
-type VehicleMakeCreateProps = {
-  onClose: () => void;
-};
-
-export function VehicleMakeCreate({ onClose }: VehicleMakeCreateProps) {
-  const navigate = useNavigate()
-
-  const form = useForm<CreateVehicleMakeFormData>({
-    defaultValues: {
-      name: "",
-    },
-    resolver: zodResolver(schema),
-  });
-
-  const handleSubmit = form.handleSubmit(async (data) => {
-    try {
-      await sdk.client.fetch("/admin/vehicles/makes", {
-        method: "POST",
-        body: data
-      });
-      
-      // Close modal and refresh page
-      onClose()
-      navigate("/vehicles/makes")
-    } catch (error) {
-      console.error("Failed to create make:", error)
-    }
-  });
+  const handleSubmit = (data: any) => {
+    mutate(data);
+  };
 
   return (
-    <FormProvider {...form}>
-      <ModalForm
-        title="Create Vehicle Make"
-        onSubmit={handleSubmit}
-        onClose={onClose}
-      >
-        <FormLayout>
-          <InputField
-            name="name"
-            control={form.control}
-            label="Make Name"
-          />
-        </FormLayout>
-      </ModalForm>
-    </FormProvider>
+    <Form onSubmit={handleSubmit}>
+      <Form.Field
+        label="Models"
+        name="models_ids"
+        type="multiselect"
+        required=
+      />
+      <Form.Field
+        label="Vehicles"
+        name="vehicles_ids"
+        type="multiselect"
+        required=
+      />
+      <Form.Submit isLoading={isLoading}>Create</Form.Submit>
+    </Form>
   );
-} 
+}; 

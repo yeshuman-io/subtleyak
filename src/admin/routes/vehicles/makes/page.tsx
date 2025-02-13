@@ -1,36 +1,39 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
-import { createDataTableColumnHelper, FocusModal } from "@medusajs/ui";
+import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
 import { VehicleMake } from "../../../types";
 import { DataTablePage } from "../../../components/data-table-page";
 import { VehicleMakeCreate } from "./create/vehicle-make-create";
 import { useState } from "react";
 import { ActionMenu } from "../../../components/action-menu";
 import { Pencil } from "@medusajs/icons";
-import { Drawer } from "@medusajs/ui";
 import { VehicleMakeEdit } from "./edit/vehicle-make-edit";
 
 const columnHelper = createDataTableColumnHelper<VehicleMake>();
 
-const VehicleMakesPage = () => {
+const MakesPage = () => {
   const [showCreate, setShowCreate] = useState(false);
-  const [editingMake, setEditingMake] = useState<VehicleMake | null>(null);
+  const [editingVehicleMake, setEditingVehicleMake] = useState<VehicleMake | null>(null);
 
   const columns = [
     columnHelper.accessor("id", {
       header: "ID",
     }),
     columnHelper.accessor("name", {
-      header: "Make",
+      header: "Name",
       enableSorting: true,
     }),
     columnHelper.accessor("models", {
       header: "Models",
       enableSorting: true,
     }),
+    columnHelper.accessor("vehicles", {
+      header: "Vehicles",
+      enableSorting: true,
+    }),
     columnHelper.accessor("actions", {
       header: "",
       cell: ({ row }) => {
-        const make = row.original;
+        const model = row.original;
         return (
           <ActionMenu
             groups={[
@@ -39,7 +42,7 @@ const VehicleMakesPage = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditingMake(make),
+                    onClick: () => setEditingVehicleMake(model),
                   },
                 ],
               },
@@ -53,12 +56,12 @@ const VehicleMakesPage = () => {
   return (
     <>
       <DataTablePage<VehicleMake>
-        title="Vehicle Makes"
-        subtitle="Manage your vehicle makes"
+        title="Makes"
+        subtitle="Manage your makes"
         endpoint="/admin/vehicles/makes"
         columns={columns}
-        queryKey="vehicle_makes"
-        dataKey="vehicle_makes"
+        queryKey="makes"
+        dataKey="makes"
         actions={[
           {
             type: "button",
@@ -94,11 +97,12 @@ const VehicleMakesPage = () => {
           <VehicleMakeCreate onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
-      {editingMake && (
-        <Drawer open onOpenChange={() => setEditingMake(null)}>
+      
+      {editingVehicleMake && (
+        <Drawer open onOpenChange={() => setEditingVehicleMake(null)}>
           <VehicleMakeEdit 
-            make={editingMake} 
-            onClose={() => setEditingMake(null)} 
+            model={editing}
+            onClose={() => setEditingVehicleMake(null)}
           />
         </Drawer>
       )}
@@ -107,7 +111,7 @@ const VehicleMakesPage = () => {
 };
 
 export const config = defineRouteConfig({
-  label: "Vehicle Makes",
+  label: "Makes",
 });
 
-export default VehicleMakesPage;
+export default MakesPage; 

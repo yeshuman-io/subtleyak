@@ -1,77 +1,24 @@
-import * as zod from "zod";
-import { FormProvider, useForm } from "react-hook-form";
-import { PostAdminCreateVehicleBody } from "../../../../../api/admin/vehicles/bodies/validators";
-import { sdk } from "../../../../lib/sdk";
-import { useNavigate } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { InputField } from "../../../../components/form/input-field";
-import { MultiSelectField } from "../../../../components/form/multi-select-field";
-import { FormLayout } from "../../../../components/form/form-layout";
-import { ModalForm } from "../../../../components/form/modal-form";
-import { ListVehicleModelsRes } from "../../../../types";
+import { useAdminCreateMutation } from "@medusajs/admin";
+import { Form } from "@medusajs/admin-ui";
 
-const schema = PostAdminCreateVehicleBody;
-type CreateVehicleBodyFormData = zod.infer<typeof schema>;
+export const VehicleBodyCreate = () => {
+  const { mutate, isLoading } = useAdminCreateMutation(
+    "vehicles/bodies"
+  );
 
-type VehicleBodyCreateProps = {
-  onClose: () => void;
-};
-
-export function VehicleBodyCreate({ onClose }: VehicleBodyCreateProps) {
-  const navigate = useNavigate();
-
-  const form = useForm<CreateVehicleBodyFormData>({
-    defaultValues: {
-      name: "",
-      model_ids: [],
-    },
-    resolver: zodResolver(schema),
-  });
-
-  const { data: modelsData } = useQuery<ListVehicleModelsRes>({
-    queryKey: ["vehicle_models"],
-    queryFn: () => sdk.client.fetch("/admin/vehicles/models"),
-  });
-
-  const models = modelsData?.vehicle_models || [];
-
-  const handleSubmit = form.handleSubmit(async (data) => {
-    try {
-      await sdk.client.fetch("/admin/vehicles/bodies", {
-        method: "POST",
-        body: data,
-      });
-
-      onClose();
-      navigate("/vehicles/bodies");
-    } catch (error) {
-      console.error("Failed to create body:", error);
-    }
-  });
+  const handleSubmit = (data: any) => {
+    mutate(data);
+  };
 
   return (
-    <FormProvider {...form}>
-      <ModalForm
-        title="Create Vehicle Body"
-        onSubmit={handleSubmit}
-        onClose={onClose}
-      >
-        <FormLayout>
-          <InputField
-            name="name"
-            control={form.control}
-            label="Body Name"
-          />
-          <MultiSelectField
-            name="model_ids"
-            control={form.control}
-            label="Vehicle Models"
-            placeholder="Select models..."
-            options={models}
-          />
-        </FormLayout>
-      </ModalForm>
-    </FormProvider>
+    <Form onSubmit={handleSubmit}>
+      <Form.Field
+        label="Models"
+        name="models_ids"
+        type="multiselect"
+        required=
+      />
+      <Form.Submit isLoading={isLoading}>Create</Form.Submit>
+    </Form>
   );
-} 
+}; 

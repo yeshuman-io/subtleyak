@@ -10,7 +10,7 @@ import { VehicleBodyEdit } from "./edit/vehicle-body-edit";
 
 const columnHelper = createDataTableColumnHelper<VehicleBody>();
 
-const VehicleBodiesPage = () => {
+const BodiesPage = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [editingVehicleBody, setEditingVehicleBody] = useState<VehicleBody | null>(null);
 
@@ -22,10 +22,14 @@ const VehicleBodiesPage = () => {
       header: "Name",
       enableSorting: true,
     }),
+    columnHelper.accessor("models", {
+      header: "Models",
+      enableSorting: true,
+    }),
     columnHelper.accessor("actions", {
       header: "",
       cell: ({ row }) => {
-        const body = row.original;
+        const model = row.original;
         return (
           <ActionMenu
             groups={[
@@ -34,7 +38,7 @@ const VehicleBodiesPage = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditingVehicleBody(body),
+                    onClick: () => setEditingVehicleBody(model),
                   },
                 ],
               },
@@ -48,12 +52,12 @@ const VehicleBodiesPage = () => {
   return (
     <>
       <DataTablePage<VehicleBody>
-        title="Vehicle Bodies"
-        subtitle="Manage your vehicle bodies"
+        title="Bodies"
+        subtitle="Manage your bodies"
         endpoint="/admin/vehicles/bodies"
         columns={columns}
-        queryKey="vehicle_bodies"
-        dataKey="vehicle_bodies"
+        queryKey="bodies"
+        dataKey="bodies"
         actions={[
           {
             type: "button",
@@ -89,20 +93,21 @@ const VehicleBodiesPage = () => {
           <VehicleBodyCreate onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
+      
       {editingVehicleBody && (
         <Drawer open onOpenChange={() => setEditingVehicleBody(null)}>
           <VehicleBodyEdit 
-            body={editingVehicleBody} 
-            onClose={() => setEditingVehicleBody(null)} 
+            model={editing}
+            onClose={() => setEditingVehicleBody(null)}
           />
         </Drawer>
       )}
     </>
   );
-}
+};
 
 export const config = defineRouteConfig({
-  label: "Vehicle Bodies",
+  label: "Bodies",
 });
 
-export default VehicleBodiesPage; 
+export default BodiesPage; 

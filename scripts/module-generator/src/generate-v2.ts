@@ -242,13 +242,63 @@ async function processTemplate(templateContent: string, data: Record<string, any
 async function loadTemplates() {
   const templateDir = path.join(process.cwd(), 'scripts/module-generator/templates');
   
-  // Model templates
+  // Module level templates
   const moduleModelTemplate = await fs.readFile(
     path.join(templateDir, 'src/modules/[module.plural]/models/[module.modelName].hbs'),
     'utf-8'
   );
+  const moduleListRouteTemplate = await fs.readFile(
+    path.join(templateDir, 'src/api/admin/[module.plural]/route.hbs'),
+    'utf-8'
+  );
+  const moduleIdRouteTemplate = await fs.readFile(
+    path.join(templateDir, 'src/api/admin/[module.plural]/[id]/route.hbs'),
+    'utf-8'
+  );
+  const moduleValidatorsTemplate = await fs.readFile(
+    path.join(templateDir, 'src/api/admin/[module.plural]/validators.hbs'),
+    'utf-8'
+  );
+  const moduleListPageTemplate = await fs.readFile(
+    path.join(templateDir, 'src/admin/routes/[module.plural]/page.hbs'),
+    'utf-8'
+  );
+  const moduleCreateFormTemplate = await fs.readFile(
+    path.join(templateDir, 'src/admin/routes/[module.plural]/create/[module.modelName]-create.hbs'),
+    'utf-8'
+  );
+  const moduleEditFormTemplate = await fs.readFile(
+    path.join(templateDir, 'src/admin/routes/[module.plural]/edit/[module.modelName]-edit.hbs'),
+    'utf-8'
+  );
+
+  // Model level templates
   const modelTemplate = await fs.readFile(
     path.join(templateDir, 'src/modules/[module.plural]/models/[model.name].hbs'),
+    'utf-8'
+  );
+  const modelListRouteTemplate = await fs.readFile(
+    path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/route.hbs'),
+    'utf-8'
+  );
+  const modelIdRouteTemplate = await fs.readFile(
+    path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs'),
+    'utf-8'
+  );
+  const modelValidatorsTemplate = await fs.readFile(
+    path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/validators.hbs'),
+    'utf-8'
+  );
+  const modelListPageTemplate = await fs.readFile(
+    path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/page.hbs'),
+    'utf-8'
+  );
+  const modelCreateFormTemplate = await fs.readFile(
+    path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs'),
+    'utf-8'
+  );
+  const modelEditFormTemplate = await fs.readFile(
+    path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs'),
     'utf-8'
   );
 
@@ -262,45 +312,28 @@ async function loadTemplates() {
     'utf-8'
   );
 
-  // API route templates
-  const routeTemplate = await fs.readFile(
-    path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/route.hbs'),
-    'utf-8'
-  );
-  const idRouteTemplate = await fs.readFile(
-    path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs'),
-    'utf-8'
-  );
-  const validatorsTemplate = await fs.readFile(
-    path.join(templateDir, 'src/api/admin/[module.plural]/[model.plural]/validators.hbs'),
-    'utf-8'
-  );
-
-  // Admin UI templates
-  const pageTemplate = await fs.readFile(
-    path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/page.hbs'),
-    'utf-8'
-  );
-  const createTemplate = await fs.readFile(
-    path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs'),
-    'utf-8'
-  );
-  const editTemplate = await fs.readFile(
-    path.join(templateDir, 'src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs'),
-    'utf-8'
-  );
-
   return {
+    // Module level templates
     moduleModelTemplate,
+    moduleListRouteTemplate,
+    moduleIdRouteTemplate,
+    moduleValidatorsTemplate,
+    moduleListPageTemplate,
+    moduleCreateFormTemplate,
+    moduleEditFormTemplate,
+
+    // Model level templates
     modelTemplate,
+    modelListRouteTemplate,
+    modelIdRouteTemplate,
+    modelValidatorsTemplate,
+    modelListPageTemplate,
+    modelCreateFormTemplate,
+    modelEditFormTemplate,
+
+    // Common templates
     serviceTemplate,
-    indexTemplate,
-    routeTemplate,
-    idRouteTemplate,
-    validatorsTemplate,
-    pageTemplate,
-    createTemplate,
-    editTemplate
+    indexTemplate
   };
 }
 
@@ -326,7 +359,7 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
 
     // Model file
     changes.push({
-      path: `src/modules/${module.plural}/${isModuleModel ? '' : 'models/'}${model.name}.ts`,
+      path: `src/modules/${module.plural}/${isModuleModel ? model.name : `models/${model.name}`}.ts`,
       type: 'create',
       templatePath: isModuleModel ? templates.moduleModelTemplate : templates.modelTemplate,
       model: model,
@@ -337,7 +370,7 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
     changes.push({
       path: `src/api/admin/${routePath}/route.ts`,
       type: 'create',
-      templatePath: templates.routeTemplate,
+      templatePath: isModuleModel ? templates.moduleListRouteTemplate : templates.modelListRouteTemplate,
       model: model,
       module: module
     });
@@ -345,7 +378,7 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
     changes.push({
       path: `src/api/admin/${routePath}/[id]/route.ts`,
       type: 'create',
-      templatePath: templates.idRouteTemplate,
+      templatePath: isModuleModel ? templates.moduleIdRouteTemplate : templates.modelIdRouteTemplate,
       model: model,
       module: module
     });
@@ -353,7 +386,7 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
     changes.push({
       path: `src/api/admin/${routePath}/validators.ts`,
       type: 'create',
-      templatePath: templates.validatorsTemplate,
+      templatePath: isModuleModel ? templates.moduleValidatorsTemplate : templates.modelValidatorsTemplate,
       model: model,
       module: module
     });
@@ -362,23 +395,31 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
     changes.push({
       path: `src/admin/routes/${routePath}/page.tsx`,
       type: 'create',
-      templatePath: templates.pageTemplate,
+      templatePath: isModuleModel ? templates.moduleListPageTemplate : templates.modelListPageTemplate,
       model: model,
       module: module
     });
 
+    const createFormPath = isModuleModel 
+      ? `src/admin/routes/${routePath}/create/${module.modelName}-create.tsx`
+      : `src/admin/routes/${routePath}/create/${model.name}-create.tsx`;
+
     changes.push({
-      path: `src/admin/routes/${routePath}/create/${model.name}-create.tsx`,
+      path: createFormPath,
       type: 'create',
-      templatePath: templates.createTemplate,
+      templatePath: isModuleModel ? templates.moduleCreateFormTemplate : templates.modelCreateFormTemplate,
       model: model,
       module: module
     });
 
+    const editFormPath = isModuleModel
+      ? `src/admin/routes/${routePath}/edit/${module.modelName}-edit.tsx`
+      : `src/admin/routes/${routePath}/edit/${model.name}-edit.tsx`;
+
     changes.push({
-      path: `src/admin/routes/${routePath}/edit/${model.name}-edit.tsx`,
+      path: editFormPath,
       type: 'create',
-      templatePath: templates.editTemplate,
+      templatePath: isModuleModel ? templates.moduleEditFormTemplate : templates.modelEditFormTemplate,
       model: model,
       module: module
     });
@@ -451,7 +492,7 @@ export async function generateModule(
     changes.push({
       path: path.join(apiBasePath, 'route.ts'),
       type: 'create',
-      templatePath: templates.routeTemplate,
+      templatePath: isModuleModel ? templates.moduleListRouteTemplate : templates.modelListRouteTemplate,
       model: model,
       module: config
     });
@@ -459,7 +500,7 @@ export async function generateModule(
     changes.push({
       path: path.join(apiBasePath, '[id]', 'route.ts'),
       type: 'create',
-      templatePath: templates.idRouteTemplate,
+      templatePath: isModuleModel ? templates.moduleIdRouteTemplate : templates.modelIdRouteTemplate,
       model: model,
       module: config
     });
@@ -467,7 +508,7 @@ export async function generateModule(
     changes.push({
       path: path.join(apiBasePath, 'validators.ts'),
       type: 'create',
-      templatePath: templates.validatorsTemplate,
+      templatePath: isModuleModel ? templates.moduleValidatorsTemplate : templates.modelValidatorsTemplate,
       model: model,
       module: config
     });
@@ -478,7 +519,7 @@ export async function generateModule(
     changes.push({
       path: path.join(adminBasePath, 'page.tsx'),
       type: 'create',
-      templatePath: templates.pageTemplate,
+      templatePath: isModuleModel ? templates.moduleListPageTemplate : templates.modelListPageTemplate,
       model: model,
       module: config
     });
@@ -486,7 +527,7 @@ export async function generateModule(
     changes.push({
       path: path.join(adminBasePath, 'create', `${model.name}-create.tsx`),
       type: 'create',
-      templatePath: templates.createTemplate,
+      templatePath: isModuleModel ? templates.moduleCreateFormTemplate : templates.modelCreateFormTemplate,
       model: model,
       module: config
     });
@@ -494,7 +535,7 @@ export async function generateModule(
     changes.push({
       path: path.join(adminBasePath, 'edit', `${model.name}-edit.tsx`),
       type: 'create',
-      templatePath: templates.editTemplate,
+      templatePath: isModuleModel ? templates.moduleEditFormTemplate : templates.modelEditFormTemplate,
       model: model,
       module: config
     });
@@ -517,14 +558,39 @@ export async function generateModule(
   });
 
   if (dryRun) {
-    console.log(`\nDry run for module: ${config.name}`);
-    console.log('='.repeat(50));
-    console.log('Files to be generated:');
-    changes.forEach(change => {
-      console.log(`  ${change.path}`);
+    // Log module templates
+    console.log(`\nModule: ${config.modelName}`);
+    changes.filter(c => c.model?.name === config.modelName).forEach(change => {
+      console.log(`Template: ${change.templatePath}`);
+      console.log(`Output:   ${change.path}`);
+      console.log('...');
     });
+
+    // Log model templates
+    config.models.forEach(model => {
+      console.log(`\nModel: ${model.name}`);
+      changes.filter(c => c.model?.name === model.name).forEach(change => {
+        console.log(`Template: ${change.templatePath}`);
+        console.log(`Output:   ${change.path}`);
+        console.log('...');
+      });
+    });
+
+    // Log common templates
+    const commonChanges = changes.filter(c => !c.model);
+    if (commonChanges.length > 0) {
+      console.log(`\nCommon:`);
+      commonChanges.forEach(change => {
+        console.log(`Template: ${change.templatePath}`);
+        console.log(`Output:   ${change.path}`);
+        console.log('...');
+      });
+    }
   } else {
     // Process all changes
+    console.log(`\nGenerating files for module: ${config.name}`);
+    console.log('='.repeat(50));
+    
     for (const change of changes) {
       const dir = path.dirname(change.path);
       await fs.mkdir(dir, { recursive: true });
@@ -537,7 +603,6 @@ export async function generateModule(
 
       const content = await processTemplate(change.templatePath, data);
       await fs.writeFile(change.path, content);
-      console.log(`Generated: ${change.path}`);
     }
   }
 

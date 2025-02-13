@@ -1,22 +1,24 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { z } from "zod";
-import { updateVehicleWorkflow } from "../../../../workflows/update-vehicle";
-import { PatchAdminUpdateVehicle } from "../validators";
+import { updateVehiclesWorkflow } from "../../../../../workflows/update-vehicles";
+import { PostAdminUpdateVehicles } from "../validators";
 
-type PatchAdminUpdateVehicleType = z.infer<
-  typeof PatchAdminUpdateVehicle
+type PostAdminUpdateVehiclesType = z.infer<
+  typeof PostAdminUpdateVehicles
 >;
-
+//fasdfsdfasdfsdfadasdflkj;jlkasdf
 export const POST = async (
-  req: MedusaRequest<PatchAdminUpdateVehicleType>,
+  req: MedusaRequest<PostAdminUpdateVehiclesType>,
   res: MedusaResponse
 ) => {
-  const { result } = await updateVehicleWorkflow(req.scope).run({
+  const { result } = await updateVehiclesWorkflow(req.scope).run({
     input: {
       id: req.params.id,
       ...req.validatedBody,
     },
   });
 
-  res.json({ vehicle: result });
+  // asdfasdfasdf
+
+  res.json({ vehicles: result });
 }; 

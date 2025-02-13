@@ -1,59 +1,64 @@
 import * as zod from "zod";
 import { Drawer } from "@medusajs/ui";
 import { FormProvider, useForm } from "react-hook-form";
-import { PostAdminCreateVehicleBody } from "../../../../../api/admin/vehicles/bodies/validators";
+import { PostAdminUpdateVehicleBody } from "../../../../../api/admin/vehicles/bodies/validators";
 import { sdk } from "../../../../lib/sdk";
 import { useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { SelectField } from "../../../../components/form/select-field";
 import { InputField } from "../../../../components/form/input-field";
-import { MultiSelectField } from "../../../../components/form/multi-select-field";
+import { SwitchField } from "../../../../components/form/switch-field";
 import { FormLayout } from "../../../../components/form/form-layout";
 import { DrawerFormLayout } from "../../../../components/drawer-form-layout";
 import { useDrawer } from "../../../../components/drawer";
+import { VehicleBody } from "../../../../types";
 import { ListVehicleModelsRes } from "../../../../types";
 
-const schema = PostAdminCreateVehicleBody;
+const schema = PostAdminUpdateVehicleBody;
 type EditVehicleBodyFormData = zod.infer<typeof schema>;
 
 type VehicleBodyEditProps = {
-  body: {
+  vehicleBody: {
     id: string;
     name: string;
-    models?: { id: string }[];
+    models: string;
+    models_ids: string[];
+    models?: { id: string; name: string }[];
   };
   onClose: () => void;
 };
 
-function VehicleBodyEditForm({ body, onClose }: VehicleBodyEditProps) {
+function VehicleBodyEditForm({ vehicleBody, onClose }: VehicleBodyEditProps) {
   const navigate = useNavigate();
   const { close } = useDrawer();
   const queryClient = useQueryClient();
 
   const form = useForm<EditVehicleBodyFormData>({
     defaultValues: {
-      name: body.name,
-      model_ids: body.models?.map(m => m.id) || [],
+      name: vehicleBody.name,
+      models: vehicleBody.models,
+      models_ids: vehicleBody.models_ids,
     },
     resolver: zodResolver(schema),
   });
 
-  const { data: modelsData } = useQuery<ListVehicleModelsRes>({
+  const { data: vehiclemodelData } = useQuery<ListVehicleModelsRes>({
     queryKey: ["vehicle_models"],
-    queryFn: () => sdk.client.fetch("/admin/vehicles/models"),
+    queryFn: () => sdk.client.fetch("/admin/vehicles/vehicle-models"),
   });
 
-  const models = modelsData?.vehicle_models || [];
+  const vehiclemodels = vehiclemodelData?.vehicle_models || [];
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
-      await sdk.client.fetch(`/admin/vehicles/bodies/${body.id}`, {
+      await sdk.client.fetch(`/admin/vehicles/bodies/${vehicleBody.id}`, {
         method: "POST",
         body: data,
       });
 
       // Invalidate and refetch queries
-      await queryClient.invalidateQueries(["vehicle_bodies"]);
+      await queryClient.invalidateQueries(["bodies"]);
       
       // Reset form
       form.reset();
@@ -62,7 +67,7 @@ function VehicleBodyEditForm({ body, onClose }: VehicleBodyEditProps) {
       close();
       navigate("/vehicles/bodies");
     } catch (error) {
-      console.error("Failed to update body:", error);
+      console.error("Failed to update vehicle-body:", error);
     }
   });
 
@@ -76,14 +81,20 @@ function VehicleBodyEditForm({ body, onClose }: VehicleBodyEditProps) {
           <InputField
             name="name"
             control={form.control}
-            label="Body Name"
+            label="Name"
           />
-          <MultiSelectField
-            name="model_ids"
+          <InputField
+            name="models"
             control={form.control}
-            label="Vehicle Models"
+            label="Models"
+          />
+          <SelectField
+            name="models_ids"
+            control={form.control}
+            label="Models"
             placeholder="Select models..."
-            options={models}
+            options={ vehiclemodels }
+            isMulti
           />
         </FormLayout>
       </DrawerFormLayout>
@@ -93,8 +104,11 @@ function VehicleBodyEditForm({ body, onClose }: VehicleBodyEditProps) {
 
 export function VehicleBodyEdit(props: VehicleBodyEditProps) {
   return (
-    <Drawer.Content aria-describedby="edit-body-description">
-      <VehicleBodyEditForm {...props} />
+    <Drawer.Content aria-describedby="edit-vehicle-body-description">
+      <VehicleBodyEditForm {...{
+        vehicleBody: props.vehicleBody,
+        onClose: props.onClose
+      }} />
     </Drawer.Content>
   );
 } 

@@ -1,0 +1,51 @@
+import { z } from "zod";
+import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { create{{toPascalCase module.modelName}}Workflow } from "../../../../workflows/create-{{toKebabCase module.modelName}}";
+import { PostAdminCreate{{toPascalCase module.modelName}} } from "./validators";
+
+type QueryResponse = {
+  data: any[];
+  metadata: {
+    count: number;
+    take: number;
+    skip: number;
+  };
+};
+
+export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
+  const query = req.scope.resolve("query");
+
+  const queryOptions = {
+    entity: "{{toSnakeCase module.modelName}}",
+    ...req.queryConfig,
+    filters: {
+      ...req.queryConfig?.filters,
+    },
+  };
+
+  const { data: {{toSnakeCase module.plural}}, metadata } = (await query.graph(
+    queryOptions
+  )) as QueryResponse;
+
+  res.json({
+    {{toSnakeCase module.plural}},
+    count: metadata.count,
+    limit: metadata.take,
+    offset: metadata.skip,
+  });
+};
+
+type PostAdminCreate{{toPascalCase module.modelName}}Type = z.infer<
+  typeof PostAdminCreate{{toPascalCase module.modelName}}
+>;
+
+export const POST = async (
+  req: MedusaRequest<PostAdminCreate{{toPascalCase module.modelName}}Type>,
+  res: MedusaResponse
+) => {
+  const { result } = await create{{toPascalCase module.modelName}}Workflow(req.scope).run({
+    input: req.validatedBody,
+  });
+
+  res.json({ {{toSnakeCase module.modelName}}: result });
+}; 

@@ -10,7 +10,7 @@ import { VehicleModelEdit } from "./edit/vehicle-model-edit";
 
 const columnHelper = createDataTableColumnHelper<VehicleModel>();
 
-const VehicleModelsPage = () => {
+const ModelsPage = () => {
   const [showCreate, setShowCreate] = useState(false);
   const [editingVehicleModel, setEditingVehicleModel] = useState<VehicleModel | null>(null);
 
@@ -19,11 +19,23 @@ const VehicleModelsPage = () => {
       header: "ID",
     }),
     columnHelper.accessor("name", {
-      header: "Model",
+      header: "Name",
+      enableSorting: true,
+    }),
+    columnHelper.accessor("make", {
+      header: "Make",
       enableSorting: true,
     }),
     columnHelper.accessor("make.name", {
       header: "Make",
+      enableSorting: true,
+    }),
+    columnHelper.accessor("vehicles", {
+      header: "Vehicles",
+      enableSorting: true,
+    }),
+    columnHelper.accessor("bodies", {
+      header: "Bodies",
       enableSorting: true,
     }),
     columnHelper.accessor("actions", {
@@ -52,12 +64,12 @@ const VehicleModelsPage = () => {
   return (
     <>
       <DataTablePage<VehicleModel>
-        title="Vehicle Models"
-        subtitle="Manage your vehicle models"
+        title="Models"
+        subtitle="Manage your models"
         endpoint="/admin/vehicles/models"
         columns={columns}
-        queryKey="vehicle_models"
-        dataKey="vehicle_models"
+        queryKey="models"
+        dataKey="models"
         actions={[
           {
             type: "button",
@@ -93,11 +105,12 @@ const VehicleModelsPage = () => {
           <VehicleModelCreate onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
+      
       {editingVehicleModel && (
         <Drawer open onOpenChange={() => setEditingVehicleModel(null)}>
           <VehicleModelEdit 
-            model={editingVehicleModel} 
-            onClose={() => setEditingVehicleModel(null)} 
+            model={editing}
+            onClose={() => setEditingVehicleModel(null)}
           />
         </Drawer>
       )}
@@ -106,7 +119,7 @@ const VehicleModelsPage = () => {
 };
 
 export const config = defineRouteConfig({
-  label: "Vehicle Models",
+  label: "Models",
 });
 
-export default VehicleModelsPage;
+export default ModelsPage; 

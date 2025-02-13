@@ -1,42 +1,27 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
-import { Pencil, RocketLaunch } from "@medusajs/icons";
 import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
-import { Vehicle } from "../../types";
-import { DataTablePage } from "../../components/data-table-page";
-import { ActionMenu } from "../../components/action-menu";
-import { VehicleCreate } from "./create/vehicle-create";
-import { VehicleEdit } from "./edit/vehicle-edit";
+import {  } from "../../../types";
+import { DataTablePage } from "../../../components/data-table-page";
+import { Create } from "./create/-create";
 import { useState } from "react";
+import { ActionMenu } from "../../../components/action-menu";
+import { Pencil } from "@medusajs/icons";
+import { Edit } from "./edit/-edit";
 
-const columnHelper = createDataTableColumnHelper<Vehicle>();
+const columnHelper = createDataTableColumnHelper<>();
 
 const VehiclesPage = () => {
   const [showCreate, setShowCreate] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<Vehicle | null>(null);
+  const [editing, setEditing] = useState< | null>(null);
+
   const columns = [
     columnHelper.accessor("id", {
       header: "ID",
     }),
-    columnHelper.accessor("make.name", {
-      header: "Make",
-      enableSorting: true,
-    }),
-    columnHelper.accessor("model.name", {
-      header: "Model",
-      enableSorting: true,
-    }),
-    columnHelper.accessor("start_year", {
-      header: "Start Year",
-      enableSorting: true,
-    }),
-    columnHelper.accessor("end_year", {
-      header: "End Year",
-      enableSorting: true,
-    }),
     columnHelper.accessor("actions", {
       header: "",
       cell: ({ row }) => {
-        const vehicle = row.original;
+        const model = row.original;
         return (
           <ActionMenu
             groups={[
@@ -45,7 +30,7 @@ const VehiclesPage = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditingVehicle(vehicle),
+                    onClick: () => setEditing(model),
                   },
                 ],
               },
@@ -55,9 +40,10 @@ const VehiclesPage = () => {
       },
     }),
   ];
+
   return (
     <>
-      <DataTablePage<Vehicle>
+      <DataTablePage<>
         title="Vehicles"
         subtitle="Manage your vehicles"
         endpoint="/admin/vehicles"
@@ -96,14 +82,15 @@ const VehiclesPage = () => {
       />
       {showCreate && (
         <FocusModal open={showCreate} onOpenChange={setShowCreate}>
-          <VehicleCreate onClose={() => setShowCreate(false)} />
+          <Create onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
-      {editingVehicle && (
-        <Drawer open onOpenChange={() => setEditingVehicle(null)}>
-          <VehicleEdit 
-            vehicle={editingVehicle} 
-            onClose={() => setEditingVehicle(null)} 
+      
+      {editing && (
+        <Drawer open onOpenChange={() => setEditing(null)}>
+          <Edit 
+            model={editing}
+            onClose={() => setEditing(null)}
           />
         </Drawer>
       )}
@@ -113,7 +100,6 @@ const VehiclesPage = () => {
 
 export const config = defineRouteConfig({
   label: "Vehicles",
-  icon: RocketLaunch,
 });
 
-export default VehiclesPage;
+export default VehiclesPage; 

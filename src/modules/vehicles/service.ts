@@ -1,16 +1,17 @@
-import { MedusaService } from "@medusajs/framework/utils"
-import Vehicle from "./models/vehicle"
-import VehicleMake from "./models/vehicle-make"
-import VehicleModel from "./models/vehicle-model"
-import VehicleBody from "./models/vehicle-body"
+import { MedusaService } from "@medusajs/framework/utils";
+import  from "./models/";
+import VehicleSeries from "./models/vehicle-series";
+import VehicleMake from "./models/vehicle-make";
+import VehicleModel from "./models/vehicle-model";
+import VehicleBody from "./models/vehicle-body";
 
 // Combine all models into a single service
-class VehicleService extends MedusaService({
-    Vehicle,
-    VehicleMake,
-    VehicleModel,
-    VehicleBody
-}){
-}
+class Service extends MedusaService({
+  ,
+  VehicleSeries,
+  VehicleMake,
+  VehicleModel,
+  VehicleBody
+}) {}
 
-export default VehicleService
+export default Service; 
