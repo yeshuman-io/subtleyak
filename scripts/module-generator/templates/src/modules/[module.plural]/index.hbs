@@ -1,18 +1,10 @@
-import {{toPascalCase module.modelName}} from "./{{module.modelName}}";
-{{#each module.models}}
-import {{toPascalCase name}} from "./models/{{name}}";
-{{/each}}
 import {{toPascalCase module.name}}Service from "./service";
 import { Module } from "@medusajs/framework/utils";
 
+// Single module for all {{module.name}}-related models
 export const {{toUpperCase module.name}}_MODULE = "{{module.name}}";
 
+// Export the {{module.name}} service that handles all models
 export default Module({{toUpperCase module.name}}_MODULE, {
-  models: [
-    {{toPascalCase module.modelName}},
-    {{#each module.models}}
-    {{toPascalCase name}}{{#unless @last}},{{/unless}}
-    {{/each}}
-  ],
-  service: {{toPascalCase module.name}}Service
+    service: {{toPascalCase module.name}}Service
 }); 

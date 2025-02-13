@@ -1,45 +1,58 @@
-import { Request, Response } from "express";
-import { Get{{toPascalCase model.name}}Schema, AdminCreate{{toPascalCase model.name}}Req } from "./validators";
+import { z } from "zod";
+import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { create{{toPascalCase model.name}}Workflow } from "../../../../workflows/create-{{toKebabCase model.name}}";
+import { PostAdminCreate{{toPascalCase model.name}} } from "./validators";
 
-export async function GET(req: Request, res: Response) {
-  const service = req.scope.resolve("{{module.name}}");
-  const validated = await Get{{toPascalCase model.name}}Schema.parseAsync(req.query);
+type QueryResponse = {
+  data: any[];
+  metadata: {
+    count: number;
+    take: number;
+    skip: number;
+  };
+};
 
-  {{#if (isModuleModel model module)}}
-  const [items, count] = await Promise.all([
-    service.list(validated.where, {
-      skip: validated.offset,
-      take: validated.limit,
-    }),
-    service.count(validated.where),
-  ]);
-  {{else}}
-  const [items, count] = await Promise.all([
-    service.list{{toPascalCase model.plural}}(validated.where, {
-      skip: validated.offset,
-      take: validated.limit,
-    }),
-    service.count{{toPascalCase model.plural}}(validated.where),
-  ]);
-  {{/if}}
+export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
+  const query = req.scope.resolve("query");
+
+  const queryOptions = {
+    entity: "{{toSnakeCase model.name}}",
+    ...req.queryConfig,
+    filters: {
+      ...req.queryConfig?.filters,
+      {{#each model.fields}}
+      {{#if relation}}
+      {{#if (eq relation.type "belongsTo")}}
+      ...(req.query.{{toSnakeCase name}}_id ? { {{toSnakeCase name}}_id: req.query.{{toSnakeCase name}}_id } : {}),
+      {{/if}}
+      {{/if}}
+      {{/each}}
+    },
+  };
+
+  const { data: {{toSnakeCase model.plural}}, metadata } = (await query.graph(
+    queryOptions
+  )) as QueryResponse;
 
   res.json({
-    items,
-    count,
-    offset: validated.offset,
-    limit: validated.limit,
+    {{toSnakeCase model.plural}},
+    count: metadata.count,
+    limit: metadata.take,
+    offset: metadata.skip,
   });
-}
+};
 
-export async function POST(req: Request<AdminCreate{{toPascalCase model.name}}Req>, res: Response) {
-  const service = req.scope.resolve("{{module.name}}");
-  const validated = await AdminCreate{{toPascalCase model.name}}Req.parseAsync(req.body);
+type PostAdminCreate{{toPascalCase model.name}}Type = z.infer<
+  typeof PostAdminCreate{{toPascalCase model.name}}
+>;
 
-  {{#if (isModuleModel model module)}}
-  const result = await service.create(validated);
-  {{else}}
-  const result = await service.create{{toPascalCase model.singular}}(validated);
-  {{/if}}
+export const POST = async (
+  req: MedusaRequest<PostAdminCreate{{toPascalCase model.name}}Type>,
+  res: MedusaResponse
+) => {
+  const { result } = await create{{toPascalCase model.name}}Workflow(req.scope).run({
+    input: req.validatedBody,
+  });
 
-  res.json(result);
-} 
+  res.json({ {{toCamelCase model.name}}: result });
+}; 

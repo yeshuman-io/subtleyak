@@ -15,7 +15,6 @@ describe('Module Generator', () => {
     it('should validate required template files exist', async () => {
       const templateDir = path.join(process.cwd(), 'scripts/module-generator/templates');
       const requiredTemplates = [
-        'src/modules/[module.plural]/[module.modelName].hbs',
         'src/modules/[module.plural]/models/[model.name].hbs',
         'src/modules/[module.plural]/service.hbs',
         'src/modules/[module.plural]/index.hbs',
@@ -29,7 +28,11 @@ describe('Module Generator', () => {
 
       for (const template of requiredTemplates) {
         const templatePath = path.join(templateDir, template);
-        expect(await TestUtils.fileExists(templatePath)).toBe(true);
+        const exists = await TestUtils.fileExists(templatePath);
+        if (!exists) {
+          console.log(`Missing template: ${templatePath}`);
+        }
+        expect(exists).toBe(true);
       }
     });
 
@@ -190,13 +193,6 @@ describe('Module Generator', () => {
 
   describe('Module Generation', () => {
     describe('File Structure', () => {
-      it('should generate module model in correct location', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
-        
-        const moduleModelPath = path.join('.test-output', 'src/modules/tests/tests.ts');
-        expect(await TestUtils.fileExists(moduleModelPath)).toBe(true);
-      });
-
       it('should generate model files in correct locations', async () => {
         await generateModule(TEST_MODULE, { testMode: true });
         

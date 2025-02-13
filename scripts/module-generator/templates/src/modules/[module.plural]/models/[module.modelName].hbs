@@ -1,4 +1,9 @@
 import { model } from "@medusajs/framework/utils";
+{{#each module.fields}}
+{{#if relation}}
+import {{toPascalCase relation.model}} from "./{{toKebabCase ../module.name}}-{{toKebabCase relation.model}}";
+{{/if}}
+{{/each}}
 
 const {{toPascalCase module.modelName}} = model.define("{{toSnakeCase module.modelName}}", {
   id: model.id().primaryKey(),
