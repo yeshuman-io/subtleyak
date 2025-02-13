@@ -82,10 +82,10 @@ src/
 - [x] New: `templates/src/modules/[module.plural]/index.hbs`
 - [x] Reference: `src/modules/vehicles/index.ts`
 
-### 3. Model Definition
-- [ ] Old: `templates/src/modules/[module]/models/[model].hbs`
-- [ ] New: `templates/src/modules/[module.plural]/models/[model.name].hbs`
-- [ ] Reference: `src/modules/vehicles/models/vehicle-make.ts`
+### 3. Model Definition ✅
+- [x] Old: `templates/src/modules/[module]/models/[model].hbs`
+- [x] New: `templates/src/modules/[module.plural]/models/[model.name].hbs`
+- [x] Reference: `src/modules/vehicles/models/vehicle-make.ts`
 
 ### 4. Module Model
 - [ ] Old: N/A
