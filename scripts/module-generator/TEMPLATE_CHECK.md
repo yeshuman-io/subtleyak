@@ -92,10 +92,15 @@ src/
 - [x] New: `templates/src/modules/[module.plural]/models/[module.modelName].hbs`
 - [x] Reference: `src/modules/vehicles/models/vehicle.ts`
 
-### 5. List Route
-- [ ] Old: `templates/src/api/admin/[module]/route.hbs`
-- [ ] New: `templates/src/api/admin/[module.plural]/[model.plural]/route.hbs`
-- [ ] Reference: `src/api/admin/vehicles/models/route.ts`
+### 5. Module List Route ✅
+- [x] Old: `templates/src/api/admin/[module]/route.hbs`
+- [x] New: `templates/src/api/admin/[module.plural]/route.hbs`
+- [x] Reference: `src/api/admin/vehicles/route.ts`
+
+### 5.1 Model List Route ✅
+- [x] Old: `templates/src/api/admin/[module]/models/route.hbs`
+- [x] New: `templates/src/api/admin/[module.plural]/[model.plural]/route.hbs`
+- [x] Reference: `src/api/admin/vehicles/models/route.ts`
 
 ### 6. ID Route
 - [ ] Old: `templates/src/api/admin/[module]/[id]/route.hbs`
