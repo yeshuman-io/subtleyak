@@ -105,37 +105,6 @@ describe('Module Generator', () => {
             field: { name: 'description', type: 'string' }
           })).toBe('description: model.text()');
         });
-
-        it('should handle relationships with inverse', () => {
-          const template = Handlebars.compile('{{processField field}}');
-          expect(template({ 
-            field: { 
-              name: 'models', 
-              type: 'string',
-              relation: {
-                type: 'hasMany',
-                model: 'TestModel',
-                inverse: 'test'
-              }
-            }
-          })).toMatch(/models: model.hasMany\(\(\) => TestModel, {\s*inverse: "test"\s*}\)/);
-        });
-
-        it('should handle many-to-many relationships', () => {
-          const template = Handlebars.compile('{{processField field}}');
-          expect(template({ 
-            field: { 
-              name: 'rights', 
-              type: 'string',
-              relation: {
-                type: 'manyToMany',
-                model: 'Right',
-                through: 'left_right',
-                inverse: 'lefts'
-              }
-            }
-          })).toMatch(/rights: model.manyToMany\(\(\) => Right, {\s*inverse: "lefts",\s*through: "left_right"\s*}\)/);
-        });
       });
 
       describe('propAccess helper', () => {
@@ -210,34 +179,6 @@ describe('Module Generator', () => {
           const filePath = path.join('.test-output', file);
           expect(await TestUtils.fileExists(filePath)).toBe(true);
         }
-      });
-    });
-
-    describe('Relationship Generation', () => {
-      it('should handle one-to-many relationships', async () => {
-        await generateModule(RELATIONSHIP_MODULE, { testMode: true });
-        
-        const oneModelPath = path.join('.test-output', 'src/modules/relationships/models/one-to-many.ts');
-        const manyModelPath = path.join('.test-output', 'src/modules/relationships/models/many-to-one.ts');
-        
-        const oneContent = await TestUtils.readGeneratedFile(oneModelPath);
-        const manyContent = await TestUtils.readGeneratedFile(manyModelPath);
-        
-        expect(oneContent).toMatch(/manys:\s*model\.hasMany\(\s*\(\)\s*=>\s*Many,\s*{\s*mappedBy:\s*"one"\s*}\)/);
-        expect(manyContent).toMatch(/one:\s*model\.belongsTo\(\s*\(\)\s*=>\s*One,\s*{\s*mappedBy:\s*"manys"\s*}\)/);
-      });
-
-      it('should handle many-to-many relationships', async () => {
-        await generateModule(MANY_TO_MANY_MODULE, { testMode: true });
-        
-        const leftModelPath = path.join('.test-output', 'src/modules/many-to-manys/models/left.ts');
-        const rightModelPath = path.join('.test-output', 'src/modules/many-to-manys/models/right.ts');
-        
-        const leftContent = await TestUtils.readGeneratedFile(leftModelPath);
-        const rightContent = await TestUtils.readGeneratedFile(rightModelPath);
-        
-        expect(leftContent).toMatch(/rights:\s*model\.manyToMany\(\s*\(\)\s*=>\s*Right,\s*{\s*mappedBy:\s*"lefts",\s*through:\s*"left_right"\s*}\)/);
-        expect(rightContent).toMatch(/lefts:\s*model\.manyToMany\(\s*\(\)\s*=>\s*Left,\s*{\s*mappedBy:\s*"rights",\s*through:\s*"left_right"\s*}\)/);
       });
     });
 

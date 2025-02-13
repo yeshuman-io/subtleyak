@@ -22,7 +22,11 @@ export type ModelField = {
     mappedBy?: string;
     through?: string;
     inverse?: string;
+    pivotTable?: string;
+    joinColumn?: string;
+    inverseJoinColumn?: string;
   };
+  default?: any;
 };
 
 export type ModelConfig = {
@@ -63,16 +67,26 @@ function processField(field: ModelField): string | Handlebars.SafeString {
     if (field.relation.through) {
       relationConfig.push(`through: "${field.relation.through}"`);
     }
+    if (field.relation.pivotTable) {
+      relationConfig.push(`pivotTable: "${field.relation.pivotTable}"`);
+    }
+    if (field.relation.joinColumn) {
+      relationConfig.push(`joinColumn: "${field.relation.joinColumn}"`);
+    }
+    if (field.relation.inverseJoinColumn) {
+      relationConfig.push(`inverseJoinColumn: "${field.relation.inverseJoinColumn}"`);
+    }
     
-    return new Handlebars.SafeString(`${field.name}: model.${field.relation.type}(() => ${field.relation.model}, {
-      ${relationConfig.join(',\n      ')}
-    })`);
+    return new Handlebars.SafeString(`${field.name}: model.${field.relation.type}(() => ${field.relation.model}${relationConfig.length ? `, {\n      ${relationConfig.join(',\n      ')}\n    }` : ''}`);
   }
 
-  // Build the field definition with required flag
+  // Build the field definition with required flag and default value
   let fieldDef = `${field.name}: model.${field.type === 'string' ? 'text' : field.type}()`;
   if (field.required) {
     fieldDef += `.required()`;
+  }
+  if (field.default !== undefined) {
+    fieldDef += `.default(${JSON.stringify(field.default)})`;
   }
   return new Handlebars.SafeString(fieldDef);
 }

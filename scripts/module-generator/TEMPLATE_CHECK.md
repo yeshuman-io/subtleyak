@@ -87,10 +87,10 @@ src/
 - [x] New: `templates/src/modules/[module.plural]/models/[model.name].hbs`
 - [x] Reference: `src/modules/vehicles/models/vehicle-make.ts`
 
-### 4. Module Model
-- [ ] Old: N/A
-- [ ] New: `templates/src/modules/[module.plural]/models/[module.modelName].hbs`
-- [ ] Reference: `src/modules/vehicles/models/vehicle.ts`
+### 4. Module Model ✅
+- [x] Old: N/A
+- [x] New: `templates/src/modules/[module.plural]/models/[module.modelName].hbs`
+- [x] Reference: `src/modules/vehicles/models/vehicle.ts`
 
 ### 5. List Route
 - [ ] Old: `templates/src/api/admin/[module]/route.hbs`
