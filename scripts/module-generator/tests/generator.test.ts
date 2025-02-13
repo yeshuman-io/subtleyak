@@ -229,7 +229,7 @@ describe('Module Generator', () => {
       });
 
       // Verify module model files are included
-      const moduleFiles = changes.filter(c => c.model === TEST_MODULE.modelName);
+      const moduleFiles = changes.filter(c => c.model?.name === TEST_MODULE.modelName);
       expect(moduleFiles).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ path: expect.stringContaining(`/tests.ts`) }),
@@ -241,7 +241,7 @@ describe('Module Generator', () => {
 
       // Verify model files are included
       TEST_MODULE.models.forEach(model => {
-        const modelFiles = changes.filter(c => c.model === model.name);
+        const modelFiles = changes.filter(c => c.model?.name === model.name);
         expect(modelFiles).toEqual(
           expect.arrayContaining([
             expect.objectContaining({ path: expect.stringContaining(`/models/${model.name}.ts`) }),
