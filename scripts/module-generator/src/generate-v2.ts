@@ -228,13 +228,12 @@ Handlebars.registerHelper('getModelImportPath', function(model: any, module: any
 });
 
 // Process template using Handlebars
-async function processTemplate(templatePath: string, data: Record<string, any>): Promise<string> {
+async function processTemplate(templateContent: string, data: Record<string, any>): Promise<string> {
   try {
-    const template = await fs.readFile(templatePath, 'utf-8');
-    const compiledTemplate = Handlebars.compile(template);
+    const compiledTemplate = Handlebars.compile(templateContent);
     return compiledTemplate(data);
   } catch (error) {
-    console.error(`Error processing template at ${templatePath}:`, error);
+    console.error(`Error processing template:`, error);
     throw error;
   }
 }
@@ -245,7 +244,7 @@ async function loadTemplates() {
   
   // Model templates
   const moduleModelTemplate = await fs.readFile(
-    path.join(templateDir, 'src/modules/[module.plural]/[module.modelName].hbs'),
+    path.join(templateDir, 'src/modules/[module.plural]/models/[module.modelName].hbs'),
     'utf-8'
   );
   const modelTemplate = await fs.readFile(
