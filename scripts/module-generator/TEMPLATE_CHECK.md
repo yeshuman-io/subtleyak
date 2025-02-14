@@ -112,15 +112,15 @@ src/
 - [x] New: `templates/src/api/admin/[module.plural]/[model.plural]/[id]/route.hbs`
 - [x] Reference: `src/api/admin/vehicles/models/[id]/route.ts`
 
-### 7. Module Validators
-- [ ] Old: `templates/src/api/admin/[module]/validators.hbs`
-- [ ] New: `templates/src/api/admin/[module.plural]/validators.hbs`
-- [ ] Reference: `src/api/admin/vehicles/validators.ts`
+### 7. Module Validators ✅
+- [x] Old: `templates/src/api/admin/[module]/validators.hbs`
+- [x] New: `templates/src/api/admin/[module.plural]/validators.hbs`
+- [x] Reference: `src/api/admin/vehicles/validators.ts`
 
-### 7.1 Model Validators
-- [ ] Old: `templates/src/api/admin/[module]/models/validators.hbs`
-- [ ] New: `templates/src/api/admin/[module.plural]/[model.plural]/validators.hbs`
-- [ ] Reference: `src/api/admin/vehicles/models/validators.ts`
+### 7.1 Model Validators ✅
+- [x] Old: `templates/src/api/admin/[module]/models/validators.hbs`
+- [x] New: `templates/src/api/admin/[module.plural]/[model.plural]/validators.hbs`
+- [x] Reference: `src/api/admin/vehicles/models/validators.ts`
 
 ### 8. Module List Page ✅
 - [x] Old: `templates/src/admin/routes/[module]/page.hbs`
@@ -134,7 +134,7 @@ src/
 
 ### 9. Module Create Form
 - [ ] Old: `templates/src/admin/routes/[module]/create/[module]-create.hbs`
-- [ ] New: `templates/src/admin/routes/[module.plural]/create/[module.moduleName]-create.hbs`
+- [ ] New: `templates/src/admin/routes/[module.plural]/create/[module.singular]-create.hbs`
 - [ ] Reference: `src/admin/routes/vehicles/create/vehicle-create.tsx`
 
 ### 9.1 Model Create Form

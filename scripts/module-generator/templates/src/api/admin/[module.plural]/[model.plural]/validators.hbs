@@ -42,7 +42,7 @@ export const PostAdminUpdate{{toPascalCase model.name}} = z.object({
 export type AdminCreate{{toPascalCase model.name}}Req = z.infer<typeof PostAdminCreate{{toPascalCase model.name}}>;
 export type AdminUpdate{{toPascalCase model.name}}Req = z.infer<typeof PostAdminUpdate{{toPascalCase model.name}}>;
 
-export type AdminListRes = {
+export type {{toPascalCase model.name}}AdminListRes = {
   items: any[];
   count: number;
   limit: number;

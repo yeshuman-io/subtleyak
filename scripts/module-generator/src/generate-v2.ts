@@ -227,6 +227,16 @@ Handlebars.registerHelper('getModelImportPath', function(model: any, module: any
   return model?.name === module?.modelName ? './' : `./models/${model?.name}`;
 });
 
+Handlebars.registerHelper('toUpperCase', (str: string) => {
+  if (!str) return '';
+  return str.toUpperCase();
+});
+
+Handlebars.registerHelper('find', (array: any[], key: string, value: string) => {
+  if (!array || !Array.isArray(array)) return null;
+  return array.find(item => item[key] === value);
+});
+
 // Process template using Handlebars
 async function processTemplate(templateContent: string, data: Record<string, any>): Promise<string> {
   try {
@@ -264,11 +274,11 @@ async function loadTemplates() {
     'utf-8'
   );
   const moduleCreateFormTemplate = await fs.readFile(
-    path.join(templateDir, 'src/admin/routes/[module.plural]/create/[module.modelName]-create.hbs'),
+    path.join(templateDir, 'src/admin/routes/[module.plural]/create/[module.singular]-create.hbs'),
     'utf-8'
   );
   const moduleEditFormTemplate = await fs.readFile(
-    path.join(templateDir, 'src/admin/routes/[module.plural]/edit/[module.modelName]-edit.hbs'),
+    path.join(templateDir, 'src/admin/routes/[module.plural]/edit/[module.singular]-edit.hbs'),
     'utf-8'
   );
 
@@ -401,7 +411,7 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
     });
 
     const createFormPath = isModuleModel 
-      ? `src/admin/routes/${routePath}/create/${module.modelName}-create.tsx`
+      ? `src/admin/routes/${routePath}/create/${module.singular}-create.tsx`
       : `src/admin/routes/${routePath}/create/${model.name}-create.tsx`;
 
     changes.push({
@@ -616,7 +626,3 @@ export {
   generateModuleFiles
 };
 
-Handlebars.registerHelper('toUpperCase', (str: string) => {
-  if (!str) return '';
-  return str.toUpperCase();
-});

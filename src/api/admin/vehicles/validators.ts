@@ -1,20 +1,15 @@
 import { z } from "zod";
-import { createFindParams } from "@medusajs/medusa/api/utils/validators";
 
-export const GetSchema = createFindParams();
-
-export const PostAdminCreate = z.object({
+export const PostAdminCreateVehicle = z.object({
+  make_id: z.string().min(1),
+  model_id: z.string().min(1),
+  start_year: z.number().min(1),
+  end_year: z.number().min(1),
 });
 
-export const PostAdminUpdate = z.object({
+export const PostAdminUpdateVehicle = z.object({
+  make_id: z.string().min(1).optional(),
+  model_id: z.string().min(1).optional(),
+  start_year: z.number().optional(),
+  end_year: z.number().optional(),
 });
-
-export type AdminCreateReq = z.infer<typeof PostAdminCreate>;
-export type AdminUpdateReq = z.infer<typeof PostAdminUpdate>;
-
-export type AdminListRes = {
-  vehicles: any[];
-  count: number;
-  limit: number;
-  offset: number;
-}; 

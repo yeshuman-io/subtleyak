@@ -3,38 +3,37 @@ import { createFindParams } from "@medusajs/medusa/api/utils/validators";
 
 export const GetSchema = createFindParams();
 
-export const PostAdminCreate{{toPascalCase module.modelName}} = z.object({
-  {{#each module.fields}}
-  {{#unless relation}}
-  {{name}}: z.{{#if (eq type "string")}}string(){{else}}{{type}}(){{/if}}{{#if required}}.min(1, "{{toTitleCase name}} is required"){{/if}},
-  {{/unless}}
+{{#with (find module.models "name" module.singular)}}
+export const PostAdminCreate{{toPascalCase singular}} = z.object({
+  {{#each fields}}
   {{#if relation}}
   {{#if (eq relation.type "belongsTo")}}
-  {{toSnakeCase name}}_id: z.string().min(1, "{{toTitleCase name}} is required"),
+  {{toSnakeCase name}}_id: z.string().min(1),
   {{/if}}
   {{/if}}
+  {{#unless relation}}
+  {{name}}: z.{{#if (eq type "text")}}string(){{else if (eq type "number")}}number(){{else if (eq type "boolean")}}boolean(){{else if (eq type "date")}}date(){{else}}string(){{/if}}.min(1),
+  {{/unless}}
   {{/each}}
 });
 
-export const PostAdminUpdate{{toPascalCase module.modelName}} = z.object({
-  {{#each module.fields}}
-  {{#unless relation}}
-  {{name}}: z.{{#if (eq type "string")}}string(){{else}}{{type}}(){{/if}}{{#unless required}}.optional(){{/unless}},
-  {{/unless}}
+export const PostAdminUpdate{{toPascalCase singular}} = z.object({
+  {{#each fields}}
   {{#if relation}}
   {{#if (eq relation.type "belongsTo")}}
-  {{toSnakeCase name}}_id: z.string().optional(),
+  {{toSnakeCase name}}_id: z.string().min(1).optional(),
   {{/if}}
   {{/if}}
+  {{#unless relation}}
+  {{name}}: z.{{#if (eq type "text")}}string(){{else if (eq type "number")}}number(){{else if (eq type "boolean")}}boolean(){{else if (eq type "date")}}date(){{else}}string(){{/if}}.optional(),
+  {{/unless}}
   {{/each}}
 });
 
-export type AdminCreate{{toPascalCase module.modelName}}Req = z.infer<typeof PostAdminCreate{{toPascalCase module.modelName}}>;
-export type AdminUpdate{{toPascalCase module.modelName}}Req = z.infer<typeof PostAdminUpdate{{toPascalCase module.modelName}}>;
-
-export type AdminList{{toPascalCase module.modelName}}Res = {
-  {{toSnakeCase module.plural}}: any[];
+export type {{toPascalCase singular}}AdminListRes = {
+  {{../module.plural}}: any[];
   count: number;
   limit: number;
   offset: number;
-}; 
+};
+{{/with}}
