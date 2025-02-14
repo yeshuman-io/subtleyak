@@ -370,7 +370,7 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
 
   // Create module's own model
   const moduleModel: ModelConfig = {
-    name: module.modelName,
+    name: module.singular,
     singular: module.singular,
     plural: module.plural,
     fields: module.fields
@@ -383,11 +383,11 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
     name: m.name,
     singular: m.singular,
     plural: m.plural,
-    isModuleModel: m.name === module.modelName
+    isModuleModel: m.name === module.singular
   })));
   
   for (const model of allModels) {
-    const isModuleModel = model.name === module.modelName;
+    const isModuleModel = model.name === module.singular;
     const routePath = isModuleModel ? module.plural : `${module.plural}/${model.plural}`;
 
     // Model file
@@ -511,7 +511,7 @@ export async function generateModule(
 
   // Generate module's own model
   const moduleModel: ModelConfig = {
-    name: config.modelName,
+    name: config.singular,
     singular: config.singular,
     plural: config.plural,
     fields: config.fields
@@ -524,11 +524,11 @@ export async function generateModule(
     name: m.name,
     singular: m.singular,
     plural: m.plural,
-    isModuleModel: m.name === config.modelName
+    isModuleModel: m.name === config.singular
   })));
   
   for (const model of allModels) {
-    const isModuleModel = model.name === config.modelName;
+    const isModuleModel = model.name === config.singular;
     const routePath = isModuleModel ? config.plural : `${config.plural}/${model.plural}`;
 
     // Model file
@@ -663,7 +663,7 @@ export async function generateModule(
       const data = {
         module: config,
         model: change.model || null,
-        isModuleModel: change.model?.name === config.modelName
+        isModuleModel: change.model?.name === config.singular
       };
 
       const content = await processTemplate(change.templatePath, data);

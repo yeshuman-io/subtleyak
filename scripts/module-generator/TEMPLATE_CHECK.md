@@ -132,25 +132,29 @@ src/
 - [x] New: `templates/src/admin/routes/[module.plural]/[model.plural]/page.hbs`
 - [x] Reference: `src/admin/routes/vehicles/models/page.tsx`
 
-### 9. Module Create Form
-- [ ] Old: `templates/src/admin/routes/[module]/create/[module]-create.hbs`
-- [ ] New: `templates/src/admin/routes/[module.plural]/create/[module.singular]-create.hbs`
-- [ ] Reference: `src/admin/routes/vehicles/create/vehicle-create.tsx`
+### 9. Module Create Form ✅
+- [x] Old: `templates/src/admin/routes/[module]/create/[module]-create.hbs`
+- [x] New: `templates/src/admin/routes/[module.plural]/create/[module.singular]-create.hbs`
+- [x] Reference: `src/admin/routes/vehicles/create/vehicle-create.tsx`
+- [x] Notes: Fixed field iteration and type handling
 
 ### 9.1 Model Create Form
 - [ ] Old: `templates/src/admin/routes/[module]/create/[model]-create.hbs`
 - [ ] New: `templates/src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs`
 - [ ] Reference: `src/admin/routes/vehicles/models/create/vehicle-model-create.tsx`
+- [ ] Notes: Needs field iteration and type handling fixes
 
-### 10. Module Edit Form
-- [ ] Old: `templates/src/admin/routes/[module]/edit/[module]-edit.hbs`
-- [ ] New: `templates/src/admin/routes/[module.plural]/edit/[module.moduleName]-edit.hbs`
-- [ ] Reference: `src/admin/routes/vehicles/edit/vehicle-edit.tsx`
+### 10. Module Edit Form ✅
+- [x] Old: `templates/src/admin/routes/[module]/edit/[module]-edit.hbs`
+- [x] New: `templates/src/admin/routes/[module.plural]/edit/[module.singular]-edit.hbs`
+- [x] Reference: `src/admin/routes/vehicles/edit/vehicle-edit.tsx`
+- [x] Notes: Fixed field iteration and type handling
 
 ### 10.1 Model Edit Form
 - [ ] Old: `templates/src/admin/routes/[module]/edit/[model]-edit.hbs`
 - [ ] New: `templates/src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs`
 - [ ] Reference: `src/admin/routes/vehicles/models/edit/vehicle-model-edit.tsx`
+- [ ] Notes: Needs field iteration and type handling fixes
 
 ## Reference Files
 - `src/modules/vehicles/service.ts`
@@ -160,7 +164,11 @@ src/
 - `src/admin/routes/vehicles/page.tsx`
 
 ## Notes
-- Need to verify variable names match new module config structure
-- Check import paths use correct casing (kebab-case)
-- Ensure templates support all relationship types
-- Verify admin UI components match actual implementation 
+- [x] Variable names match new module config structure (for module forms)
+- [x] Import paths use correct casing (kebab-case)
+- [x] Templates support all relationship types (for module forms)
+- [x] Admin UI components match actual implementation
+- [x] Module create/edit forms handle fields correctly
+- [ ] Model create/edit forms need field handling fixes
+- [x] Field types are properly mapped (text, number, boolean)
+- [x] Relations are properly handled (belongsTo, hasMany) 
