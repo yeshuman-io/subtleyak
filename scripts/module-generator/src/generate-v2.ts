@@ -240,6 +240,14 @@ Handlebars.registerHelper('find', (array: any[], key: string, value: string) => 
 // Process template using Handlebars
 async function processTemplate(templateContent: string, data: Record<string, any>): Promise<string> {
   try {
+    console.log('Debug - Processing template with data:', {
+      moduleName: data.module?.moduleName,
+      singular: data.module?.singular,
+      plural: data.module?.plural,
+      isModuleModel: data.isModuleModel,
+      modelName: data.model?.name
+    });
+    
     const compiledTemplate = Handlebars.compile(templateContent);
     return compiledTemplate(data);
   } catch (error) {
@@ -251,6 +259,8 @@ async function processTemplate(templateContent: string, data: Record<string, any
 // Load template content
 async function loadTemplates() {
   const templateDir = path.join(process.cwd(), 'scripts/module-generator/templates');
+  
+  console.log('Debug - Loading templates from:', templateDir);
   
   // Module level templates
   const moduleModelTemplate = await fs.readFile(
@@ -322,6 +332,12 @@ async function loadTemplates() {
     'utf-8'
   );
 
+  console.log('Debug - Loaded module create form template:', {
+    path: path.join(templateDir, 'src/admin/routes/[module.plural]/create/[module.singular]-create.hbs'),
+    exists: !!moduleCreateFormTemplate,
+    length: moduleCreateFormTemplate.length
+  });
+
   return {
     // Module level templates
     moduleModelTemplate,
@@ -362,6 +378,13 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
 
   // Process all models (including module's own model)
   const allModels = [moduleModel, ...module.models];
+  
+  console.log('Debug - Processing models:', allModels.map(m => ({
+    name: m.name,
+    singular: m.singular,
+    plural: m.plural,
+    isModuleModel: m.name === module.modelName
+  })));
   
   for (const model of allModels) {
     const isModuleModel = model.name === module.modelName;
@@ -414,6 +437,14 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
       ? `src/admin/routes/${routePath}/create/${module.singular}-create.tsx`
       : `src/admin/routes/${routePath}/create/${model.name}-create.tsx`;
 
+    console.log('Debug - Create form path:', {
+      isModuleModel,
+      routePath,
+      createFormPath,
+      moduleSingular: module.singular,
+      modelName: model.name
+    });
+
     changes.push({
       path: createFormPath,
       type: 'create',
@@ -451,6 +482,16 @@ async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> 
     module: module
   });
 
+  const commonChanges = changes.filter(c => !c.model);
+  if (commonChanges.length > 0) {
+    console.log(`\nCommon:`);
+    commonChanges.forEach(change => {
+      console.log(`Template: ${change.templatePath}`);
+      console.log(`Output:   ${change.path}`);
+      console.log('...');
+    });
+  }
+
   return changes;
 }
 
@@ -478,6 +519,13 @@ export async function generateModule(
 
   // Process all models (including module's own model)
   const allModels = [moduleModel, ...config.models];
+  
+  console.log('Debug - Processing models:', allModels.map(m => ({
+    name: m.name,
+    singular: m.singular,
+    plural: m.plural,
+    isModuleModel: m.name === config.modelName
+  })));
   
   for (const model of allModels) {
     const isModuleModel = model.name === config.modelName;
@@ -605,6 +653,13 @@ export async function generateModule(
       const dir = path.dirname(change.path);
       await fs.mkdir(dir, { recursive: true });
       
+      console.log('Debug - Writing file:', {
+        path: change.path,
+        type: change.type,
+        isModuleModel: change.model?.name === config.modelName,
+        templateLength: change.templatePath.length
+      });
+      
       const data = {
         module: config,
         model: change.model || null,
@@ -612,6 +667,13 @@ export async function generateModule(
       };
 
       const content = await processTemplate(change.templatePath, data);
+      
+      console.log('Debug - Generated content:', {
+        path: change.path,
+        contentLength: content.length,
+        firstFewLines: content.split('\n').slice(0, 3).join('\n')
+      });
+      
       await fs.writeFile(change.path, content);
     }
   }
@@ -625,4 +687,3 @@ export {
   loadTemplates,
   generateModuleFiles
 };
-
