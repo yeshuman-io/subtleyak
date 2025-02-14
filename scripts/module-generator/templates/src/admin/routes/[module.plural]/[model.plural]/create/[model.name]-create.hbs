@@ -1,78 +1,112 @@
-import { useAdminCreateMutation } from "@medusajs/admin";
-import { Form } from "@medusajs/admin-ui";
+import * as zod from "zod";
+import { FormProvider, useForm } from "react-hook-form";
+import { PostAdminCreate{{toPascalCase model.name}} } from "../../../../../api/admin/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}/validators";
+import { sdk } from "../../../../lib/sdk";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { SelectField } from "../../../../components/form/select-field";
+import { InputField } from "../../../../components/form/input-field";
+import { FormLayout } from "../../../../components/form/form-layout";
+import { ModalForm } from "../../../../components/form/modal-form";
 
-export const {{toPascalCase model.name}}Create = () => {
-  const { mutate, isLoading } = useAdminCreateMutation(
-    "{{getRoutePath model module}}"
-  );
+{{#if model.fields}}
+{{#each model.fields}}
+{{#if relation}}
+{{#if (eq relation.type "belongsTo")}}
+import { List{{toPascalCase relation.model}}sRes } from "../../../../types";
+{{/if}}
+{{/if}}
+{{/each}}
+{{/if}}
 
-  const handleSubmit = (data: any) => {
-    mutate(data);
-  };
+const schema = PostAdminCreate{{toPascalCase model.name}};
+type Create{{toPascalCase model.name}}FormData = zod.infer<typeof schema>;
 
-  return (
-    <Form onSubmit={handleSubmit}>
+type {{toPascalCase model.name}}CreateProps = {
+  onClose: () => void;
+};
+
+export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase model.name}}CreateProps) {
+  const navigate = useNavigate();
+  
+  const form = useForm<Create{{toPascalCase model.name}}FormData>({
+    defaultValues: {
       {{#each model.fields}}
-      {{#if (eq type "string")}}
-      <Form.Field
-        label="{{toTitleCase name}}"
-        name="{{name}}"
-        type="text"
-        required={{required}}
-      />
-      {{/if}}
-      {{#if (eq type "number")}}
-      <Form.Field
-        label="{{toTitleCase name}}"
-        name="{{name}}"
-        type="number"
-        required={{required}}
-      />
-      {{/if}}
-      {{#if (eq type "boolean")}}
-      <Form.Field
-        label="{{toTitleCase name}}"
-        name="{{name}}"
-        type="checkbox"
-        required={{required}}
-      />
-      {{/if}}
-      {{#if (eq type "date")}}
-      <Form.Field
-        label="{{toTitleCase name}}"
-        name="{{name}}"
-        type="date"
-        required={{required}}
-      />
-      {{/if}}
+      {{#unless relation}}
+      {{name}}: {{#if (eq type "text")}}""{{else if (eq type "number")}}0{{else if (eq type "boolean")}}false{{/if}},
+      {{/unless}}
       {{#if relation}}
       {{#if (eq relation.type "belongsTo")}}
-      <Form.Field
-        label="{{toTitleCase name}}"
-        name="{{name}}_id"
-        type="select"
-        required={{required}}
-      />
-      {{/if}}
-      {{#if (eq relation.type "hasMany")}}
-      <Form.Field
-        label="{{toTitleCase name}}"
-        name="{{name}}_ids"
-        type="multiselect"
-        required={{required}}
-      />
-      {{/if}}
-      {{#if (eq relation.type "manyToMany")}}
-      <Form.Field
-        label="{{toTitleCase name}}"
-        name="{{name}}_ids"
-        type="multiselect"
-        required={{required}}
-      />
+      {{toSnakeCase name}}_id: "",
       {{/if}}
       {{/if}}
       {{/each}}
-      <Form.Submit isLoading={isLoading}>Create</Form.Submit>
-    </Form>
+    },
+    resolver: zodResolver(schema),
+  });
+
+  {{#if model.fields}}
+  {{#each model.fields}}
+  {{#if relation}}
+  {{#if (eq relation.type "belongsTo")}}
+  const { data: {{toCamelCase relation.model}}sData } = useQuery<List{{toPascalCase relation.model}}sRes>({
+    queryKey: ["{{toSnakeCase relation.model}}s"],
+    queryFn: () => sdk.client.fetch("/admin/{{toKebabCase ../module.plural}}/{{toKebabCase relation.model}}s"),
+  });
+
+  const {{toCamelCase relation.model}}s = {{toCamelCase relation.model}}sData?.{{toSnakeCase relation.model}}s || [];
+  {{/if}}
+  {{/if}}
+  {{/each}}
+  {{/if}}
+
+  const handleSubmit = form.handleSubmit(async (data) => {
+    try {
+      await sdk.client.fetch("/admin/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}", {
+        method: "POST",
+        body: data,
+      });
+      
+      onClose();
+      navigate("/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}");
+    } catch (error) {
+      console.error("Failed to create {{toLowerCase model.name}}:", error);
+    }
+  });
+
+  return (
+    <FormProvider {...form}>
+      <ModalForm
+        title="Create {{toTitleCase model.name}}"
+        onSubmit={handleSubmit}
+        onClose={onClose}
+      >
+        <FormLayout>
+          {{#each model.fields}}
+          {{#unless relation}}
+          <InputField
+            name="{{name}}"
+            control={form.control}
+            label="{{toTitleCase name}}"
+            {{#if (eq type "number")}}type="number"{{/if}}
+            {{#if (eq type "boolean")}}type="checkbox"{{/if}}
+          />
+          {{/unless}}
+          {{#if relation}}
+          {{#if (eq relation.type "belongsTo")}}
+          <SelectField
+            name="{{toSnakeCase name}}_id"
+            control={form.control}
+            label="{{toTitleCase name}}"
+            placeholder="Select a {{toLowerCase name}}..."
+            options={ {{toCamelCase relation.model}}s }
+          />
+          {{/if}}
+          {{/if}}
+          {{/each}}
+        </FormLayout>
+      </ModalForm>
+    </FormProvider>
   );
-}; 
+} 
