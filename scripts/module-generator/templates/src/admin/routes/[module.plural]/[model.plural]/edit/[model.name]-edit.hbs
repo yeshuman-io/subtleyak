@@ -31,6 +31,7 @@ type {{toPascalCase model.name}}EditProps = {
     {{/if}}
     {{#if (eq type "boolean")}}
     {{toSnakeCase name}}: boolean;
+    
     {{/if}}
     {{#if (eq type "number")}}
     {{toSnakeCase name}}: number;
@@ -128,11 +129,13 @@ function {{toPascalCase model.name}}EditForm({ {{toCamelCase model.name}}, onClo
         <FormLayout>
           {{#each model.fields}}
           {{#if (eq type "text")}}
+          {{#unless relation}}
           <InputField
             name="{{toSnakeCase name}}"
             control={form.control}
             label="{{toTitleCase name}}"
           />
+          {{/unless}}
           {{/if}}
           {{#if (eq type "boolean")}}
           <SwitchField
@@ -189,11 +192,8 @@ function {{toPascalCase model.name}}EditForm({ {{toCamelCase model.name}}, onClo
 
 export function {{toPascalCase model.name}}Edit(props: {{toPascalCase model.name}}EditProps) {
   return (
-    <Drawer.Content aria-describedby="edit-{{model.name}}-description">
-      <{{toPascalCase model.name}}EditForm {...{
-        {{toCamelCase model.name}}: props.{{toCamelCase model.name}},
-        onClose: props.onClose
-      }} />
+    <Drawer.Content aria-describedby="edit-{{toKebabCase model.name}}-description">
+      <{{toPascalCase model.name}}EditForm {...props} />
     </Drawer.Content>
   );
-} 
+}

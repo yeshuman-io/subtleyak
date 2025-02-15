@@ -150,11 +150,11 @@ src/
 - [x] Reference: `src/admin/routes/vehicles/edit/vehicle-edit.tsx`
 - [x] Notes: Fixed field iteration and type handling
 
-### 10.1 Model Edit Form
-- [ ] Old: `templates/src/admin/routes/[module]/edit/[model]-edit.hbs`
-- [ ] New: `templates/src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs`
-- [ ] Reference: `src/admin/routes/vehicles/models/edit/vehicle-model-edit.tsx`
-- [ ] Notes: Needs field iteration and type handling fixes
+### 10.1 Model Edit Form ✅
+- [x] Old: `templates/src/admin/routes/[module]/edit/[model]-edit.hbs`
+- [x] New: `templates/src/admin/routes/[module.plural]/[model.plural]/edit/[model.name]-edit.hbs`
+- [x] Reference: `src/admin/routes/vehicles/models/edit/vehicle-model-edit.tsx`
+- [x] Notes: Needs field iteration and type handling fixes
 
 ## Reference Files
 - `src/modules/vehicles/service.ts`
