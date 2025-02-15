@@ -361,6 +361,12 @@ async function loadTemplates() {
     'utf-8'
   );
 
+  // Add types template
+  const mainTypesTemplate = await fs.readFile(
+    path.join(templateDir, 'src/admin/types/index.hbs'),
+    'utf-8'
+  );
+
   console.log('Debug - Loaded module create form template:', {
     path: path.join(templateDir, 'src/admin/routes/[module.plural]/create/[module.singular]-create.hbs'),
     exists: !!moduleCreateFormTemplate,
@@ -393,7 +399,10 @@ async function loadTemplates() {
     // Middleware templates
     moduleMiddlewaresTemplate,
     modelMiddlewaresTemplate,
-    mainMiddlewaresTemplate
+    mainMiddlewaresTemplate,
+
+    // Types template
+    mainTypesTemplate
   };
 }
 
@@ -531,6 +540,59 @@ async function generateModuleFiles(
   return changes;
 }
 
+// Types-specific generation
+async function generateTypes(
+  modules: ModuleConfig[],
+  options: {
+    testMode?: boolean;
+    dryRun?: boolean;
+  }
+): Promise<FileChange[]> {
+  const { testMode = false, dryRun = process.env.DRY_RUN === '1' } = options;
+  const baseDir = testMode ? '.test-output' : '';
+  const changes: FileChange[] = [];
+  const templates = await loadTemplates();
+
+  // Generate main types file with all modules
+  const mainTypesChange = {
+    path: path.join(baseDir, 'src/admin/types/index.ts'),
+    type: 'create' as const,
+    templatePath: templates.mainTypesTemplate,
+    modules: modules.map(module => ({
+      name: module.name,
+      plural: module.plural,
+      singular: module.singular,
+      modelName: module.modelName,
+      fields: module.fields,
+      models: module.models.map(m => ({
+        name: m.name,
+        plural: m.plural,
+        singular: m.singular,
+        fields: m.fields
+      }))
+    }))
+  };
+  changes.push(mainTypesChange);
+
+  if (!dryRun) {
+    for (const change of changes) {
+      const dir = path.dirname(change.path);
+      await fs.mkdir(dir, { recursive: true });
+      
+      const templateData = change.modules ? { modules: change.modules } : {
+        module: change.module || null,
+        model: change.model || null,
+        isModuleModel: change.model?.name === change.module?.modelName
+      };
+
+      const content = await processTemplate(change.templatePath, templateData);
+      await fs.writeFile(change.path, content);
+    }
+  }
+
+  return changes;
+}
+
 // Middleware-specific generation
 async function generateMiddlewares(
   modules: ModuleConfig[],
@@ -643,6 +705,10 @@ export async function generateModules(
   const middlewareChanges = await generateMiddlewares(configs, options);
   allChanges.push(...middlewareChanges);
 
+  // Generate all types files
+  const typesChanges = await generateTypes(configs, options);
+  allChanges.push(...typesChanges);
+
   return allChanges;
 }
 
@@ -651,5 +717,6 @@ export {
   processTemplate,
   loadTemplates,
   generateModuleFiles,
-  generateMiddlewares
+  generateMiddlewares,
+  generateTypes
 };

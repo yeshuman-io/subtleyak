@@ -1,0 +1,49 @@
+/**
+ * This file is auto-generated and will be overwritten by subsequent generations.
+ * Manual changes should be made to the generator templates instead.
+ */
+//asdfasdf
+{{#each modules}}
+// {{toTitleCase plural}} Types
+{{#if (eq name modelName)}}
+export type {{toPascalCase singular}} = {
+  id: string
+  {{#each fields}}
+  {{name}}{{#unless required}}?{{/unless}}: {{#if relation}}{{#if (eq relation.type "belongsTo")}}string{{else}}{{toPascalCase relation.model}}[]{{/if}}{{else}}{{#if (eq type "string")}}string{{else if (eq type "number")}}number{{else if (eq type "boolean")}}boolean{{else if (eq type "date")}}string{{/if}}{{/if}}
+  {{/each}}
+}
+{{/if}}
+
+{{#each models}}
+{{#unless (eq name ../modelName)}}
+export type {{toPascalCase name}} = {
+  id: string
+  {{#each fields}}
+  {{name}}{{#unless required}}?{{/unless}}: {{#if relation}}{{#if (eq relation.type "belongsTo")}}string{{else}}{{toPascalCase relation.model}}[]{{/if}}{{else}}{{#if (eq type "string")}}string{{else if (eq type "number")}}number{{else if (eq type "boolean")}}boolean{{else if (eq type "date")}}string{{/if}}{{/if}}
+  {{/each}}
+}
+{{/unless}}
+{{/each}}
+
+// List Response Types
+{{#if (eq name modelName)}}
+export type List{{toPascalCase plural}}Res = {
+  {{toSnakeCase plural}}: {{toPascalCase singular}}[]
+  count: number
+  limit: number
+  offset: number
+}
+{{/if}}
+
+{{#each models}}
+{{#unless (eq name ../modelName)}}
+export type List{{toPascalCase plural}}Res = {
+  {{toSnakeCase plural}}: {{toPascalCase name}}[]
+  count: number
+  limit: number
+  offset: number
+}
+{{/unless}}
+{{/each}}
+
+{{/each}} 

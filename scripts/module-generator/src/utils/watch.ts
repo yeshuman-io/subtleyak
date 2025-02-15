@@ -38,6 +38,8 @@ export async function watchTemplates(
     path.join(templatesDir, 'src', 'api', 'admin', '**', '*.hbs'),
     // Admin UI templates
     path.join(templatesDir, 'src', 'admin', 'routes', '**', '*.hbs'),
+    // Types template
+    path.join(templatesDir, 'src', 'admin', 'types', '**', '*.hbs'),
     // Workflow templates
     path.join(templatesDir, 'src', 'workflows', '**', '*.hbs')
   ];
