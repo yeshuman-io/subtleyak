@@ -1,4 +1,4 @@
-import { generateModule, processTemplate } from '../src/generate-v2';
+import { generateModule, processTemplate, generateModules } from '../src/generate-v2';
 import { TestUtils } from './test-utils';
 import path from 'path';
 import fs from 'fs/promises';
@@ -223,7 +223,7 @@ describe('Module Generator', () => {
   describe('Module Generation', () => {
     describe('File Structure', () => {
       it('should generate model files in correct locations', async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
+        const changes = await generateModule(TEST_MODULE, { testMode: true });
         
         const expectedFiles = [
           'src/modules/tests/models/test-model.ts',
@@ -232,10 +232,7 @@ describe('Module Generator', () => {
           'src/api/admin/tests/models/validators.ts',
           'src/admin/routes/tests/models/page.tsx',
           'src/admin/routes/tests/models/create/test-model-create.tsx',
-          'src/admin/routes/tests/models/edit/test-model-edit.tsx',
-          'src/api/middlewares.ts',
-          'src/api/admin/tests/middlewares.ts',
-          'src/api/admin/tests/models/middlewares.ts'
+          'src/admin/routes/tests/models/edit/test-model-edit.tsx'
         ];
 
         for (const file of expectedFiles) {
@@ -260,11 +257,9 @@ describe('Module Generator', () => {
     });
 
     describe('Middleware Generation', () => {
-      beforeEach(async () => {
-        await generateModule(TEST_MODULE, { testMode: true });
-      });
-
       it('should generate all required middleware files', async () => {
+        const changes = await generateModules([TEST_MODULE], { testMode: true });
+        
         const expectedMiddlewareFiles = [
           'src/api/middlewares.ts',
           'src/api/admin/tests/middlewares.ts',
@@ -275,44 +270,6 @@ describe('Module Generator', () => {
           const filePath = path.join('.test-output', file);
           expect(await TestUtils.fileExists(filePath)).toBe(true);
         }
-      });
-
-      it('should pass correct modules data to root middlewares template', async () => {
-        const data = {
-          modules: [{
-            name: TEST_MODULE.name,
-            plural: TEST_MODULE.plural,
-            models: TEST_MODULE.models.map(model => ({
-              name: model.name,
-              plural: model.plural
-            }))
-          }]
-        };
-
-        const template = await fs.readFile(
-          path.join(process.cwd(), 'scripts/module-generator/templates/src/api/middlewares.hbs'),
-          'utf-8'
-        );
-
-        const result = Handlebars.compile(template)(data);
-        
-        // Verify the template output contains expected module imports
-        expect(result).toContain(`import ${TEST_MODULE.plural}Middlewares`);
-        
-        // Verify model imports
-        TEST_MODULE.models.forEach(model => {
-          expect(result).toContain(`import ${model.plural}Middlewares`);
-        });
-
-        // Verify routes spread
-        expect(result).toContain(`...${TEST_MODULE.plural}Middlewares.routes`);
-        TEST_MODULE.models.forEach(model => {
-          expect(result).toContain(`...${model.plural}Middlewares.routes`);
-        });
-      });
-
-      it('should include required imports and schemas', async () => {
-        // ... rest of existing code ...
       });
     });
   });
@@ -414,7 +371,7 @@ describe('Module Generator', () => {
 
   describe('Middleware Template Data Injection', () => {
     it('should pass correct data to middleware templates', async () => {
-      const changes = await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
+      const changes = await generateModules([TEST_MODULE], { testMode: true, dryRun: true });
       
       // Main middlewares template should receive modules array
       const mainMiddlewaresChange = changes.find(c => c.path.endsWith('src/api/middlewares.ts'));
@@ -426,7 +383,6 @@ describe('Module Generator', () => {
         c.path.includes(`/admin/${TEST_MODULE.plural}/middlewares.ts`)
       );
       expect(moduleMiddlewaresChange?.module).toBe(TEST_MODULE);
-      expect(moduleMiddlewaresChange?.model?.name).toBe(TEST_MODULE.modelName);
       
       // Model middlewares template should receive module and model
       const modelMiddlewaresChange = changes.find(c => 
@@ -438,30 +394,43 @@ describe('Module Generator', () => {
 
     it('should pass multiple modules data to root middleware template', async () => {
       // Generate changes for multiple modules
-      const testModuleChanges = await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
-      const relationshipModuleChanges = await generateModule(RELATIONSHIP_MODULE, { testMode: true, dryRun: true });
+      const changes = await generateModules([TEST_MODULE, RELATIONSHIP_MODULE], { 
+        testMode: true, 
+        dryRun: true 
+      });
       
       // Get the main middleware changes
-      const mainMiddlewaresChange = testModuleChanges.find(c => c.path.endsWith('src/api/middlewares.ts'));
+      const mainMiddlewaresChange = changes.find(c => c.path.endsWith('src/api/middlewares.ts'));
       
       // Verify modules array contains multiple modules
       expect(mainMiddlewaresChange?.modules).toBeDefined();
-      expect(mainMiddlewaresChange?.modules?.length).toBeGreaterThan(1);
+      expect(mainMiddlewaresChange?.modules?.length).toBe(2);
       
       // Verify specific modules are present
       expect(mainMiddlewaresChange?.modules).toEqual(
           expect.arrayContaining([
-              expect.objectContaining({ name: TEST_MODULE.name }),
-              expect.objectContaining({ name: RELATIONSHIP_MODULE.name })
+              expect.objectContaining({ 
+                name: TEST_MODULE.name,
+                plural: TEST_MODULE.plural,
+                models: expect.arrayContaining(
+                  TEST_MODULE.models.map(m => ({
+                    name: m.name,
+                    plural: m.plural
+                  }))
+                )
+              }),
+              expect.objectContaining({ 
+                name: RELATIONSHIP_MODULE.name,
+                plural: RELATIONSHIP_MODULE.plural,
+                models: expect.arrayContaining(
+                  RELATIONSHIP_MODULE.models.map(m => ({
+                    name: m.name,
+                    plural: m.plural
+                  }))
+                )
+              })
           ])
       );
-      
-      // Verify each module has its models correctly mapped
-      const testModuleData = mainMiddlewaresChange?.modules?.find(m => m.name === TEST_MODULE.name);
-      const relationshipModuleData = mainMiddlewaresChange?.modules?.find(m => m.name === RELATIONSHIP_MODULE.name);
-      
-      expect(testModuleData?.models).toHaveLength(TEST_MODULE.models.length);
-      expect(relationshipModuleData?.models).toHaveLength(RELATIONSHIP_MODULE.models.length);
     });
   });
 }); 

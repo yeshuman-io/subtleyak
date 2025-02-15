@@ -1,14 +1,15 @@
 import * as chokidar from 'chokidar';
 import * as path from 'path';
 import debounce from 'lodash/debounce';
-import { generateModule } from '../generate-v2';
-import type { ModuleConfig } from '../generate-v2';
+import { generateModule, generateModules } from '../generate-v2.js';
+import type { ModuleConfig } from '../generate-v2.js';
 
 export type WatchOptions = {
   templatesDir: string;
   outputDir: string;
   debounceMs?: number;
   onError?: (error: Error) => void;
+  configPath?: string;
 };
 
 const DEFAULT_OPTIONS: WatchOptions = {
@@ -22,9 +23,9 @@ export async function watchTemplates(
   options: Partial<WatchOptions> = {}
 ): Promise<() => void> {
   const opts = { ...DEFAULT_OPTIONS, ...options };
-  const { templatesDir, debounceMs, onError } = opts;
+  const { templatesDir, debounceMs, onError, configPath } = opts;
 
-  console.log('Setting up watch for module:', moduleConfig.moduleName);
+  console.log('Setting up watch for module:', moduleConfig.modelName);
   console.log('Templates directory:', templatesDir);
 
   // Define patterns to watch
@@ -52,9 +53,20 @@ export async function watchTemplates(
 
   // Debounced regeneration function
   const regenerate = debounce(async () => {
+    if (!configPath) {
+      console.error('No config path provided');
+      return;
+    }
+
     console.log('Template change detected, regenerating...');
     try {
-      await generateModule(moduleConfig, { testMode: false });
+      // Get all module configs from the imported config
+      const imported = await import(path.resolve(configPath));
+      const config = imported.default || imported;
+      const modules = Object.values(config.MODULES) as ModuleConfig[];
+      
+      // Generate all modules together to ensure middleware files are generated correctly
+      await generateModules(modules, { testMode: false });
       console.log('Regeneration complete');
     } catch (error) {
       console.error('Regeneration failed:', error);
@@ -119,9 +131,9 @@ async function main() {
     console.log('Config loaded:', config);
     console.log('Starting template watch mode...');
     const modules = Object.values(config.MODULES) as ModuleConfig[];
-    console.log(`Found ${modules.length} modules:`, modules.map(m => m.moduleName).join(', '));
+    console.log(`Found ${modules.length} modules:`, modules.map(m => m.modelName).join(', '));
     
-    const cleanup = await watchAll(modules);
+    const cleanup = await watchAll(modules, { configPath });
     
     // Keep the process alive
     process.stdin.resume();

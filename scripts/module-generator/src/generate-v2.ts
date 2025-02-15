@@ -245,6 +245,12 @@ Handlebars.registerHelper('find', (array: any[], key: string, value: string) => 
   return array.find(item => item[key] === value);
 });
 
+// Debug helper
+Handlebars.registerHelper('debug', function(context) {
+  console.log('Template Debug Context:', JSON.stringify(context, null, 2));
+  return '';
+});
+
 // Process template using Handlebars
 async function processTemplate(templateContent: string, data: Record<string, any>): Promise<string> {
   try {
@@ -253,7 +259,8 @@ async function processTemplate(templateContent: string, data: Record<string, any
       singular: data.module?.singular,
       plural: data.module?.plural,
       isModuleModel: data.isModuleModel,
-      modelName: data.model?.name
+      modelName: data.model?.name,
+      modules: data.modules ? `${data.modules.length} modules: ${data.modules.map(m => m.name).join(', ')}` : 'no modules'
     });
     
     const compiledTemplate = Handlebars.compile(templateContent);
@@ -390,152 +397,13 @@ async function loadTemplates() {
   };
 }
 
-// Generate module files
-async function generateModuleFiles(module: ModuleConfig): Promise<FileChange[]> {
-  const changes: FileChange[] = [];
-  const templates = await loadTemplates();
-
-  // Create module's own model
-  const moduleModel: ModelConfig = {
-    name: module.singular,
-    singular: module.singular,
-    plural: module.plural,
-    fields: module.fields
-  };
-
-  // Process all models (including module's own model)
-  const allModels = [moduleModel, ...module.models];
-  
-  console.log('Debug - Processing models:', allModels.map(m => ({
-    name: m.name,
-    singular: m.singular,
-    plural: m.plural,
-    isModuleModel: m.name === module.singular
-  })));
-  
-  for (const model of allModels) {
-    const isModuleModel = model.name === module.singular;
-    const routePath = isModuleModel ? module.plural : `${module.plural}/${model.plural}`;
-
-    // Model file
-    changes.push({
-      path: `src/modules/${module.plural}/${isModuleModel ? model.name : `models/${model.name}`}.ts`,
-      type: 'create',
-      templatePath: isModuleModel ? templates.moduleModelTemplate : templates.modelTemplate,
-      model: model,
-      module: module
-    });
-
-    // API routes and middlewares
-    const apiBasePath = `src/api/admin/${routePath}`;
-
-    // Add middleware file
-    changes.push({
-      path: `${apiBasePath}/middlewares.ts`,
-      type: 'create',
-      templatePath: isModuleModel 
-        ? templates.moduleMiddlewaresTemplate 
-        : templates.modelMiddlewaresTemplate,
-      model: model,
-      module: module
-    });
-
-    changes.push({
-      path: `${apiBasePath}/route.ts`,
-      type: 'create',
-      templatePath: isModuleModel ? templates.moduleListRouteTemplate : templates.modelListRouteTemplate,
-      model: model,
-      module: module
-    });
-
-    changes.push({
-      path: `${apiBasePath}/[id]/route.ts`,
-      type: 'create',
-      templatePath: isModuleModel ? templates.moduleIdRouteTemplate : templates.modelIdRouteTemplate,
-      model: model,
-      module: module
-    });
-
-    changes.push({
-      path: `${apiBasePath}/validators.ts`,
-      type: 'create',
-      templatePath: isModuleModel ? templates.moduleValidatorsTemplate : templates.modelValidatorsTemplate,
-      model: model,
-      module: module
-    });
-
-    // Admin UI routes
-    const adminBasePath = `src/admin/routes/${routePath}`;
-
-    changes.push({
-      path: `${adminBasePath}/page.tsx`,
-      type: 'create',
-      templatePath: isModuleModel ? templates.moduleListPageTemplate : templates.modelListPageTemplate,
-      model: model,
-      module: module
-    });
-
-    changes.push({
-      path: `${adminBasePath}/create/${model.name}-create.tsx`,
-      type: 'create',
-      templatePath: isModuleModel ? templates.moduleCreateFormTemplate : templates.modelCreateFormTemplate,
-      model: model,
-      module: module
-    });
-
-    changes.push({
-      path: `${adminBasePath}/edit/${model.name}-edit.tsx`,
-      type: 'create',
-      templatePath: isModuleModel ? templates.moduleEditFormTemplate : templates.modelEditFormTemplate,
-      model: model,
-      module: module
-    });
-  }
-
-  // Generate module service
-  changes.push({
-    path: `src/modules/${module.plural}/service.ts`,
-    type: 'create',
-    templatePath: templates.serviceTemplate,
-    module: module
-  });
-
-  // Generate module index
-  changes.push({
-    path: `src/modules/${module.plural}/index.ts`,
-    type: 'create',
-    templatePath: templates.indexTemplate,
-    module: module
-  });
-
-  // Generate main middlewares file
-  changes.push({
-    path: `src/api/middlewares.ts`,
-    type: 'create',
-    templatePath: templates.mainMiddlewaresTemplate,
-    module: module
-  });
-
-  const commonChanges = changes.filter(c => !c.model);
-  if (commonChanges.length > 0) {
-    console.log(`\nCommon:`);
-    commonChanges.forEach(change => {
-      console.log(`Template: ${change.templatePath}`);
-      console.log(`Output:   ${change.path}`);
-      console.log('...');
-    });
-  }
-
-  return changes;
-}
-
-// Main generation function
-export async function generateModule(
+// Core file generation for a single module (no middleware concerns)
+async function generateModuleFiles(
   config: ModuleConfig,
   options: {
     testMode?: boolean;
     dryRun?: boolean;
-  } = {}
+  }
 ): Promise<FileChange[]> {
   const { testMode = false, dryRun = process.env.DRY_RUN === '1' } = options;
   const baseDir = testMode ? '.test-output' : '';
@@ -573,17 +441,8 @@ export async function generateModule(
       module: config
     });
 
-    // API routes and middlewares
+    // API routes
     const apiBasePath = path.join(baseDir, 'src/api/admin', routePath);
-
-    // Add middleware file
-    changes.push({
-      path: path.join(apiBasePath, 'middlewares.ts'),
-      type: 'create',
-      templatePath: isModuleModel ? templates.moduleMiddlewaresTemplate : templates.modelMiddlewaresTemplate,
-      model,
-      module: config
-    });
 
     changes.push({
       path: path.join(apiBasePath, 'route.ts'),
@@ -653,14 +512,6 @@ export async function generateModule(
     module: config
   });
 
-  // Generate main middlewares file with all modules
-  changes.push({
-    path: path.join(baseDir, 'src/api/middlewares.ts'),
-    type: 'create',
-    templatePath: templates.mainMiddlewaresTemplate,
-    modules: [config]  // Just pass the entire module config
-  });
-
   if (!dryRun) {
     for (const change of changes) {
       const dir = path.dirname(change.path);
@@ -669,8 +520,7 @@ export async function generateModule(
       const data = {
         module: config,
         model: change.model || null,
-        isModuleModel: change.model?.name === config.modelName,
-        modules: change.modules || null  // Add modules to template context
+        isModuleModel: change.model?.name === config.modelName
       };
 
       const content = await processTemplate(change.templatePath, data);
@@ -681,9 +531,125 @@ export async function generateModule(
   return changes;
 }
 
+// Middleware-specific generation
+async function generateMiddlewares(
+  modules: ModuleConfig[],
+  options: {
+    testMode?: boolean;
+    dryRun?: boolean;
+  }
+): Promise<FileChange[]> {
+  const { testMode = false, dryRun = process.env.DRY_RUN === '1' } = options;
+  const baseDir = testMode ? '.test-output' : '';
+  const changes: FileChange[] = [];
+  const templates = await loadTemplates();
+  
+  // Generate individual module/model middleware files
+  for (const module of modules) {
+    // Generate module-level middleware
+    changes.push({
+      path: path.join(baseDir, 'src/api/admin', module.plural, 'middlewares.ts'),
+      type: 'create',
+      templatePath: templates.moduleMiddlewaresTemplate,
+      module
+    });
+
+    // Generate model-level middlewares
+    for (const model of module.models) {
+      changes.push({
+        path: path.join(baseDir, 'src/api/admin', module.plural, model.plural, 'middlewares.ts'),
+        type: 'create',
+        templatePath: templates.modelMiddlewaresTemplate,
+        model,
+        module
+      });
+    }
+  }
+
+  // Generate main middleware file with all modules
+  const mainMiddlewareChange = {
+    path: path.join(baseDir, 'src/api/middlewares.ts'),
+    type: 'create' as const,
+    templatePath: templates.mainMiddlewaresTemplate,
+    modules: modules.map(module => ({
+      name: module.name,
+      plural: module.plural,
+      modelName: module.modelName,
+      models: module.models.map(m => ({
+        name: m.name,
+        plural: m.plural
+      }))
+    }))
+  };
+  changes.push(mainMiddlewareChange);
+
+  if (!dryRun) {
+    for (const change of changes) {
+      const dir = path.dirname(change.path);
+      await fs.mkdir(dir, { recursive: true });
+      
+      let templateData;
+      if (change.path.endsWith('middlewares.ts')) {
+        // For the main middleware file, pass modules directly
+        templateData = change.modules ? { modules: change.modules } : {
+          module: change.module || null,
+          model: change.model || null,
+          isModuleModel: change.model?.name === change.module?.modelName
+        };
+      } else {
+        // For other files, use the standard data structure
+        templateData = {
+          module: change.module || null,
+          model: change.model || null,
+          isModuleModel: change.model?.name === change.module?.modelName
+        };
+      }
+
+      const content = await processTemplate(change.templatePath, templateData);
+      await fs.writeFile(change.path, content);
+    }
+  }
+
+  return changes;
+}
+
+// Public API
+export async function generateModule(
+  config: ModuleConfig,
+  options: {
+    testMode?: boolean;
+    dryRun?: boolean;
+  } = {}
+): Promise<FileChange[]> {
+  return generateModuleFiles(config, options);
+}
+
+export async function generateModules(
+  configs: ModuleConfig[],
+  options: {
+    testMode?: boolean;
+    dryRun?: boolean;
+  } = {}
+): Promise<FileChange[]> {
+  const allChanges: FileChange[] = [];
+  
+  // Generate module files
+  for (const config of configs) {
+    const changes = await generateModuleFiles(config, options);
+    allChanges.push(...changes);
+  }
+
+  // Generate all middleware files
+  const middlewareChanges = await generateMiddlewares(configs, options);
+  allChanges.push(...middlewareChanges);
+
+  return allChanges;
+}
+
 // Export functions
 export {
   processTemplate,
   loadTemplates,
-  generateModuleFiles
+  generateModuleFiles,
+  generateMiddlewares
 };

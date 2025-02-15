@@ -2,7 +2,7 @@
  * This file is auto-generated and will be overwritten by subsequent generations.
  * Manual changes should be made to the generator templates instead.
  */
-//asdf
+//asdfasdfsdasdfsdf
 import { 
   defineMiddlewares,
   validateAndTransformQuery,
@@ -18,7 +18,7 @@ import {
 export const GetModelsSchema = createFindParams(){{#if parent}}
   .extend({
     {{toSnakeCase parent.model}}_id: z.string().optional()
-  }){{/if}}
+  }){{/if}} //asdf
 
 export default defineMiddlewares({
   routes: [
@@ -56,5 +56,5 @@ export default defineMiddlewares({
         validateAndTransformBody(PostAdminUpdate{{toPascalCase name}})
       ]
     }
-  ]
+  ] as const
 }) 

@@ -16,7 +16,7 @@ import {
 } from "./validators"
 
 export const GetTestsSchema = createFindParams()
-
+//rwqerwesadfasdf
 export default defineMiddlewares({
   routes: [
     // List {{plural}}
@@ -53,5 +53,5 @@ export default defineMiddlewares({
         validateAndTransformBody(PostAdminUpdate{{toPascalCase name}})
       ]
     }
-  ]
+  ] as const
 }) 

@@ -10,24 +10,26 @@ import { defineMiddlewares } from "@medusajs/framework/http"
 import {{toCamelCase plural}}Middlewares from "./admin/{{toKebabCase plural}}/middlewares"
 {{#each models}}
 {{#unless (eq name ../modelName)}}
+{{#unless (eq plural ../plural)}}
 import {{toCamelCase plural}}Middlewares from "./admin/{{toKebabCase ../plural}}/{{toKebabCase plural}}/middlewares"
 {{/unless}}
+{{/unless}}
 {{/each}}
-
 {{/each}}
-
+//asfdasdfasdadsf
 export default defineMiddlewares({
   routes: [
     {{#each modules}}
     // {{toTitleCase plural}} routes
-    ...{{toCamelCase plural}}Middlewares.routes,
+    ...({{toCamelCase plural}}Middlewares.routes || []),
     {{#each models}}
     {{#unless (eq name ../modelName)}}
-    ...{{toCamelCase plural}}Middlewares.routes{{#unless @last}},{{/unless}}
+    {{#unless (eq plural ../plural)}}
+    ...({{toCamelCase plural}}Middlewares.routes || []){{#unless @last}},{{/unless}}
+    {{/unless}}
     {{/unless}}
     {{/each}}
     {{#unless @last}},{{/unless}}
-
     {{/each}}
-  ]
+  ] as const
 })

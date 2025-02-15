@@ -1,4 +1,4 @@
-import { generateModule } from './generate-v2';
+import { generateModules } from './generate-v2';
 import { MODULES } from '../configs/production-modules';
 
 async function main() {
@@ -7,9 +7,10 @@ async function main() {
   console.log('Debug: DEBUG =', process.env.DEBUG);
   console.log('\n');
 
-  for (const moduleConfig of Object.values(MODULES)) {
-    await generateModule(moduleConfig, { dryRun: process.env.DRY_RUN === '1' });
-  }
+  const moduleConfigs = Object.values(MODULES);
+  await generateModules(moduleConfigs, { 
+    dryRun: process.env.DRY_RUN === '1' 
+  });
 }
 
 main().catch(error => {
