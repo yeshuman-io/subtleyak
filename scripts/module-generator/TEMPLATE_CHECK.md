@@ -139,10 +139,10 @@ src/
 - [x] Notes: Fixed field iteration and type handling
 
 ### 9.1 Model Create Form
-- [ ] Old: `templates/src/admin/routes/[module]/create/[model]-create.hbs`
-- [ ] New: `templates/src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs`
-- [ ] Reference: `src/admin/routes/vehicles/models/create/vehicle-model-create.tsx`
-- [ ] Notes: Needs field iteration and type handling fixes
+- [x] Old: `templates/src/admin/routes/[module]/create/[model]-create.hbs`
+- [x] New: `templates/src/admin/routes/[module.plural]/[model.plural]/create/[model.name]-create.hbs`
+- [x] Reference: `src/admin/routes/vehicles/models/create/vehicle-model-create.tsx`
+- [x] Notes: Needs field iteration and type handling fixes
 
 ### 10. Module Edit Form ✅
 - [x] Old: `templates/src/admin/routes/[module]/edit/[module]-edit.hbs`
@@ -169,6 +169,6 @@ src/
 - [x] Templates support all relationship types (for module forms)
 - [x] Admin UI components match actual implementation
 - [x] Module create/edit forms handle fields correctly
-- [ ] Model create/edit forms need field handling fixes
+- [x] Model create/edit forms need field handling fixes
 - [x] Field types are properly mapped (text, number, boolean)
 - [x] Relations are properly handled (belongsTo, hasMany) 
