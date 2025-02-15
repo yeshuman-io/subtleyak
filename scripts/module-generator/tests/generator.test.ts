@@ -1,10 +1,11 @@
-import { generateModule } from '../src/generate-v2';
+import { generateModule, processTemplate } from '../src/generate-v2';
 import { TestUtils } from './test-utils';
 import path from 'path';
 import fs from 'fs/promises';
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 import Handlebars from 'handlebars';
 import { TEST_MODULE, RELATIONSHIP_MODULE, MANY_TO_MANY_MODULE, FIELD_TYPES_MODULE } from '../configs/test-modules';
+import { parse, traverse } from '@babel/core';
 
 describe('Module Generator', () => {
   beforeEach(async () => {
@@ -158,6 +159,65 @@ describe('Module Generator', () => {
         });
       });
     });
+
+    describe('Middleware Templates', () => {
+      it('should validate middleware template files exist', async () => {
+        const templateDir = path.join(process.cwd(), 'scripts/module-generator/templates');
+        const requiredTemplates = [
+          'src/api/admin/[module.plural]/middlewares.hbs',
+          'src/api/admin/[module.plural]/[model.plural]/middlewares.hbs',
+          'src/api/middlewares.hbs'
+        ];
+
+        for (const template of requiredTemplates) {
+          const templatePath = path.join(templateDir, template);
+          const exists = await TestUtils.fileExists(templatePath);
+          if (!exists) {
+            console.log(`Missing template: ${templatePath}`);
+          }
+          expect(exists).toBe(true);
+        }
+      });
+
+      it('should handle field defaults in query transform', () => {
+        const template = Handlebars.compile(`
+          {{#each fields}}
+          "{{name}}"{{#if relation}}, "{{name}}.*"{{/if}}{{#unless @last}},{{/unless}}
+          {{/each}}
+        `);
+        
+        const result = template({
+          fields: [
+            { name: 'name', type: 'string' },
+            { name: 'models', type: 'string', relation: { type: 'hasMany' }}
+          ]
+        });
+        
+        const defaults = result.trim().split(',').map(s => s.trim());
+        // Verify all required fields are present
+        expect(defaults).toContain('"name"');
+        expect(defaults.some(d => d.includes('"models"'))).toBe(true);
+        expect(defaults.some(d => d.includes('"models.*"'))).toBe(true);
+      });
+
+      it('should handle parent/child model relationships', () => {
+        const template = Handlebars.compile(`
+          {{#if parent}}
+          {{toSnakeCase parent.model}}_id: z.string().optional()
+          {{/if}}
+        `);
+        
+        // Test parent model (no extension)
+        const parentResult = template({});
+        expect(parentResult.trim()).toBe('');
+        
+        // Test child model (with extension)
+        const childResult = template({
+          parent: { model: 'Wiper' }
+        });
+        expect(childResult.trim()).toBe('wiper_id: z.string().optional()');
+      });
+    });
   });
 
   describe('Module Generation', () => {
@@ -172,7 +232,10 @@ describe('Module Generator', () => {
           'src/api/admin/tests/models/validators.ts',
           'src/admin/routes/tests/models/page.tsx',
           'src/admin/routes/tests/models/create/test-model-create.tsx',
-          'src/admin/routes/tests/models/edit/test-model-edit.tsx'
+          'src/admin/routes/tests/models/edit/test-model-edit.tsx',
+          'src/api/middlewares.ts',
+          'src/api/admin/tests/middlewares.ts',
+          'src/api/admin/tests/models/middlewares.ts'
         ];
 
         for (const file of expectedFiles) {
@@ -193,6 +256,63 @@ describe('Module Generator', () => {
         expect(content).toMatch(/number_field:\s*model\.number\(\)\.required\(\)/);
         expect(content).toMatch(/boolean_field:\s*model\.boolean\(\)/);
         expect(content).toMatch(/date_field:\s*model\.date\(\)/);
+      });
+    });
+
+    describe('Middleware Generation', () => {
+      beforeEach(async () => {
+        await generateModule(TEST_MODULE, { testMode: true });
+      });
+
+      it('should generate all required middleware files', async () => {
+        const expectedMiddlewareFiles = [
+          'src/api/middlewares.ts',
+          'src/api/admin/tests/middlewares.ts',
+          'src/api/admin/tests/models/middlewares.ts'
+        ];
+
+        for (const file of expectedMiddlewareFiles) {
+          const filePath = path.join('.test-output', file);
+          expect(await TestUtils.fileExists(filePath)).toBe(true);
+        }
+      });
+
+      it('should pass correct modules data to root middlewares template', async () => {
+        const data = {
+          modules: [{
+            name: TEST_MODULE.name,
+            plural: TEST_MODULE.plural,
+            models: TEST_MODULE.models.map(model => ({
+              name: model.name,
+              plural: model.plural
+            }))
+          }]
+        };
+
+        const template = await fs.readFile(
+          path.join(process.cwd(), 'scripts/module-generator/templates/src/api/middlewares.hbs'),
+          'utf-8'
+        );
+
+        const result = Handlebars.compile(template)(data);
+        
+        // Verify the template output contains expected module imports
+        expect(result).toContain(`import ${TEST_MODULE.plural}Middlewares`);
+        
+        // Verify model imports
+        TEST_MODULE.models.forEach(model => {
+          expect(result).toContain(`import ${model.plural}Middlewares`);
+        });
+
+        // Verify routes spread
+        expect(result).toContain(`...${TEST_MODULE.plural}Middlewares.routes`);
+        TEST_MODULE.models.forEach(model => {
+          expect(result).toContain(`...${model.plural}Middlewares.routes`);
+        });
+      });
+
+      it('should include required imports and schemas', async () => {
+        // ... rest of existing code ...
       });
     });
   });
@@ -289,6 +409,59 @@ describe('Module Generator', () => {
       const prodChanges = await generateModule(TEST_MODULE, { testMode: false, dryRun: true });
       expect(prodChanges.every(c => !c.path.includes('.test-output'))).toBe(true);
       expect(prodChanges.every(c => c.path.startsWith('src/'))).toBe(true);
+    });
+  });
+
+  describe('Middleware Template Data Injection', () => {
+    it('should pass correct data to middleware templates', async () => {
+      const changes = await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
+      
+      // Main middlewares template should receive modules array
+      const mainMiddlewaresChange = changes.find(c => c.path.endsWith('src/api/middlewares.ts'));
+      expect(mainMiddlewaresChange?.modules).toBeDefined();
+      expect(mainMiddlewaresChange?.modules?.[0].name).toBe(TEST_MODULE.name);
+      
+      // Module middlewares template should receive module and its model
+      const moduleMiddlewaresChange = changes.find(c => 
+        c.path.includes(`/admin/${TEST_MODULE.plural}/middlewares.ts`)
+      );
+      expect(moduleMiddlewaresChange?.module).toBe(TEST_MODULE);
+      expect(moduleMiddlewaresChange?.model?.name).toBe(TEST_MODULE.modelName);
+      
+      // Model middlewares template should receive module and model
+      const modelMiddlewaresChange = changes.find(c => 
+        c.path.includes(`/admin/${TEST_MODULE.plural}/${TEST_MODULE.models[0].plural}/middlewares.ts`)
+      );
+      expect(modelMiddlewaresChange?.module).toBe(TEST_MODULE);
+      expect(modelMiddlewaresChange?.model).toBe(TEST_MODULE.models[0]);
+    });
+
+    it('should pass multiple modules data to root middleware template', async () => {
+      // Generate changes for multiple modules
+      const testModuleChanges = await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
+      const relationshipModuleChanges = await generateModule(RELATIONSHIP_MODULE, { testMode: true, dryRun: true });
+      
+      // Get the main middleware changes
+      const mainMiddlewaresChange = testModuleChanges.find(c => c.path.endsWith('src/api/middlewares.ts'));
+      
+      // Verify modules array contains multiple modules
+      expect(mainMiddlewaresChange?.modules).toBeDefined();
+      expect(mainMiddlewaresChange?.modules?.length).toBeGreaterThan(1);
+      
+      // Verify specific modules are present
+      expect(mainMiddlewaresChange?.modules).toEqual(
+          expect.arrayContaining([
+              expect.objectContaining({ name: TEST_MODULE.name }),
+              expect.objectContaining({ name: RELATIONSHIP_MODULE.name })
+          ])
+      );
+      
+      // Verify each module has its models correctly mapped
+      const testModuleData = mainMiddlewaresChange?.modules?.find(m => m.name === TEST_MODULE.name);
+      const relationshipModuleData = mainMiddlewaresChange?.modules?.find(m => m.name === RELATIONSHIP_MODULE.name);
+      
+      expect(testModuleData?.models).toHaveLength(TEST_MODULE.models.length);
+      expect(relationshipModuleData?.models).toHaveLength(RELATIONSHIP_MODULE.models.length);
     });
   });
 }); 

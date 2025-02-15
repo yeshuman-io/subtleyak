@@ -1,0 +1,33 @@
+/**
+ * This file is auto-generated and will be overwritten by subsequent generations.
+ * Manual changes should be made to the generator templates instead.
+ */
+
+import { defineMiddlewares } from "@medusajs/framework/http"
+
+{{#each modules}}
+// {{toTitleCase plural}} module
+import {{toCamelCase plural}}Middlewares from "./admin/{{toKebabCase plural}}/middlewares"
+{{#each models}}
+{{#unless (eq name ../modelName)}}
+import {{toCamelCase plural}}Middlewares from "./admin/{{toKebabCase ../plural}}/{{toKebabCase plural}}/middlewares"
+{{/unless}}
+{{/each}}
+
+{{/each}}
+
+export default defineMiddlewares({
+  routes: [
+    {{#each modules}}
+    // {{toTitleCase plural}} routes
+    ...{{toCamelCase plural}}Middlewares.routes,
+    {{#each models}}
+    {{#unless (eq name ../modelName)}}
+    ...{{toCamelCase plural}}Middlewares.routes{{#unless @last}},{{/unless}}
+    {{/unless}}
+    {{/each}}
+    {{#unless @last}},{{/unless}}
+
+    {{/each}}
+  ]
+})

@@ -1,0 +1,60 @@
+/**
+ * This file is auto-generated and will be overwritten by subsequent generations.
+ * Manual changes should be made to the generator templates instead.
+ */
+//asdf
+import { 
+  defineMiddlewares,
+  validateAndTransformQuery,
+  validateAndTransformBody 
+} from "@medusajs/framework/http"
+import { createFindParams } from "@medusajs/medusa/api/utils/validators"
+import { z } from "zod"
+import { 
+  PostAdminCreate{{toPascalCase name}},
+  PostAdminUpdate{{toPascalCase name}}
+} from "./validators"
+
+export const GetModelsSchema = createFindParams(){{#if parent}}
+  .extend({
+    {{toSnakeCase parent.model}}_id: z.string().optional()
+  }){{/if}}
+
+export default defineMiddlewares({
+  routes: [
+    // List {{plural}}
+    {
+      matcher: "/admin/{{toKebabCase ../module.plural}}/{{#if parent}}{{toKebabCase parent.model}}/{{toKebabCase plural}}{{else}}{{toKebabCase plural}}{{/if}}",
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetModelsSchema, {
+          defaults: [
+            "id",
+            {{#each fields}}
+            "{{name}}"{{#if relation}}, "{{name}}.*"{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+          ],
+          isList: true
+        })
+      ]
+    },
+
+    // Create {{singular}}
+    {
+      matcher: "/admin/{{toKebabCase ../module.plural}}/{{#if parent}}{{toKebabCase parent.model}}/{{toKebabCase plural}}{{else}}{{toKebabCase plural}}{{/if}}",
+      method: "POST",
+      middlewares: [
+        validateAndTransformBody(PostAdminCreate{{toPascalCase name}})
+      ]
+    },
+
+    // Update {{singular}}
+    {
+      matcher: "/admin/{{toKebabCase ../module.plural}}/{{#if parent}}{{toKebabCase parent.model}}/{{toKebabCase plural}}{{else}}{{toKebabCase plural}}{{/if}}/:id",
+      method: "POST",
+      middlewares: [
+        validateAndTransformBody(PostAdminUpdate{{toPascalCase name}})
+      ]
+    }
+  ]
+}) 

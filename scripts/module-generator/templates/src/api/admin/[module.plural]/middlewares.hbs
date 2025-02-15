@@ -1,0 +1,57 @@
+/**
+ * This file is auto-generated and will be overwritten by subsequent generations.
+ * Manual changes should be made to the generator templates instead.
+ */
+
+import { 
+  defineMiddlewares,
+  validateAndTransformQuery,
+  validateAndTransformBody 
+} from "@medusajs/framework/http"
+import { createFindParams } from "@medusajs/medusa/api/utils/validators"
+import { z } from "zod"
+import { 
+  PostAdminCreate{{toPascalCase name}},
+  PostAdminUpdate{{toPascalCase name}}
+} from "./validators"
+
+export const GetTestsSchema = createFindParams()
+
+export default defineMiddlewares({
+  routes: [
+    // List {{plural}}
+    {
+      matcher: "/admin/{{toKebabCase ../module.plural}}/{{toKebabCase plural}}",
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetTestsSchema, {
+          defaults: [
+            "id",
+            {{#each fields}}
+            "{{name}}"{{#if relation}}, "{{name}}.*"{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+          ],
+          isList: true
+        })
+      ]
+    },
+
+    // Create {{singular}}
+    {
+      matcher: "/admin/{{toKebabCase ../module.plural}}/{{toKebabCase plural}}",
+      method: "POST",
+      middlewares: [
+        validateAndTransformBody(PostAdminCreate{{toPascalCase name}})
+      ]
+    },
+
+    // Update {{singular}}
+    {
+      matcher: "/admin/{{toKebabCase ../module.plural}}/{{toKebabCase plural}}/:id",
+      method: "POST",
+      middlewares: [
+        validateAndTransformBody(PostAdminUpdate{{toPascalCase name}})
+      ]
+    }
+  ]
+}) 
