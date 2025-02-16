@@ -25,7 +25,7 @@ export async function watchTemplates(
   const opts = { ...DEFAULT_OPTIONS, ...options };
   const { templatesDir, debounceMs, onError, configPath } = opts;
 
-  console.log('Setting up watch for module:', moduleConfig.modelName);
+  console.log('Setting up watch for module:', moduleConfig.moduleName);
   console.log('Templates directory:', templatesDir);
 
   // Define patterns to watch
@@ -133,7 +133,7 @@ async function main() {
     console.log('Config loaded:', config);
     console.log('Starting template watch mode...');
     const modules = Object.values(config.MODULES) as ModuleConfig[];
-    console.log(`Found ${modules.length} modules:`, modules.map(m => m.modelName).join(', '));
+    console.log(`Found ${modules.length} modules:`, modules.map(m => m.moduleName).join(', '));
     
     const cleanup = await watchAll(modules, { configPath });
     

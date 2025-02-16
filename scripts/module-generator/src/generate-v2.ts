@@ -38,7 +38,7 @@ export type ModelConfig = {
 
 export type ModuleConfig = {
   name: string;
-  modelName: string;
+  moduleName: string;
   singular: string;
   plural: string;
   fields: ModelField[];
@@ -224,15 +224,15 @@ Handlebars.registerHelper('processField', processField);
 
 // Add new module/model helpers
 Handlebars.registerHelper('isModuleModel', function(model: any, module: any) {
-  return model?.name === module?.modelName ? 'true' : '';
+  return model?.name === module?.moduleName ? 'true' : '';
 });
 
 Handlebars.registerHelper('getRoutePath', function(model: any, module: any) {
-  return model?.name === module?.modelName ? module?.plural : `${module?.plural}/${model?.plural}`;
+  return model?.name === module?.moduleName ? module?.plural : `${module?.plural}/${model?.plural}`;
 });
 
 Handlebars.registerHelper('getModelImportPath', function(model: any, module: any) {
-  return model?.name === module?.modelName ? './' : `./models/${model?.name}`;
+  return model?.name === module?.moduleName ? './' : `./models/${model?.name}`;
 });
 
 Handlebars.registerHelper('toUpperCase', (str: string) => {
@@ -259,7 +259,6 @@ async function processTemplate(templateContent: string, data: Record<string, any
       singular: data.module?.singular,
       plural: data.module?.plural,
       isModuleModel: data.isModuleModel,
-      modelName: data.model?.name,
       modules: data.modules ? `${data.modules.length} modules: ${data.modules.map(m => m.name).join(', ')}` : 'no modules'
     });
     
@@ -279,7 +278,7 @@ async function loadTemplates() {
   
   // Module level templates
   const moduleModelTemplate = await fs.readFile(
-    path.join(templateDir, 'src/modules/[module.plural]/models/[module.modelName].hbs'),
+    path.join(templateDir, 'src/modules/[module.plural]/models/[model.name].hbs'),
     'utf-8'
   );
   const moduleListRouteTemplate = await fs.readFile(
@@ -421,7 +420,7 @@ async function generateModuleFiles(
 
   // Generate module's own model
   const moduleModel: ModelConfig = {
-    name: config.modelName,
+    name: config.moduleName,
     singular: config.singular,
     plural: config.plural,
     fields: config.fields
@@ -431,7 +430,7 @@ async function generateModuleFiles(
   const allModels = [moduleModel, ...config.models];
   
   for (const model of allModels) {
-    const isModuleModel = model.name === config.modelName;
+    const isModuleModel = model.name === config.moduleName;
     const routePath = isModuleModel ? config.plural : `${config.plural}/${model.plural}`;
 
     // Model file
@@ -529,7 +528,7 @@ async function generateModuleFiles(
       const data = {
         module: config,
         model: change.model || null,
-        isModuleModel: change.model?.name === config.modelName
+        isModuleModel: change.model?.name === config.moduleName
       };
 
       const content = await processTemplate(change.templatePath, data);
@@ -562,7 +561,7 @@ async function generateTypes(
       name: module.name,
       plural: module.plural,
       singular: module.singular,
-      modelName: module.modelName,
+      moduleName: module.moduleName,
       fields: module.fields,
       models: module.models.map(m => ({
         name: m.name,
@@ -582,7 +581,7 @@ async function generateTypes(
       const templateData = change.modules ? { modules: change.modules } : {
         module: change.module || null,
         model: change.model || null,
-        isModuleModel: change.model?.name === change.module?.modelName
+        isModuleModel: change.model?.name === change.module?.moduleName
       };
 
       const content = await processTemplate(change.templatePath, templateData);
@@ -636,7 +635,7 @@ async function generateMiddlewares(
     modules: modules.map(module => ({
       name: module.name,
       plural: module.plural,
-      modelName: module.modelName,
+      moduleName: module.moduleName,
       models: module.models.map(m => ({
         name: m.name,
         plural: m.plural
@@ -656,14 +655,14 @@ async function generateMiddlewares(
         templateData = change.modules ? { modules: change.modules } : {
           module: change.module || null,
           model: change.model || null,
-          isModuleModel: change.model?.name === change.module?.modelName
+          isModuleModel: change.model?.name === change.module?.moduleName
         };
       } else {
         // For other files, use the standard data structure
         templateData = {
           module: change.module || null,
           model: change.model || null,
-          isModuleModel: change.model?.name === change.module?.modelName
+          isModuleModel: change.model?.name === change.module?.moduleName
         };
       }
 

@@ -58,7 +58,7 @@ export class TestUtils {
 
   // New helper methods for module/model paths
   static getModuleModelPath(module: ModuleConfig, baseDir: string = ''): string {
-    return path.join(baseDir, 'src/modules', module.plural, `${module.modelName}.ts`);
+    return path.join(baseDir, 'src/modules', module.plural, `${module.moduleName}.ts`);
   }
 
   static getModelPath(module: ModuleConfig, model: ModelConfig, baseDir: string = ''): string {
@@ -66,7 +66,7 @@ export class TestUtils {
   }
 
   static getRoutePath(module: ModuleConfig, model: ModelConfig): string {
-    return model.name === module.modelName ? module.plural : `${module.plural}/${model.plural}`;
+    return model.name === module.moduleName ? module.plural : `${module.plural}/${model.plural}`;
   }
 
   static getApiRoutePaths(module: ModuleConfig, model: ModelConfig, baseDir: string = ''): string[] {
@@ -90,7 +90,7 @@ export class TestUtils {
   static async verifyGeneratedFiles(module: ModuleConfig, baseDir: string = '.test-output'): Promise<void> {
     // Module's own model
     const moduleModel: ModelConfig = {
-      name: module.modelName,
+      name: module.moduleName,
       singular: module.singular,
       plural: module.plural,
       fields: module.fields

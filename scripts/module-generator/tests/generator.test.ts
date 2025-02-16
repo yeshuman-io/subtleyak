@@ -55,11 +55,11 @@ describe('Module Generator', () => {
           const template = Handlebars.compile('{{isModuleModel model module}}');
           expect(template({ 
             model: { name: 'tests' }, 
-            module: { modelName: 'tests' } 
+            module: { moduleName: 'tests' } 
           })).toBe('true');
           expect(template({ 
             model: { name: 'test-model' }, 
-            module: { modelName: 'tests' } 
+            module: { moduleName: 'tests' } 
           })).toBe('');
         });
 
@@ -68,12 +68,12 @@ describe('Module Generator', () => {
           // Module model route
           expect(template({ 
             model: { name: 'tests', plural: 'tests' }, 
-            module: { modelName: 'tests', plural: 'tests' } 
+            module: { moduleName: 'tests', plural: 'tests' } 
           })).toBe('tests');
           // Regular model route
           expect(template({ 
             model: { name: 'test-model', plural: 'models' }, 
-            module: { modelName: 'tests', plural: 'tests' } 
+            module: { moduleName: 'tests', plural: 'tests' } 
           })).toBe('tests/models');
         });
 
@@ -82,12 +82,12 @@ describe('Module Generator', () => {
           // Module model import
           expect(template({ 
             model: { name: 'tests' }, 
-            module: { modelName: 'tests' } 
+            module: { moduleName: 'tests' } 
           })).toBe('./');
           // Regular model import
           expect(template({ 
             model: { name: 'test-model' }, 
-            module: { modelName: 'tests' } 
+            module: { moduleName: 'tests' } 
           })).toBe('./models/test-model');
         });
       });
@@ -306,7 +306,7 @@ describe('Module Generator', () => {
       });
 
       // Verify module model files are included
-      const moduleFiles = changes.filter(c => c.model?.name === TEST_MODULE.modelName);
+      const moduleFiles = changes.filter(c => c.model?.name === TEST_MODULE.moduleName);
       expect(moduleFiles).toEqual(
         expect.arrayContaining([
           expect.objectContaining({ path: expect.stringContaining(`/tests.ts`) }),

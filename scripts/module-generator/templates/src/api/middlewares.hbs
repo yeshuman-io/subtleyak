@@ -9,7 +9,7 @@ import { defineMiddlewares } from "@medusajs/framework/http"
 // {{toTitleCase plural}} module
 import {{toCamelCase plural}}Middlewares from "./admin/{{toKebabCase plural}}/middlewares"
 {{#each models}}
-{{#unless (eq name ../modelName)}}
+{{#unless (eq name ../moduleName)}}
 {{#unless (eq plural ../plural)}}
 import {{toCamelCase plural}}Middlewares from "./admin/{{toKebabCase ../plural}}/{{toKebabCase plural}}/middlewares"
 {{/unless}}
@@ -23,7 +23,7 @@ export default defineMiddlewares({
     // {{toTitleCase plural}} routes
     ...({{toCamelCase plural}}Middlewares.routes || []),
     {{#each models}}
-    {{#unless (eq name ../modelName)}}
+    {{#unless (eq name ../moduleName)}}
     {{#unless (eq plural ../plural)}}
     ...({{toCamelCase plural}}Middlewares.routes || []){{#unless @last}},{{/unless}}
     {{/unless}}

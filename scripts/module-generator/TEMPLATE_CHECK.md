@@ -38,7 +38,7 @@ src/
 ```
 src/
 ├── modules/[module.plural]/
-│   ├── [module.modelName].hbs
+│   ├── [module.moduleName].hbs
 │   ├── index.hbs
 │   ├── service.hbs
 │   └── models/
@@ -89,7 +89,7 @@ src/
 
 ### 4. Module Model ✅
 - [x] Old: N/A
-- [x] New: `templates/src/modules/[module.plural]/models/[module.modelName].hbs`
+- [x] New: `templates/src/modules/[module.plural]/models/[module.moduleName].hbs`
 - [x] Reference: `src/modules/vehicles/models/vehicle.ts`
 
 ### 5. Module List Route ✅

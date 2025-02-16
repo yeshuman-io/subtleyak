@@ -1,18 +1,18 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
 import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
-import { {{toPascalCase module.modelName}} } from "../../../types";
+import { {{toPascalCase module.moduleName}} } from "../../../types";
 import { DataTablePage } from "../../../components/data-table-page";
-import { {{toPascalCase module.modelName}}Create } from "./create/{{toKebabCase module.modelName}}-create";
+import { {{toPascalCase module.moduleName}}Create } from "./create/{{toKebabCase module.moduleName}}-create";
 import { useState } from "react";
 import { ActionMenu } from "../../../components/action-menu";
 import { Pencil } from "@medusajs/icons";
-import { {{toPascalCase module.modelName}}Edit } from "./edit/{{toKebabCase module.modelName}}-edit";
+import { {{toPascalCase module.moduleName}}Edit } from "./edit/{{toKebabCase module.moduleName}}-edit";
 
-const columnHelper = createDataTableColumnHelper<{{toPascalCase module.modelName}}>();
+const columnHelper = createDataTableColumnHelper<{{toPascalCase module.moduleName}}>();
 
 const {{toPascalCase module.plural}}Page = () => {
   const [showCreate, setShowCreate] = useState(false);
-  const [editing{{toPascalCase module.modelName}}, setEditing{{toPascalCase module.modelName}}] = useState<{{toPascalCase module.modelName}} | null>(null);
+  const [editing{{toPascalCase module.moduleName}}, setEditing{{toPascalCase module.moduleName}}] = useState<{{toPascalCase module.moduleName}} | null>(null);
 
   const columns = [
     columnHelper.accessor("id", {
@@ -46,7 +46,7 @@ const {{toPascalCase module.plural}}Page = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditing{{toPascalCase module.modelName}}(model),
+                    onClick: () => setEditing{{toPascalCase module.moduleName}}(model),
                   },
                 ],
               },
@@ -59,7 +59,7 @@ const {{toPascalCase module.plural}}Page = () => {
 
   return (
     <>
-      <DataTablePage<{{toPascalCase module.modelName}}>
+      <DataTablePage<{{toPascalCase module.moduleName}}>
         title="{{toTitleCase module.plural}}"
         subtitle="Manage your {{toLowerCase module.plural}}"
         endpoint="/admin/{{toKebabCase module.plural}}"
@@ -98,15 +98,15 @@ const {{toPascalCase module.plural}}Page = () => {
       />
       {showCreate && (
         <FocusModal open={showCreate} onOpenChange={setShowCreate}>
-          <{{toPascalCase module.modelName}}Create onClose={() => setShowCreate(false)} />
+          <{{toPascalCase module.moduleName}}Create onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
       
-      {editing{{toPascalCase module.modelName}} && (
-        <Drawer open onOpenChange={() => setEditing{{toPascalCase module.modelName}}(null)}>
-          <{{toPascalCase module.modelName}}Edit 
-            model={{jsx-expr "editing" toPascalCase module.modelName}}
-            onClose={() => setEditing{{toPascalCase module.modelName}}(null)}
+      {editing{{toPascalCase module.moduleName}} && (
+        <Drawer open onOpenChange={() => setEditing{{toPascalCase module.moduleName}}(null)}>
+          <{{toPascalCase module.moduleName}}Edit 
+            model={{jsx-expr "editing" toPascalCase module.moduleName}}
+            onClose={() => setEditing{{toPascalCase module.moduleName}}(null)}
           />
         </Drawer>
       )}

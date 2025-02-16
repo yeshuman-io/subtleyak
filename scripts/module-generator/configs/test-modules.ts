@@ -5,8 +5,7 @@ import type { ModuleConfig } from '../src/generate-v2.js';
  * Used to test specific generator features
  */
 export const TEST_MODULE: ModuleConfig = {
-  name: 'tests',
-  modelName: 'tests',
+  moduleName: 'tests',
   singular: 'test',
   plural: 'tests',
   fields: [
@@ -60,8 +59,7 @@ export const TEST_MODULE: ModuleConfig = {
  * Used to test different types of relationships
  */
 export const RELATIONSHIP_MODULE: ModuleConfig = {
-  name: 'relationships',
-  modelName: 'relationships',
+  moduleName: 'relationships',
   singular: 'relationship',
   plural: 'relationships',
   fields: [
@@ -122,8 +120,7 @@ export const RELATIONSHIP_MODULE: ModuleConfig = {
  * Used to test many-to-many relationships
  */
 export const MANY_TO_MANY_MODULE: ModuleConfig = {
-  name: 'many-to-many',
-  modelName: 'many-to-many',
+  moduleName: 'many-to-many',
   singular: 'many-to-many',
   plural: 'many-to-manys',
   fields: [
@@ -186,8 +183,7 @@ export const MANY_TO_MANY_MODULE: ModuleConfig = {
  * Used to test different field types
  */
 export const FIELD_TYPES_MODULE: ModuleConfig = {
-  name: 'field-types',
-  modelName: 'field-types',
+  moduleName: 'field-types',
   singular: 'field-type',
   plural: 'field-types',
   fields: [
