@@ -419,11 +419,13 @@ async function generateModuleFiles(
   // Find module's own model
   const moduleModel = config.models.find(m => m.name === config.moduleName);
   if (!moduleModel) {
-    throw new Error(`No model found matching module name: ${config.moduleName}`);
+    console.warn(`Warning: No model found matching module name: ${config.moduleName}`);
   }
 
-  // Process all models (including module's own model)
-  const allModels = [moduleModel, ...config.models.filter(m => m.name !== config.moduleName)];
+  // Process all models (including module's own model if found)
+  const allModels = moduleModel 
+    ? [moduleModel, ...config.models.filter(m => m.name !== config.moduleName)]
+    : config.models;
   
   for (const model of allModels) {
     const isModuleModel = model.name === config.moduleName;
