@@ -30,18 +30,8 @@ export async function watchTemplates(
 
   // Define patterns to watch
   const patterns = [
-    // Module templates
-    path.join(templatesDir, 'src', 'modules', '[module.plural]', 'models', '[model.name].hbs'),
-    path.join(templatesDir, 'src', 'modules', '[module.plural]', '**', '*.hbs'),
-    // API templates
-    path.join(templatesDir, 'src', 'api', 'middlewares.hbs'),
-    path.join(templatesDir, 'src', 'api', 'admin', '**', '*.hbs'),
-    // Admin UI templates
-    path.join(templatesDir, 'src', 'admin', 'routes', '**', '*.hbs'),
-    // Types template
-    path.join(templatesDir, 'src', 'admin', 'types', '**', '*.hbs'),
-    // Workflow templates
-    path.join(templatesDir, 'src', 'workflows', '**', '*.hbs')
+    // Watch all template files recursively
+    path.join(templatesDir, '**', '*.hbs')
   ];
 
   console.log('Watching patterns:', patterns);
