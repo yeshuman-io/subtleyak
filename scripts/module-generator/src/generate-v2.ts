@@ -43,6 +43,7 @@ export type ModuleConfig = {
   singular: string;
   plural: string;
   models: ModelConfig[];
+  moduleModel?: ModelConfig;
 };
 
 export type FileChange = {
@@ -490,16 +491,8 @@ async function generateModuleFiles(
 
   // Find module's own model using moduleModelName
   const moduleModel = config.models.find((m) => m.name === config.moduleModelName);
-  debug(`Debug - Module ${config.moduleName}:`, {
-    foundModuleModel: !!moduleModel,
-    moduleModelName: config.moduleModelName,
-    matchedModelName: moduleModel?.name
-  });
-  if (!moduleModel) {
-    console.warn(
-      chalk.yellow(`Warning: No model found matching module model name: ${config.moduleModelName}`)
-    );
-  }
+  config.moduleModel = moduleModel;
+
 
   // Process all models (including module's own model if found)
   const allModels = moduleModel

@@ -1,22 +1,22 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { z } from "zod";
-import { update{{toPascalCase module.singular}}Workflow } from "../../../../../workflows/update-{{toKebabCase module.singular}}";
-import { PostAdminUpdate{{toPascalCase module.singular}} } from "../validators";
+import { update{{toPascalCase module.moduleModel.singular}}Workflow } from "../../../../../workflows/update-{{toKebabCase module.moduleModel.singular}}";
+import { PostAdminUpdate{{toPascalCase module.moduleModel.singular}} } from "../validators";
 
-type PostAdminUpdate{{toPascalCase module.singular}}Type = z.infer<
-  typeof PostAdminUpdate{{toPascalCase module.singular}}
+type PostAdminUpdate{{toPascalCase module.moduleModel.singular}}Type = z.infer<
+  typeof PostAdminUpdate{{toPascalCase module.moduleModel.singular}}
 >;
 
 export const POST = async (
-  req: MedusaRequest<PostAdminUpdate{{toPascalCase module.singular}}Type>,
+  req: MedusaRequest<PostAdminUpdate{{toPascalCase module.moduleModel.singular}}Type>,
   res: MedusaResponse
 ) => {
-  const { result } = await update{{toPascalCase module.singular}}Workflow(req.scope).run({
+  const { result } = await update{{toPascalCase module.moduleModel.singular}}Workflow(req.scope).run({
     input: {
       id: req.params.id,
       ...req.validatedBody,
     },
   });
 
-  res.json({ {{toSnakeCase module.moduleName}}: result });
+  res.json({ {{toSnakeCase module.moduleModel.plural}}: result });
 };
