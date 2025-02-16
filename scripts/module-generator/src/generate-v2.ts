@@ -279,7 +279,7 @@ Handlebars.registerHelper("debug", function (context) {
 
 // Add debug utility function
 function debug(...args: any[]) {
-  if (process.env.DEBUG === '1') {
+  if (process.env.DEBUG === "1") {
     console.log(...args);
   }
 }
@@ -293,7 +293,7 @@ async function processTemplate(
     outputPath?: string;
   }
 ): Promise<string> {
-  try { 
+  try {
     const compiledTemplate = Handlebars.compile(templateContent);
     return compiledTemplate(data);
   } catch (error) {
@@ -434,6 +434,29 @@ async function loadTemplates() {
     "utf-8"
   );
 
+  // Add workflow templates
+  const createWorkflowTemplate = await fs.readFile(
+    path.join(
+      templateDir,
+      "src/workflows/[module.plural]/create-[model.name].hbs"
+    ),
+    "utf-8"
+  );
+  const updateWorkflowTemplate = await fs.readFile(
+    path.join(
+      templateDir,
+      "src/workflows/[module.plural]/update-[model.name].hbs"
+    ),
+    "utf-8"
+  );
+  const deleteWorkflowTemplate = await fs.readFile(
+    path.join(
+      templateDir,
+      "src/workflows/[module.plural]/delete-[model.name].hbs"
+    ),
+    "utf-8"
+  );
+
   debug("Debug - Loaded module create form template:", {
     path: path.join(
       templateDir,
@@ -473,6 +496,11 @@ async function loadTemplates() {
 
     // Types template
     mainTypesTemplate,
+
+    // Workflow templates
+    createWorkflowTemplate,
+    updateWorkflowTemplate,
+    deleteWorkflowTemplate,
   };
 }
 
@@ -490,9 +518,10 @@ async function generateModuleFiles(
   const templates = await loadTemplates();
 
   // Find module's own model using moduleModelName
-  const moduleModel = config.models.find((m) => m.name === config.moduleModelName);
+  const moduleModel = config.models.find(
+    (m) => m.name === config.moduleModelName
+  );
   config.moduleModel = moduleModel;
-
 
   // Process all models (including module's own model if found)
   const allModels = moduleModel
@@ -506,12 +535,12 @@ async function generateModuleFiles(
     const isModuleModel = model.name === config.moduleModelName;
     debug(`Debug - Processing model ${model.name}:`, {
       isModuleModel,
-      moduleModelName: config.moduleModelName
+      moduleModelName: config.moduleModelName,
     });
-    
+
     // Use different path structure for module-level routes
-    const routePath = isModuleModel 
-      ? config.plural  // Just use module plural for module-level routes
+    const routePath = isModuleModel
+      ? config.plural // Just use module plural for module-level routes
       : `${config.plural}/${model.plural}`; // Use full path for model-level routes
 
     const apiBasePath = path.join(baseDir, "src/api/admin", routePath);
@@ -598,6 +627,36 @@ async function generateModuleFiles(
       model,
       module: config,
     });
+
+    // Generate workflow files
+    const workflowBasePath = path.join(baseDir, "src/workflows", config.plural);
+
+    // Create workflow
+    changes.push({
+      path: path.join(workflowBasePath, `create-${model.name}.ts`),
+      type: "create",
+      templatePath: templates.createWorkflowTemplate,
+      model,
+      module: config,
+    });
+
+    // Update workflow
+    changes.push({
+      path: path.join(workflowBasePath, `update-${model.name}.ts`),
+      type: "create",
+      templatePath: templates.updateWorkflowTemplate,
+      model,
+      module: config,
+    });
+
+    // Delete workflow
+    changes.push({
+      path: path.join(workflowBasePath, `delete-${model.name}.ts`),
+      type: "create",
+      templatePath: templates.deleteWorkflowTemplate,
+      model,
+      module: config,
+    });
   }
 
   // Generate module service
@@ -629,7 +688,7 @@ async function generateModuleFiles(
 
       const content = await processTemplate(change.templatePath, data, {
         templatePath: change.templatePath,
-        outputPath: change.path
+        outputPath: change.path,
       });
       await fs.writeFile(change.path, content);
     }
@@ -685,7 +744,7 @@ async function generateTypes(
 
       const content = await processTemplate(change.templatePath, templateData, {
         templatePath: change.templatePath,
-        outputPath: change.path
+        outputPath: change.path,
       });
       await fs.writeFile(change.path, content);
     }
@@ -709,11 +768,12 @@ async function generateMiddlewares(
 
   // Generate individual module/model middleware files
   for (const module of modules) {
-
     // Find module's own model using moduleModelName
-    const moduleModel = module.models.find((m) => m.name === module.moduleModelName);
+    const moduleModel = module.models.find(
+      (m) => m.name === module.moduleModelName
+    );
     module.moduleModel = moduleModel;
-    
+
     // Generate module-level middleware
     changes.push({
       path: path.join(
@@ -787,7 +847,7 @@ async function generateMiddlewares(
 
       const content = await processTemplate(change.templatePath, templateData, {
         templatePath: change.templatePath,
-        outputPath: change.path
+        outputPath: change.path,
       });
       await fs.writeFile(change.path, content);
     }
