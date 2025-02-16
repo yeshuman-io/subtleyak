@@ -1,24 +1,23 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
-import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
-import { {{toPascalCase module.moduleName}} } from "../types";
-import { DataTablePage } from "../../../components/data-table-page";
-import { {{toPascalCase module.moduleName}}Create } from "./create/{{toKebabCase module.moduleName}}-create";
-import { useState } from "react";
-import { ActionMenu } from "../../../components/action-menu";
 import { Pencil } from "@medusajs/icons";
-import { {{toPascalCase module.moduleName}}Edit } from "./edit/{{toKebabCase module.moduleName}}-edit";
+import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
+import { {{toPascalCase module.singular}} } from "../../types";
+import { DataTablePage } from "../../components/data-table-page";
+import { ActionMenu } from "../../components/action-menu";
+import { {{toPascalCase module.moduleModel.singular}}Create } from "./create/{{toKebabCase module.moduleModel.singular}}-create";
+import { {{toPascalCase module.moduleModel.singular}}Edit } from "./edit/{{toKebabCase module.moduleModel.singular}}-edit";
+import { useState } from "react";
 
-const columnHelper = createDataTableColumnHelper<{{toPascalCase module.moduleName}}>();
+const columnHelper = createDataTableColumnHelper<{{toPascalCase module.moduleModel.singular}}>();
 
 const {{toPascalCase module.plural}}Page = () => {
   const [showCreate, setShowCreate] = useState(false);
-  const [editing{{toPascalCase module.moduleName}}, setEditing{{toPascalCase module.moduleName}}] = useState<{{toPascalCase module.moduleName}} | null>(null);
-//sadf
+  const [editing{{toPascalCase module.moduleModel.singular}}, setEditing{{toPascalCase module.moduleModel.singular}}] = useState<{{toPascalCase module.moduleModel.singular}} | null>(null);
   const columns = [
     columnHelper.accessor("id", {
       header: "ID",
     }),
-    {{#each module.fields}}
+    {{#each module.moduleModel.fields}}
     {{#if (eq type "text")}}
     columnHelper.accessor("{{toSnakeCase name}}", {
       header: "{{toTitleCase name}}",
@@ -46,7 +45,7 @@ const {{toPascalCase module.plural}}Page = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditing{{toPascalCase module.moduleName}}(model),
+                    onClick: () => setEditing{{toPascalCase module.moduleModel.singular}}(model),
                   },
                 ],
               },
@@ -56,10 +55,10 @@ const {{toPascalCase module.plural}}Page = () => {
       },
     }),
   ];
-
+//asfdsdafqwer
   return (
     <>
-      <DataTablePage<{{toPascalCase module.moduleName}}>
+      <DataTablePage<{{toPascalCase module.singular}}>
         title="{{toTitleCase module.plural}}"
         subtitle="Manage your {{toLowerCase module.plural}}"
         endpoint="/admin/{{toKebabCase module.plural}}"
@@ -98,15 +97,14 @@ const {{toPascalCase module.plural}}Page = () => {
       />
       {showCreate && (
         <FocusModal open={showCreate} onOpenChange={setShowCreate}>
-          <{{toPascalCase module.moduleName}}Create onClose={() => setShowCreate(false)} />
+          <{{toPascalCase module.moduleModel.singular}}Create onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
-      
-      {editing{{toPascalCase module.moduleName}} && (
-        <Drawer open onOpenChange={() => setEditing{{toPascalCase module.moduleName}}(null)}>
-          <{{toPascalCase module.moduleName}}Edit 
-            model={{jsx-expr "editing" toPascalCase module.moduleName}}
-            onClose={() => setEditing{{toPascalCase module.moduleName}}(null)}
+      {editing{{toPascalCase module.moduleModel.singular}} && (
+        <Drawer open onOpenChange={() => setEditing{{toPascalCase module.moduleModel.singular}}(null)}>
+          <{{toPascalCase module.moduleModel.singular}}Edit 
+            {{module.moduleModel.singular}}={{jsx-expr "editing{{toPascalCase module.moduleModel.singular}}"}}
+            onClose={() => setEditing{{toPascalCase module.moduleModel.singular}}(null)}
           />
         </Drawer>
       )}
