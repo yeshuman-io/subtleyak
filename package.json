@@ -33,6 +33,7 @@
     "test:generate:single": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/module-generator/tests/jest.config.ts --silent --noStackTrace",
     "test:generate:titles": "NODE_OPTIONS=--experimental-vm-modules jest --config=scripts/module-generator/tests/jest.config.ts --silent --noStackTrace --json --outputFile=.test-results.json && node scripts/process-test-titles.js",
     "src:generate": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/cli.ts",
+    "src:generate:debug": "DEBUG=1 NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/cli.ts",
     "src:generate:dry-run": "DEBUG=1 DRY_RUN=1 NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/cli.ts",
     "src:generate:watch": "NODE_OPTIONS=\"--loader ts-node/esm --experimental-specifier-resolution=node\" ts-node scripts/module-generator/src/utils/watch.ts scripts/module-generator/configs/production-modules.ts"
   },
@@ -60,6 +61,7 @@
     "@types/node": "^20.17.17",
     "@types/react": "^18.3.2",
     "@types/react-dom": "^18.2.25",
+    "chalk": "^5.4.1",
     "glob": "^11.0.1",
     "handlebars": "^4.7.8",
     "jest": "^29.7.0",

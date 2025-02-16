@@ -2,7 +2,7 @@ import { generateModules, type FileChange } from './generate-v2.js';
 import { MODULES } from '../configs/production-modules.js';
 import chalk from 'chalk';
 
-function printModuleSummary(moduleConfigs) {
+export function printModuleSummary(moduleConfigs) {
   console.log(chalk.bold('\n📦 Modules to generate:'));
   for (const config of moduleConfigs) {
     console.log(chalk.cyan(`\n${config.moduleName} module:`));
@@ -14,7 +14,7 @@ function printModuleSummary(moduleConfigs) {
   console.log('\n');
 }
 
-function printGeneratedFiles(files: FileChange[]) {
+export function printGeneratedFiles(files: FileChange[]) {
   console.log(chalk.bold('\n✨ Generated files:'));
   const groups = files.reduce<Record<string, string[]>>((acc, file) => {
     const type = file.path.includes('/api/') ? 'API' 
@@ -34,11 +34,10 @@ function printGeneratedFiles(files: FileChange[]) {
   }
 }
 
-async function main() {
+export async function main(moduleConfigs = Object.values(MODULES)) {
   console.log(chalk.bold('🚀 Starting module generation'));
   console.log(chalk.gray('Mode:', process.env.DRY_RUN === '1' ? 'Dry Run' : 'Production'));
 
-  const moduleConfigs = Object.values(MODULES);
   printModuleSummary(moduleConfigs);
 
   console.log(chalk.bold('⚙️  Generating files...'));
@@ -50,7 +49,10 @@ async function main() {
   console.log(chalk.bold('\n✅ Generation complete!\n'));
 }
 
-main().catch(error => {
-  console.error(chalk.red('\n❌ Error:'), error);
-  process.exit(1);
-}); 
+// Only run if this is the main module
+if (import.meta.url === `file://${process.argv[1]}`) {
+  main().catch(error => {
+    console.error(chalk.red('\n❌ Error:'), error);
+    process.exit(1);
+  });
+} 
