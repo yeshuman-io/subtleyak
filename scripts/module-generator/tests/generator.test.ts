@@ -230,11 +230,17 @@ describe('Module Generator', () => {
           'src/modules/tests/models/test-model.ts',
           
           // API routes
+          'src/api/admin/tests/route.ts',
+          'src/api/admin/tests/[id]/route.ts',
+          'src/api/admin/tests/validators.ts',
           'src/api/admin/tests/models/route.ts',
           'src/api/admin/tests/models/[id]/route.ts',
           'src/api/admin/tests/models/validators.ts',
           
           // Admin UI routes
+          'src/admin/routes/tests/page.tsx',
+          'src/admin/routes/tests/create/test-create.tsx',
+          'src/admin/routes/tests/edit/test-edit.tsx',
           'src/admin/routes/tests/models/page.tsx',
           'src/admin/routes/tests/models/create/test-model-create.tsx',
           'src/admin/routes/tests/models/edit/test-model-edit.tsx',
@@ -349,7 +355,7 @@ describe('Module Generator', () => {
       const dryRunChanges = await generateModule(TEST_MODULE, { testMode: true, dryRun: true });
       
       // Clean up and run actual generation
-      await TestUtils.cleanTestDir();
+      // await TestUtils.cleanTestDir();
       await generateModule(TEST_MODULE, { testMode: true });
 
       // Get actual generated files

@@ -292,48 +292,7 @@ async function processTemplate(
     outputPath?: string;
   }
 ): Promise<string> {
-  try {
-    if (process.env.DEBUG === '1') {
-      const templateName = options?.templatePath 
-        ? path.basename(options.templatePath, '.hbs')
-            .replace(/\[module\.plural\]/, data.module?.plural || '')
-            .replace(/\[module\.singular\]/, data.module?.singular || '')
-            .replace(/\[model\.plural\]/, data.model?.plural || '')
-            .replace(/\[model\.name\]/, data.model?.name || '')
-        : 'unknown';
-
-      const debugInfo = {
-        template: templateName,
-        destination: options?.outputPath || 'unknown',
-        module: {
-          name: data.module?.moduleName,
-          singular: data.module?.singular,
-          plural: data.module?.plural,
-        },
-        model: data.model ? {
-          name: data.model.name,
-          singular: data.model.singular,
-          plural: data.model.plural,
-          isModuleModel: data.isModuleModel
-        } : null,
-        multipleModules: data.modules ? `${data.modules.length} modules` : null
-      };
-
-      debug(chalk.gray('\nProcessing template:'));
-      debug(chalk.blue('Template:     '), debugInfo.template);
-      debug(chalk.blue('Destination:  '), debugInfo.destination);
-      if (debugInfo.model) {
-        debug(chalk.blue('Model:        '), 
-          `${debugInfo.model.name}${debugInfo.model.isModuleModel ? ' (module model)' : ''}`);
-      }
-      debug(chalk.blue('Module:       '), 
-        `${debugInfo.module.name} (${debugInfo.module.singular}/${debugInfo.module.plural})`);
-      if (debugInfo.multipleModules) {
-        debug(chalk.blue('Modules:      '), debugInfo.multipleModules);
-      }
-      debug('');
-    }
-
+  try { 
     const compiledTemplate = Handlebars.compile(templateContent);
     return compiledTemplate(data);
   } catch (error) {
@@ -557,8 +516,12 @@ async function generateModuleFiles(
       moduleModelName: config.moduleModelName
     });
     
-    // Always use models directory and model's plural for routes
-    const routePath = `${config.plural}/${model.plural}`;
+    // Use different path structure for module-level routes
+    const routePath = isModuleModel 
+      ? config.plural  // Just use module plural for module-level routes
+      : `${config.plural}/${model.plural}`; // Use full path for model-level routes
+
+    const apiBasePath = path.join(baseDir, "src/api/admin", routePath);
 
     // Model file - always in models directory
     const modelPath = path.join(
@@ -580,8 +543,6 @@ async function generateModuleFiles(
     });
 
     // API routes
-    const apiBasePath = path.join(baseDir, "src/api/admin", routePath);
-
     changes.push({
       path: path.join(apiBasePath, "route.ts"),
       type: "create",
