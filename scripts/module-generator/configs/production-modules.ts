@@ -3,7 +3,7 @@ import type { ModuleConfig } from "../src/generate-v2";
 /**
  * Vehicle Module Configuration
  */
-/*
+
 export const VEHICLE_MODULE: ModuleConfig = {
   moduleName: "vehicles",
   moduleModelName: "vehicle",
@@ -169,7 +169,7 @@ export const VEHICLE_MODULE: ModuleConfig = {
     },
   ],
 };
-*/
+
 /**
  * Wiper Module Configuration
  */

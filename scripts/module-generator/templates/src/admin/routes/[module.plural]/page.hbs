@@ -18,20 +18,14 @@ const {{toPascalCase module.plural}}Page = () => {
       header: "ID",
     }),
     {{#each module.moduleModel.fields}}
-    {{#if (eq type "text")}}
-    columnHelper.accessor("{{toSnakeCase name}}", {
-      header: "{{toTitleCase name}}",
-      enableSorting: true,
-    }),
-    {{/if}}
-    {{#if relation}}
     {{#if (eq relation.type "belongsTo")}}
     columnHelper.accessor("{{toSnakeCase name}}.name", {
+    {{else}}
+    columnHelper.accessor("{{toSnakeCase name}}", {
+    {{/if}}
       header: "{{toTitleCase name}}",
       enableSorting: true,
     }),
-    {{/if}}
-    {{/if}}
     {{/each}}
     columnHelper.accessor("actions", {
       header: "",
