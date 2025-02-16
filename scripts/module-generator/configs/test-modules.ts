@@ -8,22 +8,6 @@ export const TEST_MODULE: ModuleConfig = {
   moduleName: 'tests',
   singular: 'test',
   plural: 'tests',
-  fields: [
-    {
-      name: 'name',
-      type: 'string',
-      required: true
-    },
-    {
-      name: 'models',
-      type: 'string',
-      relation: {
-        type: 'hasMany',
-        model: 'TestModel',
-        mappedBy: 'test'
-      }
-    }
-  ],
   models: [
     {
       name: 'test-model',
@@ -62,13 +46,6 @@ export const RELATIONSHIP_MODULE: ModuleConfig = {
   moduleName: 'relationships',
   singular: 'relationship',
   plural: 'relationships',
-  fields: [
-    {
-      name: 'name',
-      type: 'string',
-      required: true
-    }
-  ],
   models: [
     {
       name: 'one-to-many',
@@ -123,13 +100,6 @@ export const MANY_TO_MANY_MODULE: ModuleConfig = {
   moduleName: 'many-to-many',
   singular: 'many-to-many',
   plural: 'many-to-manys',
-  fields: [
-    {
-      name: 'name',
-      type: 'string',
-      required: true
-    }
-  ],
   models: [
     {
       name: 'left',
@@ -186,13 +156,6 @@ export const FIELD_TYPES_MODULE: ModuleConfig = {
   moduleName: 'field-types',
   singular: 'field-type',
   plural: 'field-types',
-  fields: [
-    {
-      name: 'name',
-      type: 'string',
-      required: true
-    }
-  ],
   models: [
     {
       name: 'all-types',

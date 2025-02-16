@@ -376,7 +376,7 @@ describe('Module Generator', () => {
       // Main middlewares template should receive modules array
       const mainMiddlewaresChange = changes.find(c => c.path.endsWith('src/api/middlewares.ts'));
       expect(mainMiddlewaresChange?.modules).toBeDefined();
-      expect(mainMiddlewaresChange?.modules?.[0].name).toBe(TEST_MODULE.name);
+      expect(mainMiddlewaresChange?.modules?.[0].moduleName).toBe(TEST_MODULE.moduleName);
       
       // Module middlewares template should receive module and its model
       const moduleMiddlewaresChange = changes.find(c => 
@@ -410,7 +410,7 @@ describe('Module Generator', () => {
       expect(mainMiddlewaresChange?.modules).toEqual(
           expect.arrayContaining([
               expect.objectContaining({ 
-                name: TEST_MODULE.name,
+                moduleName: TEST_MODULE.moduleName,
                 plural: TEST_MODULE.plural,
                 models: expect.arrayContaining(
                   TEST_MODULE.models.map(m => ({
@@ -420,7 +420,7 @@ describe('Module Generator', () => {
                 )
               }),
               expect.objectContaining({ 
-                name: RELATIONSHIP_MODULE.name,
+                moduleName: RELATIONSHIP_MODULE.moduleName,
                 plural: RELATIONSHIP_MODULE.plural,
                 models: expect.arrayContaining(
                   RELATIONSHIP_MODULE.models.map(m => ({

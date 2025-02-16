@@ -37,11 +37,9 @@ export type ModelConfig = {
 };
 
 export type ModuleConfig = {
-  name: string;
   moduleName: string;
   singular: string;
   plural: string;
-  fields: ModelField[];
   models: ModelConfig[];
 };
 
@@ -52,7 +50,7 @@ export type FileChange = {
   model?: ModelConfig;
   module?: ModuleConfig;
   modules?: Array<{
-    name: string;
+    moduleName: string;
     plural: string;
     models: Array<{
       name: string;
@@ -418,16 +416,14 @@ async function generateModuleFiles(
   const changes: FileChange[] = [];
   const templates = await loadTemplates();
 
-  // Generate module's own model
-  const moduleModel: ModelConfig = {
-    name: config.moduleName,
-    singular: config.singular,
-    plural: config.plural,
-    fields: config.fields
-  };
+  // Find module's own model
+  const moduleModel = config.models.find(m => m.name === config.moduleName);
+  if (!moduleModel) {
+    throw new Error(`No model found matching module name: ${config.moduleName}`);
+  }
 
   // Process all models (including module's own model)
-  const allModels = [moduleModel, ...config.models];
+  const allModels = [moduleModel, ...config.models.filter(m => m.name !== config.moduleName)];
   
   for (const model of allModels) {
     const isModuleModel = model.name === config.moduleName;
@@ -558,11 +554,9 @@ async function generateTypes(
     type: 'create' as const,
     templatePath: templates.mainTypesTemplate,
     modules: modules.map(module => ({
-      name: module.name,
       plural: module.plural,
       singular: module.singular,
       moduleName: module.moduleName,
-      fields: module.fields,
       models: module.models.map(m => ({
         name: m.name,
         plural: m.plural,
@@ -633,9 +627,8 @@ async function generateMiddlewares(
     type: 'create' as const,
     templatePath: templates.mainMiddlewaresTemplate,
     modules: modules.map(module => ({
-      name: module.name,
-      plural: module.plural,
       moduleName: module.moduleName,
+      plural: module.plural,
       models: module.models.map(m => ({
         name: m.name,
         plural: m.plural

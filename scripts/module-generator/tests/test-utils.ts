@@ -88,13 +88,11 @@ export class TestUtils {
   }
 
   static async verifyGeneratedFiles(module: ModuleConfig, baseDir: string = '.test-output'): Promise<void> {
-    // Module's own model
-    const moduleModel: ModelConfig = {
-      name: module.moduleName,
-      singular: module.singular,
-      plural: module.plural,
-      fields: module.fields
-    };
+    // Find the model that matches the module name
+    const moduleModel = module.models.find(m => m.name === module.moduleName);
+    if (!moduleModel) {
+      throw new Error(`No model found matching module name: ${module.moduleName}`);
+    }
 
     // Check module model files
     const moduleModelPath = this.getModuleModelPath(module, baseDir);
@@ -108,8 +106,8 @@ export class TestUtils {
       expect(await this.fileExists(route)).toBe(true);
     }
 
-    // Check each model's files
-    for (const model of module.models) {
+    // Check each model's files (excluding the module model since we already checked it)
+    for (const model of module.models.filter(m => m.name !== module.moduleName)) {
       // Model file
       const modelPath = this.getModelPath(module, model, baseDir);
       expect(await this.fileExists(modelPath)).toBe(true);
