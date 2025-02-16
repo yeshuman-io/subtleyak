@@ -901,3 +901,16 @@ export {
   generateMiddlewares,
   generateTypes,
 };
+
+// Add plural helper
+Handlebars.registerHelper("plural", function (str: string) {
+  if (!str) return "";
+  // Basic pluralization rules
+  // if (str.endsWith('y')) {
+  //   return str.slice(0, -1) + 'ies';
+  // }
+  // if (str.endsWith('s')) {
+  //   return str;
+  // }
+  // return str + 's';
+});

@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { create{{toPascalCase module.moduleModel.singular}}Workflow } from "../../../../workflows/create-{{toKebabCase module.moduleModel.singular}}";
+import { create{{toPascalCase module.moduleModel.singular}}Workflow } from "../../../workflows/{{module.plural}}/create-{{toKebabCase module.moduleModel.singular}}";
 import { PostAdminCreate{{toPascalCase module.moduleModel.singular}} } from "./validators";
 
 type QueryResponse = {

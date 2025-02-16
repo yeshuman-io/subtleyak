@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { z } from "zod";
-import { update{{toPascalCase module.moduleModel.singular}}Workflow } from "../../../../../workflows/update-{{toKebabCase module.moduleModel.singular}}";
+import { update{{toPascalCase module.moduleModel.singular}}Workflow } from "../../../../workflows/{{module.plural}}/update-{{toKebabCase module.moduleModel.singular}}";
 import { PostAdminUpdate{{toPascalCase module.moduleModel.singular}} } from "../validators";
 
 type PostAdminUpdate{{toPascalCase module.moduleModel.singular}}Type = z.infer<

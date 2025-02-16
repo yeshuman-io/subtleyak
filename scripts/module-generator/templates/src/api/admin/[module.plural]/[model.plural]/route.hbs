@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { create{{toPascalCase model.name}}Workflow } from "../../../../workflows/create-{{toKebabCase model.name}}";
+import { create{{toPascalCase model.name}}Workflow } from "../../../../workflows/{{module.plural}}/create-{{toKebabCase model.name}}";
 import { PostAdminCreate{{toPascalCase model.name}} } from "./validators";
 
 
