@@ -10,6 +10,7 @@ import * as path from "path";
 import { existsSync } from "fs";
 import { format, resolveConfig } from "prettier";
 import Handlebars from "handlebars";
+import chalk from "chalk";
 
 // Core types for minimal implementation
 export type ModelField = {
@@ -38,6 +39,7 @@ export type ModelConfig = {
 
 export type ModuleConfig = {
   moduleName: string;
+  moduleModelName: string;
   singular: string;
   plural: string;
   models: ModelConfig[];
@@ -274,26 +276,68 @@ Handlebars.registerHelper("debug", function (context) {
   return "";
 });
 
+// Add debug utility function
+function debug(...args: any[]) {
+  if (process.env.DEBUG === '1') {
+    console.log(...args);
+  }
+}
+
 // Process template using Handlebars
 async function processTemplate(
   templateContent: string,
-  data: Record<string, any>
+  data: Record<string, any>,
+  options?: {
+    templatePath?: string;
+    outputPath?: string;
+  }
 ): Promise<string> {
   try {
-    console.log("Debug - Processing template with data:", {
-      moduleName: data.module?.moduleName,
-      singular: data.module?.singular,
-      plural: data.module?.plural,
-      isModuleModel: data.isModuleModel,
-      modules: data.modules
-        ? `${data.modules.length} modules: ${data.modules.map((m) => m.name).join(", ")}`
-        : "no modules",
-    });
+    if (process.env.DEBUG === '1') {
+      const templateName = options?.templatePath 
+        ? path.basename(options.templatePath, '.hbs')
+            .replace(/\[module\.plural\]/, data.module?.plural || '')
+            .replace(/\[module\.singular\]/, data.module?.singular || '')
+            .replace(/\[model\.plural\]/, data.model?.plural || '')
+            .replace(/\[model\.name\]/, data.model?.name || '')
+        : 'unknown';
+
+      const debugInfo = {
+        template: templateName,
+        destination: options?.outputPath || 'unknown',
+        module: {
+          name: data.module?.moduleName,
+          singular: data.module?.singular,
+          plural: data.module?.plural,
+        },
+        model: data.model ? {
+          name: data.model.name,
+          singular: data.model.singular,
+          plural: data.model.plural,
+          isModuleModel: data.isModuleModel
+        } : null,
+        multipleModules: data.modules ? `${data.modules.length} modules` : null
+      };
+
+      debug(chalk.gray('\nProcessing template:'));
+      debug(chalk.blue('Template:     '), debugInfo.template);
+      debug(chalk.blue('Destination:  '), debugInfo.destination);
+      if (debugInfo.model) {
+        debug(chalk.blue('Model:        '), 
+          `${debugInfo.model.name}${debugInfo.model.isModuleModel ? ' (module model)' : ''}`);
+      }
+      debug(chalk.blue('Module:       '), 
+        `${debugInfo.module.name} (${debugInfo.module.singular}/${debugInfo.module.plural})`);
+      if (debugInfo.multipleModules) {
+        debug(chalk.blue('Modules:      '), debugInfo.multipleModules);
+      }
+      debug('');
+    }
 
     const compiledTemplate = Handlebars.compile(templateContent);
     return compiledTemplate(data);
   } catch (error) {
-    console.error(`Error processing template:`, error);
+    console.error(chalk.red(`Error processing template:`, error));
     throw error;
   }
 }
@@ -305,7 +349,7 @@ async function loadTemplates() {
     "scripts/module-generator/templates"
   );
 
-  console.log("Debug - Loading templates from:", templateDir);
+  debug("Debug - Loading templates from:", templateDir);
 
   // Module level templates
   const moduleModelTemplate = await fs.readFile(
@@ -430,7 +474,7 @@ async function loadTemplates() {
     "utf-8"
   );
 
-  console.log("Debug - Loaded module create form template:", {
+  debug("Debug - Loaded module create form template:", {
     path: path.join(
       templateDir,
       "src/admin/routes/[module.plural]/create/[module.singular]-create.hbs"
@@ -485,11 +529,16 @@ async function generateModuleFiles(
   const changes: FileChange[] = [];
   const templates = await loadTemplates();
 
-  // Find module's own model
-  const moduleModel = config.models.find((m) => m.name === config.moduleName);
+  // Find module's own model using moduleModelName
+  const moduleModel = config.models.find((m) => m.name === config.moduleModelName);
+  debug(`Debug - Module ${config.moduleName}:`, {
+    foundModuleModel: !!moduleModel,
+    moduleModelName: config.moduleModelName,
+    matchedModelName: moduleModel?.name
+  });
   if (!moduleModel) {
     console.warn(
-      `Warning: No model found matching module name: ${config.moduleName}`
+      chalk.yellow(`Warning: No model found matching module model name: ${config.moduleModelName}`)
     );
   }
 
@@ -497,22 +546,27 @@ async function generateModuleFiles(
   const allModels = moduleModel
     ? [
         moduleModel,
-        ...config.models.filter((m) => m.name !== config.moduleName),
+        ...config.models.filter((m) => m.name !== config.moduleModelName),
       ]
     : config.models;
 
   for (const model of allModels) {
-    const isModuleModel = model.name === config.moduleName;
-    const routePath = isModuleModel
-      ? config.plural
-      : `${config.plural}/${model.plural}`;
+    const isModuleModel = model.name === config.moduleModelName;
+    debug(`Debug - Processing model ${model.name}:`, {
+      isModuleModel,
+      moduleModelName: config.moduleModelName
+    });
+    
+    // Always use models directory and model's plural for routes
+    const routePath = `${config.plural}/${model.plural}`;
 
-    // Model file
+    // Model file - always in models directory
     const modelPath = path.join(
       baseDir,
       "src/modules",
       config.plural,
-      isModuleModel ? `${model.name}.ts` : `models/${model.name}.ts`
+      "models",
+      `${model.name}.ts`
     );
 
     changes.push({
@@ -616,10 +670,13 @@ async function generateModuleFiles(
       const data = {
         module: config,
         model: change.model || null,
-        isModuleModel: change.model?.name === config.moduleName,
+        isModuleModel: change.model?.name === config.moduleModelName,
       };
 
-      const content = await processTemplate(change.templatePath, data);
+      const content = await processTemplate(change.templatePath, data, {
+        templatePath: change.templatePath,
+        outputPath: change.path
+      });
       await fs.writeFile(change.path, content);
     }
   }
@@ -672,7 +729,10 @@ async function generateTypes(
             isModuleModel: change.model?.name === change.module?.moduleName,
           };
 
-      const content = await processTemplate(change.templatePath, templateData);
+      const content = await processTemplate(change.templatePath, templateData, {
+        templatePath: change.templatePath,
+        outputPath: change.path
+      });
       await fs.writeFile(change.path, content);
     }
   }
@@ -766,7 +826,10 @@ async function generateMiddlewares(
         };
       }
 
-      const content = await processTemplate(change.templatePath, templateData);
+      const content = await processTemplate(change.templatePath, templateData, {
+        templatePath: change.templatePath,
+        outputPath: change.path
+      });
       await fs.writeFile(change.path, content);
     }
   }

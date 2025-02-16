@@ -6,6 +6,7 @@ import type { ModuleConfig } from '../src/generate-v2.js';
  */
 export const TEST_MODULE: ModuleConfig = {
   moduleName: 'tests',
+  moduleModelName: 'test-model',
   singular: 'test',
   plural: 'tests',
   models: [
@@ -44,6 +45,7 @@ export const TEST_MODULE: ModuleConfig = {
  */
 export const RELATIONSHIP_MODULE: ModuleConfig = {
   moduleName: 'relationships',
+  moduleModelName: 'one-to-many',
   singular: 'relationship',
   plural: 'relationships',
   models: [
@@ -98,6 +100,7 @@ export const RELATIONSHIP_MODULE: ModuleConfig = {
  */
 export const MANY_TO_MANY_MODULE: ModuleConfig = {
   moduleName: 'many-to-many',
+  moduleModelName: 'left',
   singular: 'many-to-many',
   plural: 'many-to-manys',
   models: [
@@ -154,6 +157,7 @@ export const MANY_TO_MANY_MODULE: ModuleConfig = {
  */
 export const FIELD_TYPES_MODULE: ModuleConfig = {
   moduleName: 'field-types',
+  moduleModelName: 'all-types',
   singular: 'field-type',
   plural: 'field-types',
   models: [

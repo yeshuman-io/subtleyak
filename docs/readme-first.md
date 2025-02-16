@@ -51,6 +51,15 @@ Define your module using TypeScript configurations:
 ```typescript
 type ModuleConfig = {
   moduleName: string;  // kebab-case module name
+  /**
+   * The name of the primary model for this module (in kebab-case).
+   * This model is special - it will:
+   * 1. Be treated as the root model for the module
+   * 2. Have simplified routing (e.g., /admin/vehicles instead of /admin/vehicles/vehicles)
+   * 3. Be registered as the main service for the module
+   * 4. Must match one of the model names defined in the models array
+   */
+  moduleModelName: string;
   singular: string;    // Singular display name
   plural: string;      // Plural display name
   models: ModelConfig[];
@@ -119,6 +128,15 @@ src/
 ### Development
 
 ```bash
+# Generate modules
+npm run src:generate
+
+# Generate modules with debug output
+npm run src:generate:debug
+
+# Generate modules with watch mode
+npm run src:generate:watch
+
 # Run tests with watch mode
 npm run test:generate:watch
 
@@ -147,8 +165,9 @@ IMPORTANT FOR AI COMPOSER SESSION TESTING:
 
 ```typescript
 // configs/my-module.ts
-export const config: ModuleConfig = {
+export const MY_MODULE: ModuleConfig = {
   moduleName: "products",
+  moduleModelName: "product", // Name of the main model
   singular: "product",
   plural: "products",
   models: [
@@ -176,12 +195,16 @@ export const config: ModuleConfig = {
     }
   ]
 };
-```
 
-2. Run the generator:
+/**
+ * Export all module configurations
+ */
+export const MODULES = {
+  products: MY_MODULE,
+  // Add more modules here
+} as const;
 
-```bash
-npx ts-node scripts/module-generator/src/generate-v2.ts configs/my-module.ts
+export type ModuleName = keyof typeof MODULES;
 ```
 
 ## Key Features

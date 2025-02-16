@@ -223,16 +223,30 @@ describe('Module Generator', () => {
   describe('Module Generation', () => {
     describe('File Structure', () => {
       it('should generate model files in correct locations', async () => {
-        const changes = await generateModule(TEST_MODULE, { testMode: true });
+        await generateModules([TEST_MODULE], { testMode: true });
         
         const expectedFiles = [
+          // Model files
           'src/modules/tests/models/test-model.ts',
+          
+          // API routes
           'src/api/admin/tests/models/route.ts',
           'src/api/admin/tests/models/[id]/route.ts',
           'src/api/admin/tests/models/validators.ts',
+          
+          // Admin UI routes
           'src/admin/routes/tests/models/page.tsx',
           'src/admin/routes/tests/models/create/test-model-create.tsx',
-          'src/admin/routes/tests/models/edit/test-model-edit.tsx'
+          'src/admin/routes/tests/models/edit/test-model-edit.tsx',
+          
+          // Module infrastructure
+          'src/modules/tests/service.ts',
+          'src/modules/tests/index.ts',
+          
+          // Middleware files
+          'src/api/middlewares.ts',
+          'src/api/admin/tests/middlewares.ts',
+          'src/api/admin/tests/models/middlewares.ts'
         ];
 
         for (const file of expectedFiles) {
@@ -306,13 +320,13 @@ describe('Module Generator', () => {
       });
 
       // Verify module model files are included
-      const moduleFiles = changes.filter(c => c.model?.name === TEST_MODULE.moduleName);
+      const moduleFiles = changes.filter(c => c.model?.name === TEST_MODULE.moduleModelName);
       expect(moduleFiles).toEqual(
         expect.arrayContaining([
-          expect.objectContaining({ path: expect.stringContaining(`/tests.ts`) }),
-          expect.objectContaining({ path: expect.stringContaining(`/tests/route.ts`) }),
-          expect.objectContaining({ path: expect.stringContaining(`/tests/[id]/route.ts`) }),
-          expect.objectContaining({ path: expect.stringContaining(`/tests/validators.ts`) })
+          expect.objectContaining({ path: expect.stringContaining(`/models/${TEST_MODULE.moduleModelName}.ts`) }),
+          expect.objectContaining({ path: expect.stringContaining(`/${TEST_MODULE.models[0].plural}/route.ts`) }),
+          expect.objectContaining({ path: expect.stringContaining(`/${TEST_MODULE.models[0].plural}/[id]/route.ts`) }),
+          expect.objectContaining({ path: expect.stringContaining(`/${TEST_MODULE.models[0].plural}/validators.ts`) })
         ])
       );
 
