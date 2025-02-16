@@ -709,6 +709,11 @@ async function generateMiddlewares(
 
   // Generate individual module/model middleware files
   for (const module of modules) {
+
+    // Find module's own model using moduleModelName
+    const moduleModel = module.models.find((m) => m.name === module.moduleModelName);
+    module.moduleModel = moduleModel;
+    
     // Generate module-level middleware
     changes.push({
       path: path.join(

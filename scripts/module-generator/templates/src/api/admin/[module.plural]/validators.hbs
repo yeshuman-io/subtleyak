@@ -3,9 +3,8 @@ import { createFindParams } from "@medusajs/medusa/api/utils/validators";
 
 export const GetSchema = createFindParams();
 
-{{#with (find module.models "name" module.singular)}}
-export const PostAdminCreate{{toPascalCase singular}} = z.object({
-  {{#each fields}}
+export const PostAdminCreate{{toPascalCase module.moduleModel.singular}} = z.object({
+  {{#each module.moduleModel.fields}}
   {{#if relation}}
   {{#if (eq relation.type "belongsTo")}}
   {{toSnakeCase name}}_id: z.string().min(1),
@@ -17,8 +16,8 @@ export const PostAdminCreate{{toPascalCase singular}} = z.object({
   {{/each}}
 });
 
-export const PostAdminUpdate{{toPascalCase singular}} = z.object({
-  {{#each fields}}
+export const PostAdminUpdate{{toPascalCase module.moduleModel.singular}} = z.object({
+  {{#each module.moduleModel.fields}}
   {{#if relation}}
   {{#if (eq relation.type "belongsTo")}}
   {{toSnakeCase name}}_id: z.string().min(1).optional(),
@@ -30,10 +29,9 @@ export const PostAdminUpdate{{toPascalCase singular}} = z.object({
   {{/each}}
 });
 
-export type {{toPascalCase singular}}AdminListRes = {
-  {{../module.plural}}: any[];
+export type {{toPascalCase module.moduleModel.singular}}AdminListRes = {
+  {{module.moduleModel.plural}}: any[];
   count: number;
   limit: number;
   offset: number;
 };
-{{/with}}

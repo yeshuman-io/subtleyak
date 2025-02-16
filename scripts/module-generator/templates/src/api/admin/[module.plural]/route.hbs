@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { create{{toPascalCase module.moduleName}}Workflow } from "../../../../workflows/create-{{toKebabCase module.moduleName}}";
-import { PostAdminCreate{{toPascalCase module.moduleName}} } from "./validators";
+import { create{{toPascalCase module.moduleModel.singular}}Workflow } from "../../../../workflows/create-{{toKebabCase module.moduleModel.singular}}";
+import { PostAdminCreate{{toPascalCase module.moduleModel.singular}} } from "./validators";
 
 type QueryResponse = {
   data: any[];
@@ -10,42 +10,42 @@ type QueryResponse = {
     take: number;
     skip: number;
   };
-};//asdf
+};
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
 
   const queryOptions = {
-    entity: "{{toSnakeCase module.moduleName}}",
+    entity: "{{toSnakeCase module.moduleModel.plural}}",
     ...req.queryConfig,
     filters: {
       ...req.queryConfig?.filters,
     },
   };
 
-  const { data: {{toSnakeCase module.plural}}, metadata } = (await query.graph(
+  const { data: {{toSnakeCase module.moduleModel.plural}}, metadata } = (await query.graph(
     queryOptions
   )) as QueryResponse;
 
   res.json({
-    {{toSnakeCase module.plural}},
+    {{toSnakeCase module.moduleModel.plural}},
     count: metadata.count,
     limit: metadata.take,
     offset: metadata.skip,
   });
 };
 
-type PostAdminCreate{{toPascalCase module.moduleName}}Type = z.infer<
-  typeof PostAdminCreate{{toPascalCase module.moduleName}}
+type PostAdminCreate{{toPascalCase module.moduleModel.singular}}Type = z.infer<
+  typeof PostAdminCreate{{toPascalCase module.moduleModel.singular}}
 >;
 
 export const POST = async (
-  req: MedusaRequest<PostAdminCreate{{toPascalCase module.moduleName}}Type>,
+  req: MedusaRequest<PostAdminCreate{{toPascalCase module.moduleModel.singular}}Type>,
   res: MedusaResponse
 ) => {
-  const { result } = await create{{toPascalCase module.moduleName}}Workflow(req.scope).run({
+  const { result } = await create{{toPascalCase module.moduleModel.singular}}Workflow(req.scope).run({
     input: req.validatedBody,
   });
 
-  res.json({ {{toSnakeCase module.moduleName}}: result });
+  res.json({ {{toSnakeCase module.moduleModel.plural}}: result });
 }; 

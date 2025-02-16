@@ -11,17 +11,17 @@ import {
 import { createFindParams } from "@medusajs/medusa/api/utils/validators"
 import { z } from "zod"
 import { 
-  PostAdminCreate{{toPascalCase name}},
-  PostAdminUpdate{{toPascalCase name}}
+  PostAdminCreate{{toPascalCase module.moduleModel.singular}},
+  PostAdminUpdate{{toPascalCase module.moduleModel.singular}}
 } from "./validators"
 
 export const GetTestsSchema = createFindParams()
-//rwqerwesadfasdf
+
 export default defineMiddlewares({
   routes: [
     // List {{plural}}
     {
-      matcher: "/admin/{{toKebabCase ../module.plural}}/{{toKebabCase plural}}",
+      matcher: "/admin/{{toKebabCase module.moduleModel.plural}}",
       method: "GET",
       middlewares: [
         validateAndTransformQuery(GetTestsSchema, {
@@ -38,19 +38,19 @@ export default defineMiddlewares({
 
     // Create {{singular}}
     {
-      matcher: "/admin/{{toKebabCase ../module.plural}}/{{toKebabCase plural}}",
+      matcher: "/admin/{{toKebabCase module.moduleModel.plural}}",
       method: "POST",
       middlewares: [
-        validateAndTransformBody(PostAdminCreate{{toPascalCase name}})
+        validateAndTransformBody(PostAdminCreate{{toPascalCase module.moduleModel.singular}})
       ]
     },
 
     // Update {{singular}}
     {
-      matcher: "/admin/{{toKebabCase ../module.plural}}/{{toKebabCase plural}}/:id",
+      matcher: "/admin/{{toKebabCase module.moduleModel.plural}}/:id",
       method: "POST",
       middlewares: [
-        validateAndTransformBody(PostAdminUpdate{{toPascalCase name}})
+        validateAndTransformBody(PostAdminUpdate{{toPascalCase module.moduleModel.singular}})
       ]
     }
   ] as const
