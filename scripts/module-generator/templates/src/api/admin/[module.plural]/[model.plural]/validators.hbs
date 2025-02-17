@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createFindParams } from "@medusajs/medusa/api/utils/validators";
+import {{toPascalCase model.name}} from "../../../../modules/{{module.plural}}/models/{{toKebabCase model.name}}";
 
 export const Get{{toPascalCase model.name}}Schema = createFindParams();
 
@@ -43,8 +44,8 @@ export type AdminCreate{{toPascalCase model.name}}Req = z.infer<typeof PostAdmin
 export type AdminUpdate{{toPascalCase model.name}}Req = z.infer<typeof PostAdminUpdate{{toPascalCase model.name}}>;
 
 export type {{toPascalCase model.name}}AdminListRes = {
-  items: any[];
+  items: typeof {{toPascalCase model.name}};
   count: number;
   limit: number;
   offset: number;
-}; 
+};

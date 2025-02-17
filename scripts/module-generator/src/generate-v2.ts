@@ -15,7 +15,7 @@ import chalk from "chalk";
 // Core types for minimal implementation
 export type ModelField = {
   name: string;
-  type: "string" | "number" | "boolean" | "date";
+  type: "string" | "number" | "boolean" | "date" | "text";
   required?: boolean;
   relation?: {
     type: "belongsTo" | "hasMany" | "manyToMany";
@@ -52,14 +52,7 @@ export type FileChange = {
   templatePath: string;
   model?: ModelConfig;
   module?: ModuleConfig;
-  modules?: Array<{
-    moduleName: string;
-    plural: string;
-    models: Array<{
-      name: string;
-      plural: string;
-    }>;
-  }>;
+  modules?: Array<ModuleConfig>;
 };
 
 // Helper to process field definitions
@@ -149,6 +142,15 @@ Handlebars.registerHelper("toCamelCase", (str: string) => {
 Handlebars.registerHelper("toKebabCase", (str: string) => {
   if (!str) return "";
   return str.replace(/([a-z])([A-Z])/g, "$1-$2").toLowerCase();
+});
+
+Handlebars.registerHelper("toSentenceCase", (str: string) => {
+  if (!str) return "";
+  return str
+    .replace(/[-_]/g, ' ')  // Replace hyphens and underscores with spaces
+    .replace(/([a-z])([A-Z])/g, '$1 $2')  // Add space between camelCase
+    .toLowerCase()  // Convert to lowercase
+    .replace(/\b\w/g, c => c.toUpperCase());  // Capitalize first letter of each word
 });
 
 Handlebars.registerHelper("eq", function (a: any, b: any) {
@@ -270,6 +272,27 @@ Handlebars.registerHelper(
     return array.find((item) => item[key] === value);
   }
 );
+
+// Add plural helper
+Handlebars.registerHelper("plural", function (str: string) {
+  if (!str) return "";
+  // Basic pluralization rules
+  // if (str.endsWith('y')) {
+  //   return str.slice(0, -1) + 'ies';
+  // }
+  // if (str.endsWith('s')) {
+  //   return str;
+  // }
+  // return str + 's';
+});
+
+Handlebars.registerHelper("hasRelations", (fields, type = null) => {
+  return fields.some(field => {
+    if (!field.relation) return false;
+    if (type) return field.relation.type === type;
+    return true;
+  });
+});
 
 // Debug helper
 Handlebars.registerHelper("debug", function (context) {
@@ -716,15 +739,8 @@ async function generateTypes(
     type: "create" as const,
     templatePath: templates.mainTypesTemplate,
     modules: modules.map((module) => ({
-      plural: module.plural,
-      singular: module.singular,
-      moduleName: module.moduleName,
-      models: module.models.map((m) => ({
-        name: m.name,
-        plural: m.plural,
-        singular: m.singular,
-        fields: m.fields,
-      })),
+      ...module,  // Pass the entire module object
+      models: module.models  // Pass complete model objects
     })),
   };
   changes.push(mainTypesChange);
@@ -784,7 +800,7 @@ async function generateMiddlewares(
       ),
       type: "create",
       templatePath: templates.moduleMiddlewaresTemplate,
-      module,
+      module: module,
     });
 
     // Generate model-level middlewares
@@ -811,12 +827,8 @@ async function generateMiddlewares(
     type: "create" as const,
     templatePath: templates.mainMiddlewaresTemplate,
     modules: modules.map((module) => ({
-      moduleName: module.moduleName,
-      plural: module.plural,
-      models: module.models.map((m) => ({
-        name: m.name,
-        plural: m.plural,
-      })),
+      ...module,  // Pass full module data
+      models: module.models  // Pass complete model objects
     })),
   };
   changes.push(mainMiddlewareChange);
@@ -902,15 +914,3 @@ export {
   generateTypes,
 };
 
-// Add plural helper
-Handlebars.registerHelper("plural", function (str: string) {
-  if (!str) return "";
-  // Basic pluralization rules
-  // if (str.endsWith('y')) {
-  //   return str.slice(0, -1) + 'ies';
-  // }
-  // if (str.endsWith('s')) {
-  //   return str;
-  // }
-  // return str + 's';
-});
