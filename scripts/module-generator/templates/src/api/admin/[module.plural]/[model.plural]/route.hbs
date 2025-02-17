@@ -3,27 +3,40 @@ import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { create{{toPascalCase model.name}}Workflow } from "../../../../workflows/{{module.plural}}/create-{{toKebabCase model.name}}";
 import { PostAdminCreate{{toPascalCase model.name}} } from "./validators";
 
+type QueryResponse = {
+  data: any[];
+  metadata: {
+    count: number;
+    take: number;
+    skip: number;
+  };
+};
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
-  try {
-    const {
-      data: {{toSnakeCase model.name}}s, {{! TODO: handle pluralization of model name }}
-      metadata: { count, take, skip },
-    } = await query.graph({
+    
+    const queryOptions = {
       entity: "{{toSnakeCase model.name}}",
       ...req.queryConfig,
-    });
+      filters: {
+        ...req.queryConfig?.filters,
+      },
+    };
+
+  try {
+    const { data: {{toSnakeCase model.plural}}, metadata } = (await query.graph(
+      queryOptions
+    )) as QueryResponse;
 
     res.json({
-      {{toSnakeCase model.name}}s,
-      count,
-      limit: take,
-      offset: skip,
+      {{toSnakeCase model.plural}},
+      count: metadata.count,
+      limit: metadata.take,
+      offset: metadata.skip,
     });
   } catch (error) {
-    console.error("Error fetching {{toSnakeCase model.name}}s:", error);
-    res.status(500).json({ error: "An error occurred while fetching {{toSnakeCase model.name}}s" });
+    console.error("Error fetching {{toSentenceCase model.name}}s:", error);
+    res.status(500).json({ error: "An error occurred while fetching {{toSentenceCase model.name}}s" });
   }
 };
 
