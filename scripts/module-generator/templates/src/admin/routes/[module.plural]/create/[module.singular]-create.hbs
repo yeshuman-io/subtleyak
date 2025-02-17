@@ -29,6 +29,7 @@ export function {{toPascalCase ../module.singular}}Create({ onClose }: {{toPasca
   
   const form = useForm<Create{{toPascalCase module.moduleModel.singular}}FormData>({
     defaultValues: {
+      {{! TODO: make this a partial template }}
       {{#each module.moduleModel.fields}}
       {{#unless relation}}
       {{name}}: {{#if (eq type "text")}}""{{else if (eq type "number")}}0{{else if (eq type "boolean")}}false{{/if}},
