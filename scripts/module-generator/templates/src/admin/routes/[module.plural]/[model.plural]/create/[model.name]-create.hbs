@@ -49,7 +49,7 @@ export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase mo
   {{#if model.fields}}
   {{#each model.fields}}
   {{#if relation}}
-  {{#if (eq relation.type "belongsTo")}}
+  {{#if (eq relation.type "hasMany")}}
   const { data: {{toCamelCase relation.model}}sData } = useQuery<List{{toPascalCase relation.model}}sRes>({
     queryKey: ["{{toSnakeCase relation.model}}s"],
     queryFn: () => sdk.client.fetch("/admin/{{toKebabCase ../module.plural}}/{{toKebabCase relation.model}}s"),

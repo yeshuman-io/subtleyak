@@ -44,6 +44,27 @@ export function {{toPascalCase module.moduleModel.singular}}Create({ onClose }: 
     resolver: zodResolver(schema),
   });
 
+  {{#each module.moduleModel.fields}}
+  {{#if relation}}
+  {{#if (eq relation.type "belongsTo")}}
+  {{#with (find @root.module.models "name" (toKebabCase relation.model))}}
+  const { data: {{toCamelCase plural}}Data } = useQuery<List{{toPascalCase ../relation.model}}sRes>({
+    queryKey: ["{{toSnakeCase ../relation.model}}s"],
+    queryFn: () => sdk.client.fetch("/admin/{{toKebabCase ../../module.plural}}/{{toKebabCase plural}}"),
+  });
+  const {{toCamelCase plural}} = {{toCamelCase plural}}Data?.{{toSnakeCase plural}} || [];
+ 
+  {{/with}}
+  {{/if}}
+  {{/if}}
+  {{/each}}
+  {{!
+  const { data: makesData } = useQuery<ListVehicleMakesRes>({
+    queryKey: ["vehicle_makes"],
+    queryFn: () => sdk.client.fetch("/admin/vehicles/makes"),
+  });
+  const makes = makesData?.vehicle_makes || [];
+  }}
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
       await sdk.client.fetch("/admin/{{toKebabCase module.moduleModel.plural}}", {
