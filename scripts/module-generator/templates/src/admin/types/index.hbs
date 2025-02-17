@@ -5,33 +5,10 @@
 
 {{#each modules}}
 {{!-- Outer loop: Iterates through each module configuration --}}
-
 // {{toTitleCase plural}} Types
 {{!-- Adds a section header for each module's types --}}
 
-{{#if (eq name moduleName)}}
-{{!-- 
-  Main module type generation block
-  Generates type definition for the module itself
-  TODO: Verify the name/moduleName comparison is correct
---}}
-export type {{toPascalCase singular}} = {
-  id: string
-  {{#each fields}}
-  {{!-- 
-    Field type generation:
-    - Handles optional fields with ?
-    - Relations: belongsTo -> string, others -> array
-    - Basic types: string, number, boolean, date 
-  --}}
-  {{name}}{{#unless required}}?{{/unless}}: {{#if relation}}{{#if (eq relation.type "belongsTo")}}string{{else}}{{toPascalCase relation.model}}[]{{/if}}{{else}}{{#if (eq type "string")}}string{{else if (eq type "text")}}string{{else if (eq type "number")}}number{{else if (eq type "boolean")}}boolean{{else if (eq type "date")}}string{{/if}}{{/if}}
-  {{/each}}
-}
-{{/if}}
-
 {{#each models}}
-{{!-- Sub-model type generation --}}
-{{#unless (eq name ../moduleName)}}
 {{!-- Conditional: Generates types for models that aren't the main module type --}}
 export type {{toPascalCase name}} = {
   id: string
@@ -39,30 +16,17 @@ export type {{toPascalCase name}} = {
   {{name}}{{#unless required}}?{{/unless}}: {{#if relation}}{{#if (eq relation.type "belongsTo")}}string{{else}}{{toPascalCase relation.model}}[]{{/if}}{{else}}{{#if (eq type "string")}}string{{else if (eq type "text")}}string{{else if (eq type "number")}}number{{else if (eq type "boolean")}}boolean{{else if (eq type "date")}}string{{/if}}{{/if}}
   {{/each}}
 }
-{{/unless}}
-{{/each}}
 
-{{!-- List Response Types --}}
-{{#if (eq name moduleName)}}
-{{!-- Generates list response type for the main module --}}
-export type List{{toPascalCase plural}}Res = {
-  {{toSnakeCase plural}}: {{toPascalCase singular}}[]
-  count: number
-  limit: number
-  offset: number
-}
-{{/if}}
+{{/each}}
+// {{toTitleCase plural}} Response Types
 
 {{#each models}}
-{{#unless (eq name ../moduleName)}}
 {{!-- Generates list response types for each model --}}
-export type List{{toPascalCase plural}}Res = {
+export type List{{toPascalCase name}}sRes = {
   {{toSnakeCase plural}}: {{toPascalCase name}}[]
   count: number
   limit: number
   offset: number
 }
-{{/unless}}
-{{/each}}
 
-{{/each}} 
+{{/each}}{{/each}} 

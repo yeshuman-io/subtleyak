@@ -20,6 +20,9 @@ const {{toPascalCase module.plural}}Page = () => {
     {{#each module.moduleModel.fields}}
     {{#if (eq relation.type "belongsTo")}}
     columnHelper.accessor("{{toSnakeCase name}}.name", {
+    {{else if (eq relation.type "hasMany")}}
+    columnHelper.accessor("{{toSnakeCase name}}", {
+      cell: ({ row }) => row.original.{{toSnakeCase name}}?.length || 0,
     {{else}}
     columnHelper.accessor("{{toSnakeCase name}}", {
     {{/if}}
@@ -49,7 +52,6 @@ const {{toPascalCase module.plural}}Page = () => {
       },
     }),
   ];
-//asfdsdafqwer
   return (
     <>
       <DataTablePage<{{toPascalCase module.singular}}>

@@ -1,6 +1,6 @@
 import * as zod from "zod";
 import { FormProvider, useForm } from "react-hook-form";
-import { PostAdminCreate{{toPascalCase module.singular}} } from "../../../../api/admin/{{toKebabCase module.plural}}/validators";
+import { PostAdminCreate{{toPascalCase module.moduleModel.singular}} } from "../../../../api/admin/{{toKebabCase module.plural}}/validators";
 import { sdk } from "../../../lib/sdk";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -9,17 +9,13 @@ import { SelectField } from "../../../components/form/select-field";
 import { InputField } from "../../../components/form/input-field";
 import { FormLayout } from "../../../components/form/form-layout";
 import { ModalForm } from "../../../components/form/modal-form";
-
-{{#with (find module.models "name" module.singular)}}
-{{#if fields}}
-{{#each fields}}
+{{#each module.moduleModel.fields}} 
 {{#if relation}}
 {{#if (eq relation.type "belongsTo")}}
 import { List{{toPascalCase relation.model}}sRes } from "../../../types";
 {{/if}}
 {{/if}}
 {{/each}}
-{{/if}}
 
 const schema = PostAdminCreate{{toPascalCase ../module.singular}};
 type Create{{toPascalCase ../module.singular}}FormData = zod.infer<typeof schema>;
@@ -31,9 +27,9 @@ type {{toPascalCase ../module.singular}}CreateProps = {
 export function {{toPascalCase ../module.singular}}Create({ onClose }: {{toPascalCase ../module.singular}}CreateProps) {
   const navigate = useNavigate();
   
-  const form = useForm<Create{{toPascalCase ../module.singular}}FormData>({
+  const form = useForm<Create{{toPascalCase module.moduleModel.singular}}FormData>({
     defaultValues: {
-      {{#each fields}}
+      {{#each module.moduleModel.fields}}
       {{#unless relation}}
       {{name}}: {{#if (eq type "text")}}""{{else if (eq type "number")}}0{{else if (eq type "boolean")}}false{{/if}},
       {{/unless}}
@@ -47,44 +43,29 @@ export function {{toPascalCase ../module.singular}}Create({ onClose }: {{toPasca
     resolver: zodResolver(schema),
   });
 
-  {{#if fields}}
-  {{#each fields}}
-  {{#if relation}}
-  {{#if (eq relation.type "belongsTo")}}
-  const { data: {{toCamelCase relation.model}}sData } = useQuery<List{{toPascalCase relation.model}}sRes>({
-    queryKey: ["{{toSnakeCase relation.model}}s"],
-    queryFn: () => sdk.client.fetch("/admin/{{toKebabCase ../../module.plural}}/{{toKebabCase relation.model}}s"),
-  });
-
-  const {{toCamelCase relation.model}}s = {{toCamelCase relation.model}}sData?.{{toSnakeCase relation.model}}s || [];
-  {{/if}}
-  {{/if}}
-  {{/each}}
-  {{/if}}
-
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
-      await sdk.client.fetch("/admin/{{toKebabCase ../module.plural}}", {
+      await sdk.client.fetch("/admin/{{toKebabCase module.moduleModel.plural}}", {
         method: "POST",
         body: data,
       });
       
       onClose();
-      navigate("/{{toKebabCase ../module.plural}}");
+      navigate("/{{toKebabCase module.moduleModel.plural}}");
     } catch (error) {
-      console.error("Failed to create {{toLowerCase ../module.singular}}:", error);
+      console.error("Failed to create {{toLowerCase module.moduleModel.singular}}:", error);
     }
   });
 
   return (
     <FormProvider {...form}>
       <ModalForm
-        title="Create {{toTitleCase ../module.singular}}"
+        title="Create {{toTitleCase module.moduleModel.singular}}"
         onSubmit={handleSubmit}
         onClose={onClose}
       >
         <FormLayout>
-          {{#each fields}}
+          {{#each module.moduleModel.fields}}
           {{#unless relation}}
           <InputField
             name="{{name}}"
@@ -110,4 +91,3 @@ export function {{toPascalCase ../module.singular}}Create({ onClose }: {{toPasca
       </ModalForm>
     </FormProvider>
   );
-{{/with}}
