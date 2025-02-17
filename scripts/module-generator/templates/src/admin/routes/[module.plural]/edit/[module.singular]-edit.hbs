@@ -113,7 +113,9 @@ function {{toPascalCase module.moduleModel.singular}}EditForm({ {{toCamelCase mo
             control={form.control}
             label="{{toTitleCase name}}"
             placeholder="Select a {{toLowerCase name}}..."
-            options={ {{toSnakeCase (plural relation.model)}} }
+            {{#with (find @root.module.models "name" (toKebabCase relation.model))}}
+            options={{jsx-expr "{{toLowerCase plural}}"}}
+            {{/with}}
             {{#if relation.dependsOn}}
             disabled={!form.watch("{{toSnakeCase relation.dependsOn}}_id")}
             {{/if}}
@@ -132,5 +134,5 @@ export function {{toPascalCase module.moduleModel.singular}}Edit(props: {{toPasc
     <Drawer.Content aria-describedby="edit-{{toKebabCase module.moduleModel.singular}}-description">
       <{{toPascalCase module.moduleModel.singular}}EditForm {{toCamelCase module.moduleModel.singular}}={{jsx-expr "props.{{module.moduleModel.singular}}"}} />
     </Drawer.Content>
-  );
+  )
 }

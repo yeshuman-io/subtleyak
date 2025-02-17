@@ -1,4 +1,4 @@
-import type { ModuleConfig } from "../src/generate-v2";
+import type { ModuleConfig } from "../src/generate-v2.js";
 
 /**
  * Vehicle Module Configuration
