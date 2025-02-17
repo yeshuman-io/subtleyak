@@ -13,7 +13,7 @@
 export type {{toPascalCase name}} = {
   id: string
   {{#each fields}}
-  {{name}}{{#unless required}}?{{/unless}}: {{#if relation}}{{#if (eq relation.type "belongsTo")}}string{{else}}{{toPascalCase relation.model}}[]{{/if}}{{else}}{{#if (eq type "string")}}string{{else if (eq type "text")}}string{{else if (eq type "number")}}number{{else if (eq type "boolean")}}boolean{{else if (eq type "date")}}string{{/if}}{{/if}}
+  {{name}}{{#unless required}}?{{/unless}}: {{#if relation}}{{#if (eq relation.type "belongsTo")}}{{toPascalCase relation.model}}{{else}}{{toPascalCase relation.model}}[]{{/if}}{{else}}{{#if (eq type "string")}}string{{else if (eq type "text")}}string{{else if (eq type "number")}}number{{else if (eq type "boolean")}}boolean{{else if (eq type "date")}}string{{/if}}{{/if}}
   {{/each}}
 }
 

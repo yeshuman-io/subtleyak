@@ -17,14 +17,14 @@ import { List{{toPascalCase relation.model}}sRes } from "../../../types";
 {{/if}}
 {{/each}}
 
-const schema = PostAdminCreate{{toPascalCase ../module.singular}};
-type Create{{toPascalCase ../module.singular}}FormData = zod.infer<typeof schema>;
+const schema = PostAdminCreate{{toPascalCase module.moduleModel.singular}};
+type Create{{toPascalCase module.moduleModel.singular}}FormData = zod.infer<typeof schema>;
 
-type {{toPascalCase ../module.singular}}CreateProps = {
+type {{toPascalCase module.moduleModel.singular}}CreateProps = {
   onClose: () => void;
 };
 
-export function {{toPascalCase ../module.singular}}Create({ onClose }: {{toPascalCase ../module.singular}}CreateProps) {
+export function {{toPascalCase module.moduleModel.singular}}Create({ onClose }: {{toPascalCase module.moduleModel.singular}}CreateProps) {
   const navigate = useNavigate();
   
   const form = useForm<Create{{toPascalCase module.moduleModel.singular}}FormData>({
@@ -83,7 +83,9 @@ export function {{toPascalCase ../module.singular}}Create({ onClose }: {{toPasca
             control={form.control}
             label="{{toTitleCase name}}"
             placeholder="Select a {{toLowerCase name}}..."
-            options={ {{toCamelCase relation.model}}s }
+            {{#with (find @root.module.models "name" (toKebabCase relation.model))}}
+            options={{jsx-expr "{{toLowerCase plural}}"}}
+            {{/with}}
           />
           {{/if}}
           {{/if}}
@@ -91,4 +93,5 @@ export function {{toPascalCase ../module.singular}}Create({ onClose }: {{toPasca
         </FormLayout>
       </ModalForm>
     </FormProvider>
-  );
+  )
+}

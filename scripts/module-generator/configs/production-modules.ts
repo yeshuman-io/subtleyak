@@ -16,10 +16,6 @@ export const VEHICLE_MODULE: ModuleConfig = {
       plural: "vehicles",
       fields: [
         {
-          name: "name",
-          type: "text",
-        },
-        {
           name: "make",
           type: "text",
           relation: {
