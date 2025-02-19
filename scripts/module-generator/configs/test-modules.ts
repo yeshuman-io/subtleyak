@@ -9,11 +9,27 @@ export const TEST_MODULE: ModuleConfig = {
   moduleModelName: 'test-model',
   singular: 'test',
   plural: 'tests',
+  faker: {
+    defaults: {
+      string: "string.sample",
+      number: "number.int({ min: 1, max: 100 })",
+      boolean: "datatype.boolean",
+      date: "date.recent"
+    }
+  },
   models: [
     {
       name: 'test-model',
+      modelName: 'TestModel',
+      modelNamePlural: 'TestModels',
       singular: 'model',
       plural: 'models',
+      faker: {
+        fields: {
+          name: "commerce.productName",
+          code: "string.alphanumeric(10)"
+        }
+      },
       fields: [
         {
           name: 'name',
@@ -48,11 +64,24 @@ export const RELATIONSHIP_MODULE: ModuleConfig = {
   moduleModelName: 'one-to-many',
   singular: 'relationship',
   plural: 'relationships',
+  faker: {
+    defaults: {
+      string: "string.sample",
+      number: "number.int({ min: 1, max: 1000 })"
+    }
+  },
   models: [
     {
       name: 'one-to-many',
+      modelName: 'OneToMany',
+      modelNamePlural: 'OneToManys',
       singular: 'one',
       plural: 'ones',
+      faker: {
+        fields: {
+          name: "commerce.productName"
+        }
+      },
       fields: [
         {
           name: 'name',
@@ -72,8 +101,15 @@ export const RELATIONSHIP_MODULE: ModuleConfig = {
     },
     {
       name: 'many-to-one',
+      modelName: 'ManyToOne',
+      modelNamePlural: 'ManyToOnes',
       singular: 'many',
       plural: 'manys',
+      faker: {
+        fields: {
+          name: "commerce.productName"
+        }
+      },
       fields: [
         {
           name: 'name',
@@ -103,11 +139,24 @@ export const MANY_TO_MANY_MODULE: ModuleConfig = {
   moduleModelName: 'left',
   singular: 'many-to-many',
   plural: 'many-to-manys',
+  faker: {
+    defaults: {
+      string: "string.sample",
+      number: "number.int({ min: 1, max: 100 })"
+    }
+  },
   models: [
     {
       name: 'left',
+      modelName: 'Left',
+      modelNamePlural: 'Lefts',
       singular: 'left',
       plural: 'lefts',
+      faker: {
+        fields: {
+          name: "commerce.productName"
+        }
+      },
       fields: [
         {
           name: 'name',
@@ -128,8 +177,15 @@ export const MANY_TO_MANY_MODULE: ModuleConfig = {
     },
     {
       name: 'right',
+      modelName: 'Right',
+      modelNamePlural: 'Rights',
       singular: 'right',
       plural: 'rights',
+      faker: {
+        fields: {
+          name: "commerce.productName"
+        }
+      },
       fields: [
         {
           name: 'name',
@@ -160,11 +216,29 @@ export const FIELD_TYPES_MODULE: ModuleConfig = {
   moduleModelName: 'all-types',
   singular: 'field-type',
   plural: 'field-types',
+  faker: {
+    defaults: {
+      string: "string.sample",
+      number: "number.int({ min: 1, max: 100 })",
+      boolean: "datatype.boolean",
+      date: "date.recent"
+    }
+  },
   models: [
     {
       name: 'all-types',
+      modelName: 'AllTypes',
+      modelNamePlural: 'AllTypes',
       singular: 'type',
       plural: 'types',
+      faker: {
+        fields: {
+          string_field: "string.sample",
+          number_field: "number.int({ min: 1, max: 1000 })",
+          boolean_field: "datatype.boolean",
+          date_field: "date.recent"
+        }
+      },
       fields: [
         {
           name: 'string_field',

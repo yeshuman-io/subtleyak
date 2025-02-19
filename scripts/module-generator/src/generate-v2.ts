@@ -30,11 +30,24 @@ export type ModelField = {
   default?: any;
 };
 
+export type FakerMapping = {
+  fields?: Record<string, string>;  // Field name to faker method mapping
+  defaults?: Record<string, string>; // Type to faker method mapping
+};
+
 export type ModelConfig = {
   name: string;
+  modelName: string;      // PascalCase singular name
+  modelNamePlural: string; // PascalCase plural name
   singular: string;
   plural: string;
+  isParent?: boolean;
+  parent?: {
+    model: string;
+    routePrefix: string;
+  };
   fields: ModelField[];
+  faker?: FakerMapping;  // Add faker mapping to model config
 };
 
 export type ModuleConfig = {
@@ -43,7 +56,8 @@ export type ModuleConfig = {
   singular: string;
   plural: string;
   models: ModelConfig[];
-  moduleModel?: ModelConfig;
+  faker?: FakerMapping;  // Add faker mapping to module config
+  moduleModel?: ModelConfig;  // Add moduleModel property
 };
 
 export type FileChange = {
@@ -480,6 +494,12 @@ async function loadTemplates() {
     "utf-8"
   );
 
+  // Add seed template
+  const seedTemplate = await fs.readFile(
+    path.join(templateDir, "src/scripts/seed.hbs"),
+    "utf-8"
+  );
+
   debug("Debug - Loaded module create form template:", {
     path: path.join(
       templateDir,
@@ -524,6 +544,9 @@ async function loadTemplates() {
     createWorkflowTemplate,
     updateWorkflowTemplate,
     deleteWorkflowTemplate,
+
+    // Add seed template
+    seedTemplate,
   };
 }
 
@@ -868,6 +891,135 @@ async function generateMiddlewares(
   return changes;
 }
 
+// Add concat helper
+Handlebars.registerHelper("concat", function (...args) {
+  // Remove the last argument (Handlebars options object)
+  args.pop();
+  
+  // Join all arguments with no separator
+  return args.join("");
+});
+
+// Add getFakerMethod helper
+Handlebars.registerHelper("getFakerMethod", function (model: any, field: string, type: string) {
+  // First check model-specific field mapping
+  if (model?.faker?.fields?.[field]) {
+    const method = model.faker.fields[field];
+    return method;
+  }
+
+  // Then check module-level defaults
+  if (model?.module?.faker?.defaults?.[type]) {
+    const method = model.module.faker.defaults[type];
+    return method;
+  }
+
+  // Fallback based on type
+  const typeMap = {
+    text: "lorem.word",
+    number: "number.int({ min: 1, max: 100 })",
+    boolean: "datatype.boolean",
+    date: "date.recent"
+  };
+
+  return typeMap[type] || "lorem.word";
+});
+
+// Add getCountString helper
+Handlebars.registerHelper("getCountString", function (module: any, model: any) {
+  const moduleUpper = module.singular.toUpperCase();
+  const modelUpper = model.plural.toUpperCase();
+  return `${moduleUpper}_COUNT * ${moduleUpper}_${modelUpper}_PER_${moduleUpper}`;
+});
+
+// Add includes helper
+Handlebars.registerHelper("includes", function (str: string, search: string) {
+  return str.includes(search);
+});
+
+// Add modelHasDependencies helper
+Handlebars.registerHelper("modelHasDependencies", function(model) {
+  return model.fields.some(field => field.relation?.type === "belongsTo");
+});
+
+// Add pluralize helper
+Handlebars.registerHelper("pluralize", function(str) {
+  // For now just return the plural from the model config
+  // Later we can use a proper pluralize library if needed
+  return str + "s";
+});
+
+// Add split helper
+Handlebars.registerHelper("split", function(str, separator) {
+  return str.split(separator);
+});
+
+// Add last helper
+Handlebars.registerHelper("last", function(array) {
+  return array[array.length - 1] || "";
+});
+
+// Add modelHasOnlyIndependentDependencies helper
+Handlebars.registerHelper("modelHasOnlyIndependentDependencies", function(model, allModels) {
+  return model.fields.every(field => {
+    if (!field.relation || field.relation.type !== "belongsTo") return true;
+    const dependentModel = allModels.find(m => m.name === field.relation.model);
+    return !dependentModel || !dependentModel.fields.some(f => f.relation?.type === "belongsTo");
+  });
+});
+
+// Add and helper
+Handlebars.registerHelper("and", function(a, b) {
+  return a && b;
+});
+
+// Add not helper
+Handlebars.registerHelper("not", function(a) {
+  return !a;
+});
+
+// Add getDependencyLevel helper
+Handlebars.registerHelper("getDependencyLevel", function(model, allModels) {
+  // Ensure we have both model and allModels
+  if (!model || !allModels) return 0;
+
+  if (!model.fields.some(field => field.relation?.type === "belongsTo")) {
+    return 0;  // No dependencies
+  }
+
+  let maxDependencyLevel = 0;
+  model.fields.forEach(field => {
+    if (field.relation?.type === "belongsTo") {
+      // Strip "Vehicle" prefix if it exists
+      const modelName = field.relation.model.replace(/^Vehicle/, "");
+      const dependentModel = allModels.find(m => 
+        m.name === modelName || m.name === `vehicle-${modelName.toLowerCase()}`
+      );
+      if (dependentModel) {
+        const level = Handlebars.helpers.getDependencyLevel(dependentModel, allModels);
+        maxDependencyLevel = Math.max(maxDependencyLevel, level + 1);
+      }
+    }
+  });
+  return maxDependencyLevel;
+});
+
+// Add sortModelsByDependencyLevel helper
+Handlebars.registerHelper("sortModelsByDependencyLevel", function(models) {
+  if (!models || !Array.isArray(models)) return [];
+
+  return [...models].sort((a, b) => {
+    const levelA = Handlebars.helpers.getDependencyLevel(a, models);
+    const levelB = Handlebars.helpers.getDependencyLevel(b, models);
+    return levelA - levelB;
+  });
+});
+
+// Add gt helper
+Handlebars.registerHelper("gt", function(a, b) {
+  return a > b;
+});
+
 // Public API
 export async function generateModule(
   config: ModuleConfig,
@@ -887,6 +1039,9 @@ export async function generateModules(
   } = {}
 ): Promise<FileChange[]> {
   const allChanges: FileChange[] = [];
+  const { testMode = false, dryRun = process.env.DRY_RUN === "1" } = options;
+  const baseDir = testMode ? ".test-output" : "";
+  const templates = await loadTemplates();
 
   // Generate module files
   for (const config of configs) {
@@ -901,6 +1056,36 @@ export async function generateModules(
   // Generate all types files
   const typesChanges = await generateTypes(configs, options);
   allChanges.push(...typesChanges);
+
+  // Generate seed file
+  const seedChange = {
+    path: path.join(baseDir, "src/scripts/seed.ts"),
+    type: "create" as const,
+    templatePath: templates.seedTemplate,
+    modules: configs.map(config => ({
+      ...config,
+      models: config.models.map(model => ({
+        ...model,
+        module: config,  // Add module reference to each model
+        fields: model.fields.map(field => ({
+          ...field,
+        }))
+      }))
+    })),
+  };
+  allChanges.push(seedChange);
+
+  if (!dryRun) {
+    // Process seed file
+    const dir = path.dirname(seedChange.path);
+    await fs.mkdir(dir, { recursive: true });
+    
+    const content = await processTemplate(seedChange.templatePath, { modules: seedChange.modules }, {
+      templatePath: seedChange.templatePath,
+      outputPath: seedChange.path,
+    });
+    await fs.writeFile(seedChange.path, content);
+  }
 
   return allChanges;
 }

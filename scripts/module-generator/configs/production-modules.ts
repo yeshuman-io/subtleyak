@@ -20,6 +20,8 @@ export const VEHICLE_MODULE: ModuleConfig = {
   models: [
     {
       name: "vehicle",
+      modelName: "Vehicle",
+      modelNamePlural: "Vehicles",
       singular: "vehicle",
       plural: "vehicles",
       faker: {
@@ -63,6 +65,8 @@ export const VEHICLE_MODULE: ModuleConfig = {
     },
     {
       name: "vehicle-series",
+      modelName: "VehicleSeries",
+      modelNamePlural: "VehicleSeries",
       singular: "series",
       plural: "series",
       faker: {
@@ -102,6 +106,8 @@ export const VEHICLE_MODULE: ModuleConfig = {
     },
     {
       name: "vehicle-make",
+      modelName: "VehicleMake",
+      modelNamePlural: "VehicleMakes",
       singular: "make",
       plural: "makes",
       faker: {
@@ -136,6 +142,8 @@ export const VEHICLE_MODULE: ModuleConfig = {
     },
     {
       name: "vehicle-model",
+      modelName: "VehicleModel",
+      modelNamePlural: "VehicleModels",
       singular: "model",
       plural: "models",
       faker: {
@@ -178,6 +186,8 @@ export const VEHICLE_MODULE: ModuleConfig = {
     },
     {
       name: "vehicle-body",
+      modelName: "VehicleBody",
+      modelNamePlural: "VehicleBodies",
       singular: "body",
       plural: "bodies",
       faker: {
@@ -221,6 +231,8 @@ export const WIPER_MODULE: ModuleConfig = {
   models: [
     {
       name: "wiper",
+      modelName: "Wiper",
+      modelNamePlural: "Wipers",
       singular: "wiper",
       plural: "wipers",
       faker: {
@@ -251,6 +263,8 @@ export const WIPER_MODULE: ModuleConfig = {
     },
     {
       name: "wiper-kit",
+      modelName: "WiperKit",
+      modelNamePlural: "WiperKits",
       singular: "kit",
       plural: "kits",
       parent: {

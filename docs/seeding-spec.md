@@ -67,6 +67,8 @@ npx medusa exec src/scripts/seed.ts --quantity 3 --verbose
      moduleName: string;
      models: Array<{
        name: string;
+       modelName: string;
+       modelNamePlural: string;
        fields: Array<{
          name: string;
          type: "string" | "number" | "boolean" | "date" | "text";

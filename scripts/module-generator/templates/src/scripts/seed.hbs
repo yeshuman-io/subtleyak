@@ -1,0 +1,189 @@
+import { faker } from "@faker-js/faker";
+import { MedusaContainer } from "@medusajs/framework/types"
+import { 
+  {{#each modules}}
+  {{#each models}}
+  {{modelName}},
+  {{/each}}
+  {{/each}} 
+} from "../admin/types";
+{{#each modules}}
+import { {{toUpperCase plural}}_MODULE } from "../modules/{{this.plural}}";
+import {{toPascalCase plural}}ModuleService from "../modules/{{this.plural}}/service";
+{{/each}}
+
+// Constants for seeding quantities
+{{#each modules}}
+const {{toUpperCase singular}}_COUNT = 10;
+{{#each models}}
+{{#if (not (eq name ../moduleModelName))}}
+const {{toUpperCase ../singular}}_{{toUpperCase plural}}_PER_{{toUpperCase ../singular}} = 2;
+{{/if}}
+{{/each}}
+{{/each}}
+
+// Define field types
+type Field = {
+  name: string;
+  type: "text" | "number" | "boolean" | "date";
+  relation?: {
+    type: "belongsTo" | "hasMany" | "manyToMany";
+    model: string;
+    mappedBy?: string;
+  };
+};
+
+export default async function seed(
+  { container }: { container: MedusaContainer },
+  quantity: number = 10
+): Promise<void> {
+  console.log("Starting seed process...");
+  const startTime = Date.now();
+  
+  console.log("Inspecting registered modules...");
+  
+  // Log all registrations in the container
+  console.log("Registered modules:", Object.keys(container.registrations));
+
+  // Optionally, you can log more details about each registration
+  Object.entries(container.registrations).forEach(([key, value]) => {
+    console.log(`Module: ${key}`, typeof value);
+  });
+
+  // Resolve services
+  {{#each modules}}
+  const {{toCamelCase this.plural}}ModuleService: {{toPascalCase this.plural}}ModuleService = 
+    container.cradle[{{toUpperCase this.plural}}_MODULE];
+  {{/each}}
+
+  try {
+    {{#each modules}}
+    console.log("\nSeeding {{toSentenceCase moduleName}} module...");
+    
+    // Sort models by dependency level
+    const {{singular}}Models = [
+      {{#each (sortModelsByDependencyLevel models)}}
+      {
+        name: "{{modelName}}",
+        modelNamePlural: "{{modelNamePlural}}",
+        service: {{toCamelCase ../this.plural}}ModuleService,
+        dependencies: [
+          {{#each fields}}
+          {{#if (eq relation.type "belongsTo")}}
+          "{{relation.model}}",
+          {{/if}}
+          {{/each}}
+        ],
+        count: {{#if (eq name ../moduleModelName)}}quantity{{else}}quantity * 2{{/if}},
+        config: {
+          fields: [
+            {{#each fields}}
+            {
+              name: "{{name}}",
+              type: "{{type}}" as const,
+              {{#if relation}}
+              relation: {
+                type: "{{relation.type}}" as const,
+                model: "{{relation.model}}",
+                {{#if relation.mappedBy}}
+                mappedBy: "{{relation.mappedBy}}",
+                {{/if}}
+              },
+              {{/if}}
+            },
+            {{/each}}
+          ] as const,
+          faker: {
+            fields: {
+              {{#if faker.fields}}
+              {{#each faker.fields}}
+              "{{@key}}": "{{this}}",
+              {{/each}}
+              {{/if}}
+            }
+          }
+        }
+      },
+      {{/each}}
+    ];
+
+    // Create records for each model in dependency order
+    for (const model of {{singular}}Models) {
+      console.log(`\nCreating ${model.count} ${model.name} records...`);
+      
+      for (let i = 0; i < model.count; i++) {
+        // Generate data for the record
+        const data: Record<string, any> = {};
+        
+        for (const field of model.config.fields as unknown as Field[]) {
+          if ('relation' in field && field.relation) {
+            if (field.relation.type === "belongsTo") {
+              // Get a random related record ID
+              const moduleService = field.relation.model.toLowerCase().includes('{{singular}}') 
+                ? {{toCamelCase this.plural}}ModuleService 
+                : null;
+              
+              if (!moduleService) {
+                console.warn(`No module service found for model ${field.relation.model}`);
+                continue;
+              }
+
+              const relatedRecords = await moduleService[`list${field.relation.model}s`](
+                {},  // Empty filter object
+                { 
+                  take: 1,
+                  select: ['id']
+                }
+              );
+              
+              if (relatedRecords.length > 0) {
+                data[`${field.name}_id`] = relatedRecords[0].id;
+              }
+            }
+          } else {
+            // Generate data using faker
+            const fakerMethod = 
+              model.config.faker.fields[field.name] || 
+              {
+                text: "lorem.word",
+                number: "number.int({ min: 1, max: 100 })",
+                boolean: "datatype.boolean",
+                date: "date.recent"
+              }[field.type] || "lorem.word";
+            
+            // Evaluate faker method
+            const [namespace, method] = fakerMethod.split(".");
+            if (namespace === 'number' && method.startsWith('int')) {
+              const argsMatch = method.match(/\{(.+)\}/);
+              if (argsMatch) {
+                const options = argsMatch[1].split(',').reduce((obj, pair) => {
+                  const [key, value] = pair.trim().split(':').map(s => s.trim());
+                  obj[key] = Number(value);
+                  return obj;
+                }, {} as Record<string, number>);
+                data[field.name] = faker.number.int(options);
+              } else {
+                data[field.name] = faker.number.int();
+              }
+            } else {
+              const methodName = method.split('(')[0];
+              data[field.name] = faker[namespace][methodName]();
+            }
+          }
+        }
+
+        // Create the record using the module service with the current model name
+        const record = await {{toCamelCase this.plural}}ModuleService[`create${model.modelNamePlural}`](data);
+        console.log(`Created ${model.name} ${i + 1}/${model.count}`);
+      }
+    }
+    {{/each}}
+
+    const endTime = Date.now();
+    console.log(`\nSeed completed in ${(endTime - startTime) / 1000}s`);
+
+  } catch (error) {
+    console.error("Error during seed process:", error);
+    throw error;
+  }
+} 
