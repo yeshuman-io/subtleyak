@@ -1020,6 +1020,22 @@ Handlebars.registerHelper("gt", function(a, b) {
   return a > b;
 });
 
+// Add findModelPlural helper
+Handlebars.registerHelper("findModelPlural", function(relationModel: string, models: ModelConfig[]) {
+  if (!models || !Array.isArray(models)) return "";
+  
+  const model = models.find(m => m.modelName === relationModel);
+  if (!model) return "";
+  
+  return model.plural;
+});
+
+// Add findModel helper
+Handlebars.registerHelper("findModel", function(relationModel: string, models: ModelConfig[]) {
+  if (!models || !Array.isArray(models)) return null;
+  return models.find(m => m.modelName === relationModel) || null;
+});
+
 // Public API
 export async function generateModule(
   config: ModuleConfig,

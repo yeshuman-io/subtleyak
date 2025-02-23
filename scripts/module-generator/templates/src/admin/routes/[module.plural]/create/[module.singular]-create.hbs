@@ -58,13 +58,7 @@ export function {{toPascalCase module.moduleModel.singular}}Create({ onClose }: 
   {{/if}}
   {{/if}}
   {{/each}}
-  {{!
-  const { data: makesData } = useQuery<ListVehicleMakesRes>({
-    queryKey: ["vehicle_makes"],
-    queryFn: () => sdk.client.fetch("/admin/vehicles/makes"),
-  });
-  const makes = makesData?.vehicle_makes || [];
-  }}
+
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
       await sdk.client.fetch("/admin/{{toKebabCase module.moduleModel.plural}}", {

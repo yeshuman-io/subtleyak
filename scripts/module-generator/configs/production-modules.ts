@@ -6,7 +6,7 @@ import type { ModuleConfig } from "../src/generate-v2.js";
 
 export const VEHICLE_MODULE: ModuleConfig = {
   moduleName: "vehicles",
-  moduleModelName: "vehicle",
+  moduleModelName: "Vehicle",
   singular: "vehicle",
   plural: "vehicles",
   faker: {
@@ -219,7 +219,7 @@ export const VEHICLE_MODULE: ModuleConfig = {
  */
 export const WIPER_MODULE: ModuleConfig = {
   moduleName: "wipers",
-  moduleModelName: "wiper",
+  moduleModelName: "Wiper",
   singular: "wiper",
   plural: "wipers",
   faker: {

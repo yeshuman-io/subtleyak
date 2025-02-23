@@ -46,20 +46,20 @@ export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase mo
     resolver: zodResolver(schema),
   });
 
-  {{#if model.fields}}
   {{#each model.fields}}
   {{#if relation}}
-  {{#if (eq relation.type "hasMany")}}
-  const { data: {{toCamelCase relation.model}}sData } = useQuery<List{{toPascalCase relation.model}}sRes>({
-    queryKey: ["{{toSnakeCase relation.model}}s"],
-    queryFn: () => sdk.client.fetch("/admin/{{toKebabCase ../module.plural}}/{{toKebabCase relation.model}}s"),
+  {{#if (eq relation.type "belongsTo")}}
+  {{#with (findModel relation.model ../module.models)}}
+  const { data: {{toCamelCase this.name}}sData } = useQuery<List{{toPascalCase this.name}}sRes>({
+    queryKey: ["{{toSnakeCase this.name}}s"],
+    queryFn: () => sdk.client.fetch("/admin/{{toKebabCase ../../module.plural}}{{#if (not (eq ../relation.model ../../module.moduleModelName))}}/{{this.plural}}{{/if}}"),
   });
 
-  const {{toCamelCase relation.model}}s = {{toCamelCase relation.model}}sData?.{{toSnakeCase relation.model}}s || [];
+  const {{toCamelCase this.name}}s = {{toCamelCase this.name}}sData?.{{toSnakeCase this.name}}s || [];
+  {{/with}}
   {{/if}}
   {{/if}}
   {{/each}}
-  {{/if}}
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
@@ -71,7 +71,7 @@ export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase mo
       onClose();
       navigate("/{{toKebabCase module.plural}}/{{toKebabCase model.plural}}");
     } catch (error) {
-      console.error("Failed to create {{toLowerCase model.name}}:", error);
+      console.error("Failed to create {{toSentenceCase model.name}}:", error);
     }
   });
 
@@ -95,13 +95,15 @@ export function {{toPascalCase model.name}}Create({ onClose }: {{toPascalCase mo
           {{/unless}}
           {{#if relation}}
           {{#if (eq relation.type "belongsTo")}}
+          {{#with (findModel relation.model ../module.models)}}
           <SelectField
             name="{{toSnakeCase name}}_id"
             control={form.control}
             label="{{toTitleCase name}}"
-            placeholder="Select a {{toLowerCase name}}..."
-            options={ {{toCamelCase relation.model}}s }
+            placeholder="Select a {{toSentenceCase name}}..."
+            options={{jsx-expr "{{toLowerCase plural}}"}}            
           />
+          {{/with}}
           {{/if}}
           {{/if}}
           {{/each}}
