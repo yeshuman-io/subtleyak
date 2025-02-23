@@ -297,6 +297,102 @@ export const WIPER_MODULE: ModuleConfig = {
         },
       ],
     },
+    {
+      name: "wiper-length",
+      modelName: "WiperLength",
+      modelNamePlural: "WiperLengths",
+      singular: "length",
+      plural: "lengths",
+      faker: {
+        fields: {
+          value: "number.int({ min: 300, max: 800 })",
+          unit: "science.unit().symbol"
+        }
+      },
+      fields: [
+        {
+          name: "value",
+          type: "number",
+        },
+        {
+          name: "unit",
+          type: "text",
+        }
+      ],
+    },
+    {
+      name: "wiper-connector",
+      modelName: "WiperConnector",
+      modelNamePlural: "WiperConnectors",
+      singular: "connector",
+      plural: "connectors",
+      faker: {
+        fields: {
+          name: "commerce.productName",
+          code: "string.alphanumeric(8)",
+          type: "word.sample(['image', 'video'])"
+        }
+      },
+      fields: [
+        {
+          name: "name",
+          type: "text",
+        },
+        {
+          name: "code",
+          type: "text",
+        },
+        {
+          name: "type",
+          type: "text",
+        },
+        {
+          name: "media_url",
+          type: "text",
+        },
+        {
+          name: "arms",
+          type: "text",
+          relation: {
+            type: "hasMany",
+            model: "WiperArm",
+            mappedBy: "connector",
+          },
+        }
+      ],
+    },
+    {
+      name: "wiper-arm",
+      modelName: "WiperArm",
+      modelNamePlural: "WiperArms",
+      singular: "arm",
+      plural: "arms",
+      faker: {
+        fields: {
+          name: "commerce.productName",
+          code: "string.alphanumeric(8)"
+        }
+      },
+      fields: [
+        {
+          name: "name",
+          type: "text",
+        },
+        {
+          name: "code",
+          type: "text",
+        },
+        {
+          name: "connector",
+          type: "text",
+          relation: {
+            type: "belongsTo",
+            model: "WiperConnector",
+            mappedBy: "arms",
+          },
+        }
+      ],
+    },
   ],
 };
 
