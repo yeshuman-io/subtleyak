@@ -41,6 +41,7 @@ export type ModelConfig = {
   modelNamePlural: string; // PascalCase plural name
   singular: string;
   plural: string;
+  icon?: string;
   isParent?: boolean;
   parent?: {
     model: string;
@@ -558,44 +559,41 @@ async function generateModuleFiles(
     dryRun?: boolean;
   }
 ): Promise<FileChange[]> {
+  const changes: FileChange[] = [];
   const { testMode = false, dryRun = process.env.DRY_RUN === "1" } = options;
   const baseDir = testMode ? ".test-output" : "";
-  const changes: FileChange[] = [];
   const templates = await loadTemplates();
 
-  // Find module's own model using moduleModelName
-  const moduleModel = config.models.find(
-    (m) => m.name === config.moduleModelName
-  );
-  config.moduleModel = moduleModel;
+  // Inject moduleModel into config
+  const configWithModuleModel = {
+    ...config,
+    moduleModel: config.models.find(m => m.modelName === config.moduleModelName)
+  };
 
-  // Process all models (including module's own model if found)
-  const allModels = moduleModel
-    ? [
-        moduleModel,
-        ...config.models.filter((m) => m.name !== config.moduleModelName),
-      ]
-    : config.models;
+  // Use configWithModuleModel instead of config for all file generation
+  const allModels = configWithModuleModel.models;
 
   for (const model of allModels) {
-    const isModuleModel = model.name === config.moduleModelName;
+    const isModuleModel = model.modelName === configWithModuleModel.moduleModelName;
     debug(`Debug - Processing model ${model.name}:`, {
       isModuleModel,
-      moduleModelName: config.moduleModelName,
+      moduleModelName: configWithModuleModel.moduleModelName,
     });
 
     // Use different path structure for module-level routes
-    const routePath = isModuleModel
-      ? config.plural // Just use module plural for module-level routes
-      : `${config.plural}/${model.plural}`; // Use full path for model-level routes
-
-    const apiBasePath = path.join(baseDir, "src/api/admin", routePath);
+    const apiBasePath = path.join(
+      baseDir, 
+      "src/api/admin",
+      isModuleModel 
+        ? configWithModuleModel.plural  // For module-level files
+        : `${configWithModuleModel.plural}/${model.plural}`  // For model-level files
+    );
 
     // Model file - always in models directory
     const modelPath = path.join(
       baseDir,
       "src/modules",
-      config.plural,
+      configWithModuleModel.plural,
       "models",
       `${model.name}.ts`
     );
@@ -607,18 +605,18 @@ async function generateModuleFiles(
         ? templates.moduleModelTemplate
         : templates.modelTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
 
     // API routes
     changes.push({
       path: path.join(apiBasePath, "route.ts"),
       type: "create",
-      templatePath: isModuleModel
+      templatePath: model.modelName === configWithModuleModel.moduleModelName
         ? templates.moduleListRouteTemplate
         : templates.modelListRouteTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
 
     changes.push({
@@ -628,7 +626,7 @@ async function generateModuleFiles(
         ? templates.moduleIdRouteTemplate
         : templates.modelIdRouteTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
 
     changes.push({
@@ -638,20 +636,31 @@ async function generateModuleFiles(
         ? templates.moduleValidatorsTemplate
         : templates.modelValidatorsTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
 
     // Admin UI routes
-    const adminBasePath = path.join(baseDir, "src/admin/routes", routePath);
+    const adminBasePath = path.join(
+      baseDir, 
+      "src/admin/routes",
+      isModuleModel 
+        ? configWithModuleModel.plural
+        : model.name === configWithModuleModel.moduleModelName.toLowerCase()
+          ? configWithModuleModel.plural
+          : `${configWithModuleModel.plural}/${model.plural}`
+    );
 
     changes.push({
       path: path.join(adminBasePath, "page.tsx"),
       type: "create",
-      templatePath: isModuleModel
+      templatePath: model.modelName === configWithModuleModel.moduleModelName
         ? templates.moduleListPageTemplate
         : templates.modelListPageTemplate,
       model,
-      module: config,
+      module: {
+        ...configWithModuleModel,
+        moduleModel: configWithModuleModel.models.find(m => m.modelName === configWithModuleModel.moduleModelName)  // Add moduleModel
+      },
     });
 
     changes.push({
@@ -661,7 +670,7 @@ async function generateModuleFiles(
         ? templates.moduleCreateFormTemplate
         : templates.modelCreateFormTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
 
     changes.push({
@@ -671,11 +680,11 @@ async function generateModuleFiles(
         ? templates.moduleEditFormTemplate
         : templates.modelEditFormTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
 
     // Generate workflow files
-    const workflowBasePath = path.join(baseDir, "src/workflows", config.plural);
+    const workflowBasePath = path.join(baseDir, "src/workflows", configWithModuleModel.plural);
 
     // Create workflow
     changes.push({
@@ -683,7 +692,7 @@ async function generateModuleFiles(
       type: "create",
       templatePath: templates.createWorkflowTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
 
     // Update workflow
@@ -692,7 +701,7 @@ async function generateModuleFiles(
       type: "create",
       templatePath: templates.updateWorkflowTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
 
     // Delete workflow
@@ -701,24 +710,24 @@ async function generateModuleFiles(
       type: "create",
       templatePath: templates.deleteWorkflowTemplate,
       model,
-      module: config,
+      module: configWithModuleModel,
     });
   }
 
   // Generate module service
   changes.push({
-    path: path.join(baseDir, "src/modules", config.plural, "service.ts"),
+    path: path.join(baseDir, "src/modules", configWithModuleModel.plural, "service.ts"),
     type: "create",
     templatePath: templates.serviceTemplate,
-    module: config,
+    module: configWithModuleModel,
   });
 
   // Generate module index
   changes.push({
-    path: path.join(baseDir, "src/modules", config.plural, "index.ts"),
+    path: path.join(baseDir, "src/modules", configWithModuleModel.plural, "index.ts"),
     type: "create",
     templatePath: templates.indexTemplate,
-    module: config,
+    module: configWithModuleModel,
   });
 
   if (!dryRun) {
@@ -727,9 +736,9 @@ async function generateModuleFiles(
       await fs.mkdir(dir, { recursive: true });
 
       const data = {
-        module: config,
+        module: configWithModuleModel,
         model: change.model || null,
-        isModuleModel: change.model?.name === config.moduleModelName,
+        isModuleModel: change.model?.name === configWithModuleModel.moduleModelName,
       };
 
       const content = await processTemplate(change.templatePath, data, {
@@ -758,7 +767,7 @@ async function generateTypes(
 
   // Generate main types file with all modules
   const mainTypesChange = {
-    path: path.join(baseDir, "src/admin/types/index.ts"),
+    path: path.join(baseDir, "src/admin/types/index.hbs"),
     type: "create" as const,
     templatePath: templates.mainTypesTemplate,
     modules: modules.map((module) => ({
@@ -809,7 +818,7 @@ async function generateMiddlewares(
   for (const module of modules) {
     // Find module's own model using moduleModelName
     const moduleModel = module.models.find(
-      (m) => m.name === module.moduleModelName
+      (m) => m.modelName === module.moduleModelName
     );
     module.moduleModel = moduleModel;
 
@@ -833,11 +842,15 @@ async function generateMiddlewares(
           baseDir,
           "src/api/admin",
           module.plural,
-          model.plural,
+          model.modelName === module.moduleModelName  // Check if it's the main model
+            ? ""  // No subfolder for main model
+            : model.plural,  // Use model plural for other models
           "middlewares.ts"
         ),
         type: "create",
-        templatePath: templates.modelMiddlewaresTemplate,
+        templatePath: model.modelName === module.moduleModelName
+          ? templates.moduleMiddlewaresTemplate
+          : templates.modelMiddlewaresTemplate,
         model,
         module,
       });

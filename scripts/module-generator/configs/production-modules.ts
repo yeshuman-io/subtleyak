@@ -24,6 +24,7 @@ export const VEHICLE_MODULE: ModuleConfig = {
       modelNamePlural: "Vehicles",
       singular: "vehicle",
       plural: "vehicles",
+      icon: "RocketLaunch",
       faker: {
         fields: {
           name: "vehicle.model",
@@ -235,6 +236,7 @@ export const WIPER_MODULE: ModuleConfig = {
       modelNamePlural: "Wipers",
       singular: "wiper",
       plural: "wipers",
+      icon: "HandTruck",
       faker: {
         fields: {
           name: "commerce.productName",

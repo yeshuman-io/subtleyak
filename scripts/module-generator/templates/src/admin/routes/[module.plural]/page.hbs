@@ -1,5 +1,5 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
-import { Pencil } from "@medusajs/icons";
+import { Pencil{{#if module.moduleModel.icon}}, {{module.moduleModel.icon}}{{/if}} } from "@medusajs/icons";
 import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
 import { {{toPascalCase module.singular}} } from "../../types";
 import { DataTablePage } from "../../components/data-table-page";
@@ -111,6 +111,7 @@ const {{toPascalCase module.plural}}Page = () => {
 
 export const config = defineRouteConfig({
   label: "{{toTitleCase module.plural}}",
-});
+  {{#if module.moduleModel.icon}}icon: {{module.moduleModel.icon}}{{/if}}
+});//asdf
 
 export default {{toPascalCase module.plural}}Page; 
