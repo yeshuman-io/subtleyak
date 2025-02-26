@@ -1,3 +1,8 @@
+<!-- 
+THIS FILE IS MARKED FOR DELETION
+Information from this file has been incorporated into module-generator-spec.md and module-generator-recommendations.md
+-->
+
 # Medusa Module Generator v2
 
 A powerful code generator for creating consistent Medusa modules with models, services, API routes, and admin UI components.
