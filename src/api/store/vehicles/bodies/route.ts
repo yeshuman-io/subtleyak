@@ -4,25 +4,44 @@ import { ContainerRegistrationKeys } from "@medusajs/framework/utils"
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve(ContainerRegistrationKeys.QUERY)
 
-  const queryOptions = {
+  // Extract filter parameters if present
+  const modelId = req.query.model_id as string | undefined
+
+  // Create query options
+  const queryOptions: any = {
     entity: "vehicle_body",
     ...req.queryConfig,
-    filters: {
-      ...req.queryConfig?.filters,
-      // Add any additional filters specific to storefront
-    },
     fields: [
       "id",
       "name",
-      "models.*",
+      "models.id",
+      "models.name",
     ],
   }
 
   try {
+    // Execute the query with proper filtering
     const { data: vehicleBodies, metadata } = await query.graph(queryOptions)
 
+    // For many-to-many relationships, we need to filter in memory
+    // after we retrieve the data
+    let filteredBodies = vehicleBodies;
+    
+    if (modelId) {
+      filteredBodies = vehicleBodies.filter(body => 
+        body.models && body.models.some(model => model.id === modelId)
+      );
+    }
+
+    // Get pagination information from the request's query config
+    const limit = req.queryConfig?.pagination?.take || 10
+    const offset = req.queryConfig?.pagination?.skip || 0
+
     res.json({
-      vehicleBodies,
+      vehicleBodies: filteredBodies,
+      count: filteredBodies.length,
+      limit,
+      offset,
     })
   } catch (error) {
     console.error("Error fetching Vehicle Bodies:", error)
