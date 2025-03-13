@@ -398,6 +398,35 @@ export const WIPER_MODULE: ModuleConfig = {
   ],
 };
 
+export const FITMENT_MODULE: ModuleConfig = {
+  moduleName: "fitments",
+  moduleModelName: "Fitment",
+  singular: "fitment",
+  plural: "fitments",
+  models: [
+    {
+      name: "fitment",
+      modelName: "Fitment",
+      modelNamePlural: "Fitments",
+      singular: "fitment",
+      plural: "fitments",
+      icon: "Link",
+      faker: {
+        fields: {
+          code: "string.alphanumeric(10)"
+        }
+      },
+      fields: [
+        {
+          name: "code",
+          type: "text",
+        },
+      ]
+    },
+  ],
+};
+
+
 /**
  * All module configurations
  * Add new modules here as they are created
@@ -405,6 +434,7 @@ export const WIPER_MODULE: ModuleConfig = {
 export const MODULES = {
   vehicles: VEHICLE_MODULE,
   wipers: WIPER_MODULE,
+  fitments: FITMENT_MODULE,
   // Add more modules here
 } as const;
 
