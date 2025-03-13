@@ -14,7 +14,7 @@
   ],
   "scripts": {
     "build": "medusa build",
-    "db:setup": "medusa db:setup --db subtlecow",
+    "db:setup": "medusa db:setup --db $DB_NAME",
     "seed": "medusa exec ./src/scripts/seed.ts",
     "start": "medusa start",
     "dev": "medusa develop",
