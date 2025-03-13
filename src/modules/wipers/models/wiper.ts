@@ -7,7 +7,7 @@ const Wiper = model.define("wiper", {
   code: model.text(),
   kits: model.hasMany(() => WiperKit, {
       mappedBy: "wiper"
-    }
+    })
 });
 
-export default Wiper; 
+export default Wiper;//sdfasadf

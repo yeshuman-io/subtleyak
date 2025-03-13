@@ -7,7 +7,7 @@ import { useState } from "react";
 import { ActionMenu } from "../../../components/action-menu";
 import { Pencil } from "@medusajs/icons";
 import { VehicleBodyEdit } from "./edit/vehicle-body-edit";
-
+//asdf
 const columnHelper = createDataTableColumnHelper<VehicleBody>();
 
 const BodiesPage = () => {

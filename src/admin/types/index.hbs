@@ -1,0 +1,155 @@
+/**
+ * This file is auto-generated and will be overwritten by subsequent generations.
+ * Manual changes should be made to the generator templates instead.
+ */
+
+// Vehicles Types
+
+export type Vehicle = {
+  id: string
+  make?: VehicleMake
+  model?: VehicleModel
+  series?: VehicleSeries[]
+}
+
+export type VehicleSeries = {
+  id: string
+  start_year?: number
+  end_year?: number
+  vehicle?: Vehicle
+  model?: VehicleModel
+}
+
+export type VehicleMake = {
+  id: string
+  name?: string
+  models?: VehicleModel[]
+  vehicles?: Vehicle[]
+}
+
+export type VehicleModel = {
+  id: string
+  name?: string
+  make?: VehicleMake
+  vehicles?: Vehicle[]
+  bodies?: VehicleBody[]
+}
+
+export type VehicleBody = {
+  id: string
+  name?: string
+  models?: VehicleModel[]
+}
+
+// Vehicles Response Types
+
+export type ListVehiclesRes = {
+  vehicles: Vehicle[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListVehicleSeriessRes = {
+  series: VehicleSeries[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListVehicleMakesRes = {
+  makes: VehicleMake[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListVehicleModelsRes = {
+  models: VehicleModel[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListVehicleBodysRes = {
+  bodies: VehicleBody[]
+  count: number
+  limit: number
+  offset: number
+}
+
+// Wipers Types
+
+export type Wiper = {
+  id: string
+  name?: string
+  code?: string
+  kits?: WiperKit[]
+}
+
+export type WiperKit = {
+  id: string
+  name?: string
+  code?: string
+  wiper?: Wiper
+}
+
+export type WiperLength = {
+  id: string
+  value?: number
+  unit?: string
+}
+
+export type WiperConnector = {
+  id: string
+  name?: string
+  code?: string
+  type?: string
+  media_url?: string
+  arms?: WiperArm[]
+}
+
+export type WiperArm = {
+  id: string
+  name?: string
+  code?: string
+  connector?: WiperConnector
+}
+
+// Wipers Response Types
+
+export type ListWipersRes = {
+  wipers: Wiper[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListWiperKitsRes = {
+  kits: WiperKit[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListWiperLengthsRes = {
+  lengths: WiperLength[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListWiperConnectorsRes = {
+  connectors: WiperConnector[]
+  count: number
+  limit: number
+  offset: number
+}
+
+export type ListWiperArmsRes = {
+  arms: WiperArm[]
+  count: number
+  limit: number
+  offset: number
+}
+

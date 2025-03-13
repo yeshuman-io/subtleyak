@@ -1,10 +1,10 @@
-import Service from "./service";
+import WipersService from "./service";
 import { Module } from "@medusajs/framework/utils";
 
-// Single module for all -related models
-export const _MODULE = "";
+// Single module for all wipers-related models
+export const WIPERS_MODULE = "wipers";
 
-// Export the  service that handles all models
-export default Module(_MODULE, {
-    service: Service
-}); 
+// Export the wipers service that handles all models
+export default Module(WIPERS_MODULE, {
+  service: WipersService
+});

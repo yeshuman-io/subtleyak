@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { createWorkflow } from "../../../../workflows/create-";
-import { PostAdminCreate } from "./validators";
+import { createWiperWorkflow } from "../../../workflows/wipers/create-wiper";
+import { PostAdminCreateWiper } from "./validators";
 
 type QueryResponse = {
   data: any[];
@@ -10,42 +10,47 @@ type QueryResponse = {
     take: number;
     skip: number;
   };
-};
+}; //asdfsdfg
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
 
-  const queryOptions = {
-    entity: "",
-    ...req.queryConfig,
-    filters: {
-      ...req.queryConfig?.filters,
-    },
-  };
+    const queryOptions = {
+      entity: "wiper",
+      ...req.queryConfig,
+      filters: {
+        ...req.queryConfig?.filters,
+      },
+    };
 
-  const { data: wipers, metadata } = (await query.graph(
-    queryOptions
-  )) as QueryResponse;
+  try {
+    const { data: wipers, metadata } = (await query.graph(
+      queryOptions
+    )) as QueryResponse;
 
   res.json({
     wipers,
     count: metadata.count,
     limit: metadata.take,
     offset: metadata.skip,
-  });
+    });
+  } catch (error) {
+    console.error("Error fetching Wipers:", error);
+    res.status(500).json({ error: "An error occurred while fetching Wipers" });
+  }
 };
 
-type PostAdminCreateType = z.infer<
-  typeof PostAdminCreate
+type PostAdminCreateWiperType = z.infer<
+  typeof PostAdminCreateWiper
 >;
 
 export const POST = async (
-  req: MedusaRequest<PostAdminCreateType>,
+  req: MedusaRequest<PostAdminCreateWiperType>,
   res: MedusaResponse
 ) => {
-  const { result } = await createWorkflow(req.scope).run({
+  const { result } = await createWiperWorkflow(req.scope).run({
     input: req.validatedBody,
   });
 
-  res.json({ : result });
+  res.json({ wipers: result });
 }; 

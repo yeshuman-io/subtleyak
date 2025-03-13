@@ -6,7 +6,7 @@ const VehicleBody = model.define("vehicle_body", {
   name: model.text(),
   models: model.manyToMany(() => VehicleModel, {
       mappedBy: "bodies"
-    }
+    })
 });
 
-export default VehicleBody; 
+export default VehicleBody;//sdfasadf

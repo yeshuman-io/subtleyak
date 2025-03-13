@@ -7,10 +7,10 @@ const VehicleMake = model.define("vehicle_make", {
   name: model.text(),
   models: model.hasMany(() => VehicleModel, {
       mappedBy: "make"
-    },
+    }),
   vehicles: model.hasMany(() => Vehicle, {
       mappedBy: "make"
-    }
+    })
 });
 
-export default VehicleMake; 
+export default VehicleMake;//sdfasadf

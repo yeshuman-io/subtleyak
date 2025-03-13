@@ -95,11 +95,6 @@ function VehicleMakeEditForm({ vehicleMake, onClose }: VehicleMakeEditProps) {
             control={form.control}
             label="Name"
           />
-          <InputField
-            name="models"
-            control={form.control}
-            label="Models"
-          />
           <SelectField
             name="models_ids"
             control={form.control}
@@ -107,11 +102,6 @@ function VehicleMakeEditForm({ vehicleMake, onClose }: VehicleMakeEditProps) {
             placeholder="Select models..."
             options={ vehiclemodels }
             isMulti
-          />
-          <InputField
-            name="vehicles"
-            control={form.control}
-            label="Vehicles"
           />
           <SelectField
             name="vehicles_ids"
@@ -130,10 +120,7 @@ function VehicleMakeEditForm({ vehicleMake, onClose }: VehicleMakeEditProps) {
 export function VehicleMakeEdit(props: VehicleMakeEditProps) {
   return (
     <Drawer.Content aria-describedby="edit-vehicle-make-description">
-      <VehicleMakeEditForm {...{
-        vehicleMake: props.vehicleMake,
-        onClose: props.onClose
-      }} />
+      <VehicleMakeEditForm {...props} />
     </Drawer.Content>
   );
-} 
+}

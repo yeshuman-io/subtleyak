@@ -83,11 +83,6 @@ function VehicleBodyEditForm({ vehicleBody, onClose }: VehicleBodyEditProps) {
             control={form.control}
             label="Name"
           />
-          <InputField
-            name="models"
-            control={form.control}
-            label="Models"
-          />
           <SelectField
             name="models_ids"
             control={form.control}
@@ -105,10 +100,7 @@ function VehicleBodyEditForm({ vehicleBody, onClose }: VehicleBodyEditProps) {
 export function VehicleBodyEdit(props: VehicleBodyEditProps) {
   return (
     <Drawer.Content aria-describedby="edit-vehicle-body-description">
-      <VehicleBodyEditForm {...{
-        vehicleBody: props.vehicleBody,
-        onClose: props.onClose
-      }} />
+      <VehicleBodyEditForm {...props} />
     </Drawer.Content>
   );
-} 
+}

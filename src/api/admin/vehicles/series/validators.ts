@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createFindParams } from "@medusajs/medusa/api/utils/validators";
+import VehicleSeries from "../../../../modules/vehicles/models/vehicle-series";
 
 export const GetVehicleSeriesSchema = createFindParams();
 
@@ -20,9 +21,9 @@ export const PostAdminUpdateVehicleSeries = z.object({
 export type AdminCreateVehicleSeriesReq = z.infer<typeof PostAdminCreateVehicleSeries>;
 export type AdminUpdateVehicleSeriesReq = z.infer<typeof PostAdminUpdateVehicleSeries>;
 
-export type AdminListRes = {
-  items: any[];
+export type VehicleSeriesAdminListRes = {
+  items: typeof VehicleSeries;
   count: number;
   limit: number;
   offset: number;
-}; 
+};

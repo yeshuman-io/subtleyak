@@ -7,7 +7,7 @@ import { useState } from "react";
 import { ActionMenu } from "../../../components/action-menu";
 import { Pencil } from "@medusajs/icons";
 import { VehicleSeriesEdit } from "./edit/vehicle-series-edit";
-
+//asdf
 const columnHelper = createDataTableColumnHelper<VehicleSeries>();
 
 const SeriesPage = () => {

@@ -104,22 +104,12 @@ function VehicleSeriesEditForm({ vehicleSeries, onClose }: VehicleSeriesEditProp
             label="End Year"
             type="number"
           />
-          <InputField
-            name="vehicle"
-            control={form.control}
-            label="Vehicle"
-          />
           <SelectField
             name="vehicle_id"
             control={form.control}
             label="Vehicle"
             placeholder="Select vehicle..."
             options={ vehicles }
-          />
-          <InputField
-            name="model"
-            control={form.control}
-            label="Model"
           />
           <SelectField
             name="model_id"
@@ -137,10 +127,7 @@ function VehicleSeriesEditForm({ vehicleSeries, onClose }: VehicleSeriesEditProp
 export function VehicleSeriesEdit(props: VehicleSeriesEditProps) {
   return (
     <Drawer.Content aria-describedby="edit-vehicle-series-description">
-      <VehicleSeriesEditForm {...{
-        vehicleSeries: props.vehicleSeries,
-        onClose: props.onClose
-      }} />
+      <VehicleSeriesEditForm {...props} />
     </Drawer.Content>
   );
-} 
+}

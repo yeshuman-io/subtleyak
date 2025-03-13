@@ -1,49 +1,51 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { createVehicleModelWorkflow } from "../../../../workflows/create-vehicle-model";
+import { createVehicleModelWorkflow } from "../../../../workflows/vehicles/create-vehicle-model";
 import { PostAdminCreateVehicleModel } from "./validators";
 
-
-//asdfsadfs
 type QueryResponse = {
   data: any[];
   metadata: {
     count: number;
     take: number;
     skip: number;
-  };//asdf
+  };
 };
-//asdfasdfasdfd
+
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
+    
+    const queryOptions = {
+      entity: "vehicle_model",
+      ...req.queryConfig,
+      filters: {
+        ...req.queryConfig?.filters,
+      },
+    };
 
-  const queryOptions = {
-    entity: "vehicle_model",
-    ...req.queryConfig,
-    filters: {
-      ...req.queryConfig?.filters,
-      ...(req.query.make_id ? { make_id: req.query.make_id } : {}),
-    },
-  };
+  try {
+    const { data: models, metadata } = (await query.graph(
+      queryOptions
+    )) as QueryResponse;
 
-  const { data: models, metadata } = (await query.graph(
-    queryOptions
-  )) as QueryResponse;
-
-  res.json({
-    models,
-    count: metadata.count,
-    limit: metadata.take,
-    offset: metadata.skip,
-  });
+    res.json({
+      models,
+      count: metadata.count,
+      limit: metadata.take,
+      offset: metadata.skip,
+    });
+  } catch (error) {
+    console.error("Error fetching Vehicle Models:", error);
+    res.status(500).json({ error: "An error occurred while fetching Vehicle Models" });
+  }
 };
 
-type PostAdminCreateVehicleModelType = z.infer<
+type PostAdminCreateVehicleModelReq = z.infer<
   typeof PostAdminCreateVehicleModel
 >;
 
 export const POST = async (
-  req: MedusaRequest<PostAdminCreateVehicleModelType>,
+  req: MedusaRequest<PostAdminCreateVehicleModelReq>,
   res: MedusaResponse
 ) => {
   const { result } = await createVehicleModelWorkflow(req.scope).run({
@@ -51,4 +53,5 @@ export const POST = async (
   });
 
   res.json({ vehicleModel: result });
-}; 
+};
+

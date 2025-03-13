@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { z } from "zod";
-import { updateVehicleMakeWorkflow } from "../../../../../workflows/update-vehicle-make";
+import { updateVehicleMakeWorkflow } from "../../../../../workflows/vehicles/update-vehicle-make";
 import { PostAdminUpdateVehicleMake } from "../validators";
 
 type PostAdminUpdateVehicleMakeType = z.infer<

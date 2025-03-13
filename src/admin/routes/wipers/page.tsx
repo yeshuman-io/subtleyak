@@ -1,22 +1,34 @@
 import { defineRouteConfig } from "@medusajs/admin-sdk";
+import { Pencil, HandTruck } from "@medusajs/icons";
 import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
-import {  } from "../../../types";
-import { DataTablePage } from "../../../components/data-table-page";
-import { Create } from "./create/-create";
+import { Wiper } from "../../types";
+import { DataTablePage } from "../../components/data-table-page";
+import { ActionMenu } from "../../components/action-menu";
+import { WiperCreate } from "./create/wiper-create";
+import { WiperEdit } from "./edit/wiper-edit";
 import { useState } from "react";
-import { ActionMenu } from "../../../components/action-menu";
-import { Pencil } from "@medusajs/icons";
-import { Edit } from "./edit/-edit";
 
-const columnHelper = createDataTableColumnHelper<>();
+const columnHelper = createDataTableColumnHelper<Wiper>();
 
 const WipersPage = () => {
   const [showCreate, setShowCreate] = useState(false);
-  const [editing, setEditing] = useState< | null>(null);
-
+  const [editingWiper, setEditingWiper] = useState<Wiper | null>(null);
   const columns = [
     columnHelper.accessor("id", {
       header: "ID",
+    }),
+    columnHelper.accessor("name", {
+          header: "Name",
+      enableSorting: true,
+    }),
+    columnHelper.accessor("code", {
+          header: "Code",
+      enableSorting: true,
+    }),
+    columnHelper.accessor("kits", {
+      cell: ({ row }) => row.original.kits?.length || 0,
+      header: "Kits",
+      enableSorting: true,
     }),
     columnHelper.accessor("actions", {
       header: "",
@@ -30,7 +42,7 @@ const WipersPage = () => {
                   {
                     label: "Edit",
                     icon: <Pencil />,
-                    onClick: () => setEditing(model),
+                    onClick: () => setEditingWiper(model),
                   },
                 ],
               },
@@ -40,10 +52,9 @@ const WipersPage = () => {
       },
     }),
   ];
-
   return (
     <>
-      <DataTablePage<>
+      <DataTablePage<Wiper>
         title="Wipers"
         subtitle="Manage your wipers"
         endpoint="/admin/wipers"
@@ -82,15 +93,14 @@ const WipersPage = () => {
       />
       {showCreate && (
         <FocusModal open={showCreate} onOpenChange={setShowCreate}>
-          <Create onClose={() => setShowCreate(false)} />
+          <WiperCreate onClose={() => setShowCreate(false)} />
         </FocusModal>
       )}
-      
-      {editing && (
-        <Drawer open onOpenChange={() => setEditing(null)}>
-          <Edit 
-            model={editing}
-            onClose={() => setEditing(null)}
+      {editingWiper && (
+        <Drawer open onOpenChange={() => setEditingWiper(null)}>
+          <WiperEdit 
+            wiper={editingWiper}
+            onClose={() => setEditingWiper(null)}
           />
         </Drawer>
       )}
@@ -100,6 +110,7 @@ const WipersPage = () => {
 
 export const config = defineRouteConfig({
   label: "Wipers",
-});
+  icon: HandTruck
+});//asdf
 
 export default WipersPage; 

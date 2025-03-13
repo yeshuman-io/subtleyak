@@ -1,6 +1,6 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { z } from "zod";
-import { updateWiperKitWorkflow } from "../../../../../workflows/update-wiper-kit";
+import { updateWiperKitWorkflow } from "../../../../../workflows/wipers/update-wiper-kit";
 import { PostAdminUpdateWiperKit } from "../validators";
 
 type PostAdminUpdateWiperKitType = z.infer<

@@ -90,11 +90,6 @@ function WiperKitEditForm({ wiperKit, onClose }: WiperKitEditProps) {
             control={form.control}
             label="Code"
           />
-          <InputField
-            name="wiper"
-            control={form.control}
-            label="Wiper"
-          />
           <SelectField
             name="wiper_id"
             control={form.control}
@@ -111,10 +106,7 @@ function WiperKitEditForm({ wiperKit, onClose }: WiperKitEditProps) {
 export function WiperKitEdit(props: WiperKitEditProps) {
   return (
     <Drawer.Content aria-describedby="edit-wiper-kit-description">
-      <WiperKitEditForm {...{
-        wiperKit: props.wiperKit,
-        onClose: props.onClose
-      }} />
+      <WiperKitEditForm {...props} />
     </Drawer.Content>
   );
-} 
+}

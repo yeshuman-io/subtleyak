@@ -107,22 +107,12 @@ function VehicleModelEditForm({ vehicleModel, onClose }: VehicleModelEditProps) 
             control={form.control}
             label="Name"
           />
-          <InputField
-            name="make"
-            control={form.control}
-            label="Make"
-          />
           <SelectField
             name="make_id"
             control={form.control}
             label="Make"
             placeholder="Select make..."
             options={ vehiclemakes }
-          />
-          <InputField
-            name="vehicles"
-            control={form.control}
-            label="Vehicles"
           />
           <SelectField
             name="vehicles_ids"
@@ -131,11 +121,6 @@ function VehicleModelEditForm({ vehicleModel, onClose }: VehicleModelEditProps) 
             placeholder="Select vehicles..."
             options={ vehicles }
             isMulti
-          />
-          <InputField
-            name="bodies"
-            control={form.control}
-            label="Bodies"
           />
           <SelectField
             name="bodies_ids"
@@ -154,10 +139,7 @@ function VehicleModelEditForm({ vehicleModel, onClose }: VehicleModelEditProps) 
 export function VehicleModelEdit(props: VehicleModelEditProps) {
   return (
     <Drawer.Content aria-describedby="edit-vehicle-model-description">
-      <VehicleModelEditForm {...{
-        vehicleModel: props.vehicleModel,
-        onClose: props.onClose
-      }} />
+      <VehicleModelEditForm {...props} />
     </Drawer.Content>
   );
-} 
+}

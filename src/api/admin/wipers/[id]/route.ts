@@ -1,24 +1,22 @@
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
 import { z } from "zod";
-import { updateWipersWorkflow } from "../../../../../workflows/update-wipers";
-import { PostAdminUpdateWipers } from "../validators";
+import { updateWiperWorkflow } from "../../../../workflows/wipers/update-wiper";
+import { PostAdminUpdateWiper } from "../validators";
 
-type PostAdminUpdateWipersType = z.infer<
-  typeof PostAdminUpdateWipers
+type PostAdminUpdateWiperType = z.infer<
+  typeof PostAdminUpdateWiper
 >;
-//fasdfsdfasdfsdfadasdflkj;jlkasdf
+
 export const POST = async (
-  req: MedusaRequest<PostAdminUpdateWipersType>,
+  req: MedusaRequest<PostAdminUpdateWiperType>,
   res: MedusaResponse
 ) => {
-  const { result } = await updateWipersWorkflow(req.scope).run({
+  const { result } = await updateWiperWorkflow(req.scope).run({
     input: {
       id: req.params.id,
       ...req.validatedBody,
     },
   });
 
-  // asdfasdfasdf
-
   res.json({ wipers: result });
-}; 
+};

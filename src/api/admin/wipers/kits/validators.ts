@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { createFindParams } from "@medusajs/medusa/api/utils/validators";
+import WiperKit from "../../../../modules/wipers/models/wiper-kit";
 
 export const GetWiperKitSchema = createFindParams();
 
@@ -18,9 +19,9 @@ export const PostAdminUpdateWiperKit = z.object({
 export type AdminCreateWiperKitReq = z.infer<typeof PostAdminCreateWiperKit>;
 export type AdminUpdateWiperKitReq = z.infer<typeof PostAdminUpdateWiperKit>;
 
-export type AdminListRes = {
-  items: any[];
+export type WiperKitAdminListRes = {
+  items: typeof WiperKit;
   count: number;
   limit: number;
   offset: number;
-}; 
+};
