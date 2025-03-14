@@ -153,3 +153,19 @@ export type ListWiperArmsRes = {
   offset: number
 }
 
+// Fitments Types
+
+export type Fitment = {
+  id: string
+  code?: string
+}
+
+// Fitments Response Types
+
+export type ListFitmentsRes = {
+  fitments: Fitment[]
+  count: number
+  limit: number
+  offset: number
+}
+

@@ -21,6 +21,9 @@ module.exports = defineConfig({
     },
     {
       resolve: "./src/modules/wipers"
+    },
+    {
+      resolve: "./src/modules/fitments"
     }
   ]
 })

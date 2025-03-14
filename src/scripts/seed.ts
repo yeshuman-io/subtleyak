@@ -11,11 +11,14 @@ import {
   WiperLength,
   WiperConnector,
   WiperArm,
+  Fitment,
 } from "../admin/types";
 import { VEHICLES_MODULE } from "../modules/vehicles";
 import VehiclesModuleService from "../modules/vehicles/service";
 import { WIPERS_MODULE } from "../modules/wipers";
 import WipersModuleService from "../modules/wipers/service";
+import { FITMENTS_MODULE } from "../modules/fitments";
+import FitmentsModuleService from "../modules/fitments/service";
 
 // Constants for seeding quantities
 const VEHICLE_COUNT = 10;
@@ -30,6 +33,8 @@ const WIPER_KITS_PER_WIPER = 2;
 const WIPER_LENGTHS_PER_WIPER = 2;
 const WIPER_CONNECTORS_PER_WIPER = 2;
 const WIPER_ARMS_PER_WIPER = 2;
+const FITMENT_COUNT = 10;
+const FITMENT_FITMENTS_PER_FITMENT = 2;
 
 // Define field types
 type Field = {
@@ -64,6 +69,8 @@ export default async function seed(
     container.cradle[VEHICLES_MODULE];
   const wipersModuleService: WipersModuleService = 
     container.cradle[WIPERS_MODULE];
+  const fitmentsModuleService: FitmentsModuleService = 
+    container.cradle[FITMENTS_MODULE];
 
   try {
     console.log("\nSeeding Vehicles module...");
@@ -604,6 +611,103 @@ export default async function seed(
 
         // Create the record using the module service with the current model name
         const record = await wipersModuleService[`create${model.modelNamePlural}`](data);
+        console.log(`Created ${model.name} ${i + 1}/${model.count}`);
+      }
+    }
+    console.log("\nSeeding Fitments module...");
+    
+    // Sort models by dependency level
+    const fitmentModels = [
+      {
+        name: "Fitment",
+        modelNamePlural: "Fitments",
+        service: fitmentsModuleService,
+        dependencies: [
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "code",
+              type: "false" as const,
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "code": "string.alphanumeric(10)",
+            }
+          }
+        }
+      },
+    ];
+
+    // Create records for each model in dependency order
+    for (const model of fitmentModels) {
+      console.log(`\nCreating ${model.count} ${model.name} records...`);
+      
+      for (let i = 0; i < model.count; i++) {
+        // Generate data for the record
+        const data: Record<string, any> = {};
+        
+        for (const field of model.config.fields as unknown as Field[]) {
+          if ('relation' in field && field.relation) {
+            if (field.relation.type === "belongsTo") {
+              // Get a random related record ID
+              const moduleService = field.relation.model.toLowerCase().includes('fitment') 
+                ? fitmentsModuleService 
+                : null;
+              
+              if (!moduleService) {
+                console.warn(`No module service found for model ${field.relation.model}`);
+                continue;
+              }
+
+              const relatedRecords = await moduleService[`list${field.relation.model}s`](
+                {},  // Empty filter object
+                { 
+                  take: 1,
+                  select: ['id']
+                }
+              );
+              
+              if (relatedRecords.length > 0) {
+                data[`${field.name}_id`] = relatedRecords[0].id;
+              }
+            }
+          } else {
+            // Generate data using faker
+            const fakerMethod = 
+              model.config.faker.fields[field.name] || 
+              {
+                text: "lorem.word",
+                number: "number.int({ min: 1, max: 100 })",
+                boolean: "datatype.boolean",
+                date: "date.recent"
+              }[field.type] || "lorem.word";
+            
+            // Evaluate faker method
+            const [namespace, method] = fakerMethod.split(".");
+            if (namespace === 'number' && method.startsWith('int')) {
+              const argsMatch = method.match(/\{(.+)\}/);
+              if (argsMatch) {
+                const options = argsMatch[1].split(',').reduce((obj, pair) => {
+                  const [key, value] = pair.trim().split(':').map(s => s.trim());
+                  obj[key] = Number(value);
+                  return obj;
+                }, {} as Record<string, number>);
+                data[field.name] = faker.number.int(options);
+              } else {
+                data[field.name] = faker.number.int();
+              }
+            } else {
+              const methodName = method.split('(')[0];
+              data[field.name] = faker[namespace][methodName]();
+            }
+          }
+        }
+
+        // Create the record using the module service with the current model name
+        const record = await fitmentsModuleService[`create${model.modelNamePlural}`](data);
         console.log(`Created ${model.name} ${i + 1}/${model.count}`);
       }
     }

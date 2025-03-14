@@ -17,6 +17,8 @@ import kitsMiddlewares from "./admin/wipers/kits/middlewares"
 import lengthsMiddlewares from "./admin/wipers/lengths/middlewares"
 import connectorsMiddlewares from "./admin/wipers/connectors/middlewares"
 import armsMiddlewares from "./admin/wipers/arms/middlewares"
+// Fitments module
+import fitmentsMiddlewares from "./admin/fitments/middlewares"
 //asfdasdfasdadsf
 export default defineMiddlewares({
   routes: [
@@ -33,6 +35,9 @@ export default defineMiddlewares({
     ...(lengthsMiddlewares.routes || []),
     ...(connectorsMiddlewares.routes || []),
     ...(armsMiddlewares.routes || [])
+    ,
+    // Fitments routes
+    ...(fitmentsMiddlewares.routes || []),
     
   ] as const
 })
