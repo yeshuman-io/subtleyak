@@ -9,11 +9,14 @@ module.exports = defineConfig({
     vite: (config) => {
       let host = process.env.MEDUSA_BACKEND_URL;
 
-      if (host.startsWith("http")) {
-        host = new URL(host).hostname;
+      if (host) {
+        if (host.startsWith("http")) {
+          host = new URL(host).hostname;
+        }
+
+        config.server.allowedHosts = [host];
       }
 
-      config.server.allowedHosts = [host];
       return config;
     },
   },
@@ -40,7 +43,7 @@ module.exports = defineConfig({
     },
     {
       resolve: "./src/modules/fitments"
-    }
+    },
     {
       resolve: "@medusajs/medusa/cache-redis",
       options: {
