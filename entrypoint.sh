@@ -9,5 +9,4 @@ COOKIE_SECRET=${COOKIE_SECRET}
 PORT=${PORT:-9000}  # Default to 9000 if PORT is not set
 EOF
 
-# Pass all arguments to pnpm
-exec pnpm "$@"
+exec "$@"

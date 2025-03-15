@@ -1,11 +1,10 @@
 FROM node:current-alpine
-RUN npm install -g pnpm
 
 WORKDIR /app
 
-COPY package.json pnpm-lock.yaml ./
+COPY package.json ./
 
-RUN pnpm install --frozen-lockfile
+RUN npm install
 
 COPY medusa-config.ts tsconfig.json entrypoint.sh ./
 COPY src/ ./src/
@@ -13,5 +12,4 @@ COPY src/ ./src/
 EXPOSE 9000
 
 ENTRYPOINT ["./entrypoint.sh"]
-
-CMD ["medusa", "start", "-H", "0.0.0.0"]
+CMD ["npx", "medusa", "start", "-H", "0.0.0.0", "-p", "9000"]

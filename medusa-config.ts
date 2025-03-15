@@ -4,6 +4,7 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
 module.exports = defineConfig({
   admin: {
+    path: "/plzwork",
     disable: process.env.MEDUSA_DISABLE_ADMIN === "true",
     backendUrl: process.env.MEDUSA_BACKEND_URL,
     vite: (config) => {
@@ -31,10 +32,10 @@ module.exports = defineConfig({
       jwtSecret: process.env.JWT_SECRET || "supersecret",
       cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     },
-    redisUrl: process.env.REDIS_URL || "redis://localhost:6379",
     redisPrefix: "medusa:",
   },
   modules: [
+    /*
     {
       resolve: "./src/modules/vehicles"
     },
@@ -44,6 +45,7 @@ module.exports = defineConfig({
     {
       resolve: "./src/modules/fitments"
     },
+    */
     {
       resolve: "@medusajs/medusa/cache-redis",
       options: {
