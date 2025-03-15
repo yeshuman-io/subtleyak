@@ -1,131 +1,43 @@
-import { z } from "zod";
-import {
-  defineMiddlewares,
-  unlessPath,
-  validateAndTransformBody,
-  validateAndTransformQuery,
-} from "@medusajs/framework/http";
-import { createFindParams } from "@medusajs/medusa/api/utils/validators";
-import {
-  PostAdminCreateVehicle,
-  PostAdminUpdateVehicle,
-} from "./admin/vehicles/validators";
-import {
-  PostAdminCreateVehicleMake,
-  PostAdminUpdateVehicleMake,
-} from "./admin/vehicles/makes/validators";
-import {
-  PostAdminCreateVehicleModel,
-  PostAdminUpdateVehicleModel,
-} from "./admin/vehicles/models/validators";
-import {
-  PostAdminCreateVehicleBody,
-  PostAdminUpdateVehicleBody,
-} from "./admin/vehicles/bodies/validators";
+/**
+ * This file is auto-generated and will be overwritten by subsequent generations.
+ * Manual changes should be made to the generator templates instead.
+ */
 
-export const GetVehiclesSchema = createFindParams();
-export const GetVehicleModelsSchema = createFindParams().extend({
-  make_id: z.string().optional(),
-});
+import { defineMiddlewares } from "@medusajs/framework/http"
 
+// Vehicles module
+import vehiclesMiddlewares from "./admin/vehicles/middlewares"
+import seriesMiddlewares from "./admin/vehicles/series/middlewares"
+import makesMiddlewares from "./admin/vehicles/makes/middlewares"
+import modelsMiddlewares from "./admin/vehicles/models/middlewares"
+import bodiesMiddlewares from "./admin/vehicles/bodies/middlewares"
+// Wipers module
+import wipersMiddlewares from "./admin/wipers/middlewares"
+import kitsMiddlewares from "./admin/wipers/kits/middlewares"
+import lengthsMiddlewares from "./admin/wipers/lengths/middlewares"
+import connectorsMiddlewares from "./admin/wipers/connectors/middlewares"
+import armsMiddlewares from "./admin/wipers/arms/middlewares"
+// Fitments module
+import fitmentsMiddlewares from "./admin/fitments/middlewares"
+//asfdasdfasdadsf
 export default defineMiddlewares({
   routes: [
-    // GET routes - specific first
-    {
-      matcher: "/admin/vehicles/makes",
-      method: "GET",
-      middlewares: [
-        validateAndTransformQuery(GetVehiclesSchema, {
-          defaults: ["id", "name", "models.*"],
-          isList: true,
-        }),
-      ],
-    },
-    {
-      matcher: "/admin/vehicles/models",
-      method: "GET",
-      middlewares: [
-        validateAndTransformQuery(GetVehicleModelsSchema, {
-          defaults: ["id", "name", "make.*"],
-          isList: true,
-        }),
-      ],
-    },
-    {
-      matcher: "/admin/vehicles/bodies",
-      method: "GET",
-      middlewares: [
-        validateAndTransformQuery(GetVehiclesSchema, {
-          defaults: ["id", "name"],
-          isList: true,
-        }),
-      ],
-    },
-    {
-      matcher: "/admin/vehicles",
-      method: "GET",
-      middlewares: [
-        validateAndTransformQuery(GetVehiclesSchema, {
-          defaults: ["id", "start_year", "end_year", "make.*", "model.*"],
-          isList: true,
-        }),
-      ],
-    },
-
-    // CREATE - specific routes first
-    {
-      matcher: "/admin/vehicles/makes",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminCreateVehicleMake)],
-    },
-    {
-      matcher: "/admin/vehicles/models",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminCreateVehicleModel)],
-    },
-    {
-      matcher: "/admin/vehicles/bodies",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminCreateVehicleBody)],
-    },
-
-    // UPDATE - specific routes first
-    {
-      matcher: "/admin/vehicles/makes/:id",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleMake)],
-    },
-    {
-      matcher: "/admin/vehicles/models/:id",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleModel)],
-    },
-    {
-      matcher: "/admin/vehicles/bodies/:id",
-      method: "POST",
-      middlewares: [validateAndTransformBody(PostAdminUpdateVehicleBody)],
-    },
-
-    // Generic routes last
-    {
-      matcher: "/admin/vehicles",
-      method: "POST",
-      middlewares: [
-        unlessPath(
-          /.*\/(models|makes|bodies)/,
-          validateAndTransformBody(PostAdminCreateVehicle)
-        ),
-      ],
-    },
-    {
-      matcher: "/admin/vehicles/:id",
-      method: "POST",
-      middlewares: [
-        unlessPath(
-          /.*\/(models|makes|bodies)/,
-          validateAndTransformBody(PostAdminUpdateVehicle)
-        ),
-      ],
-    },
-  ],
-});
+    // Vehicles routes
+    ...(vehiclesMiddlewares.routes || []),
+    ...(seriesMiddlewares.routes || []),
+    ...(makesMiddlewares.routes || []),
+    ...(modelsMiddlewares.routes || []),
+    ...(bodiesMiddlewares.routes || [])
+    ,
+    // Wipers routes
+    ...(wipersMiddlewares.routes || []),
+    ...(kitsMiddlewares.routes || []),
+    ...(lengthsMiddlewares.routes || []),
+    ...(connectorsMiddlewares.routes || []),
+    ...(armsMiddlewares.routes || [])
+    ,
+    // Fitments routes
+    ...(fitmentsMiddlewares.routes || []),
+    
+  ] as const
+})

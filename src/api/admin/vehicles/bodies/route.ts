@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { createVehicleBodyWorkflow } from "../../../../workflows/vehicles/create-vehicle-body";
 import { PostAdminCreateVehicleBody } from "./validators";
-import { createVehicleBodyWorkflow } from "../../../../workflows/create-vehicle-body";
 
 type QueryResponse = {
   data: any[];
@@ -14,35 +14,44 @@ type QueryResponse = {
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
+    
+    const queryOptions = {
+      entity: "vehicle_body",
+      ...req.queryConfig,
+      filters: {
+        ...req.queryConfig?.filters,
+      },
+    };
 
-  const queryOptions = {
-    entity: "vehicle_body",
-    ...req.queryConfig,
-  };
+  try {
+    const { data: bodies, metadata } = (await query.graph(
+      queryOptions
+    )) as QueryResponse;
 
-  const { data: vehicle_bodies, metadata } = (await query.graph(
-    queryOptions
-  )) as QueryResponse;
-
-  res.json({
-    vehicle_bodies,
-    count: metadata.count,
-    limit: metadata.take,
-    offset: metadata.skip,
-  });
+    res.json({
+      bodies,
+      count: metadata.count,
+      limit: metadata.take,
+      offset: metadata.skip,
+    });
+  } catch (error) {
+    console.error("Error fetching Vehicle Bodys:", error);
+    res.status(500).json({ error: "An error occurred while fetching Vehicle Bodys" });
+  }
 };
 
-type PostAdminCreateVehicleBodyType = z.infer<
+type PostAdminCreateVehicleBodyReq = z.infer<
   typeof PostAdminCreateVehicleBody
 >;
 
 export const POST = async (
-  req: MedusaRequest<PostAdminCreateVehicleBodyType>,
+  req: MedusaRequest<PostAdminCreateVehicleBodyReq>,
   res: MedusaResponse
 ) => {
   const { result } = await createVehicleBodyWorkflow(req.scope).run({
     input: req.validatedBody,
   });
 
-  res.json({ vehicle_body: result });
-}; 
+  res.json({ vehicleBody: result });
+};
+

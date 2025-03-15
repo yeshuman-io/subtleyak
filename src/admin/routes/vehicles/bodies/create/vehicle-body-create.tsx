@@ -5,11 +5,11 @@ import { sdk } from "../../../../lib/sdk";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { zodResolver } from "@hookform/resolvers/zod";
+import { SelectField } from "../../../../components/form/select-field";
 import { InputField } from "../../../../components/form/input-field";
-import { MultiSelectField } from "../../../../components/form/multi-select-field";
 import { FormLayout } from "../../../../components/form/form-layout";
 import { ModalForm } from "../../../../components/form/modal-form";
-import { ListVehicleModelsRes } from "../../../../types";
+
 
 const schema = PostAdminCreateVehicleBody;
 type CreateVehicleBodyFormData = zod.infer<typeof schema>;
@@ -20,21 +20,14 @@ type VehicleBodyCreateProps = {
 
 export function VehicleBodyCreate({ onClose }: VehicleBodyCreateProps) {
   const navigate = useNavigate();
-
+  
   const form = useForm<CreateVehicleBodyFormData>({
     defaultValues: {
       name: "",
-      model_ids: [],
     },
     resolver: zodResolver(schema),
   });
 
-  const { data: modelsData } = useQuery<ListVehicleModelsRes>({
-    queryKey: ["vehicle_models"],
-    queryFn: () => sdk.client.fetch("/admin/vehicles/models"),
-  });
-
-  const models = modelsData?.vehicle_models || [];
 
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
@@ -42,11 +35,11 @@ export function VehicleBodyCreate({ onClose }: VehicleBodyCreateProps) {
         method: "POST",
         body: data,
       });
-
+      
       onClose();
       navigate("/vehicles/bodies");
     } catch (error) {
-      console.error("Failed to create body:", error);
+      console.error("Failed to create Vehicle Body:", error);
     }
   });
 
@@ -61,14 +54,9 @@ export function VehicleBodyCreate({ onClose }: VehicleBodyCreateProps) {
           <InputField
             name="name"
             control={form.control}
-            label="Body Name"
-          />
-          <MultiSelectField
-            name="model_ids"
-            control={form.control}
-            label="Vehicle Models"
-            placeholder="Select models..."
-            options={models}
+            label="Name"
+            
+            
           />
         </FormLayout>
       </ModalForm>

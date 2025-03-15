@@ -1,0 +1,117 @@
+/**
+ * This file is auto-generated and will be overwritten by subsequent generations.
+ * Manual changes should be made to the generator templates instead.
+ */
+
+import { 
+  defineMiddlewares,
+  unlessPath,
+  validateAndTransformQuery,
+  validateAndTransformBody 
+} from "@medusajs/framework/http"
+import { createFindParams } from "@medusajs/medusa/api/utils/validators"
+import { z } from "zod"
+import { 
+  PostAdminCreate{{toPascalCase module.moduleModel.singular}},
+  PostAdminUpdate{{toPascalCase module.moduleModel.singular}}
+} from "./validators"
+
+export const GetTestsSchema = createFindParams()
+
+export default defineMiddlewares({
+  routes: [
+    // List {{module.moduleModel.plural}}
+    {
+      matcher: "/admin/{{toKebabCase module.moduleModel.plural}}",
+      method: "GET",
+      middlewares: [
+        validateAndTransformQuery(GetTestsSchema, {
+          defaults: [
+            "id",
+            {{#each fields}}
+            "{{name}}"{{#if relation}}, "{{name}}.*"{{/if}}{{#unless @last}},{{/unless}}
+            {{/each}}
+          ],
+          isList: true
+        })
+      ]
+    },
+
+    // Update {{module.moduleModel.singular}}
+    {
+      matcher: "/admin/{{toKebabCase module.moduleModel.plural}}/:id",
+      method: "POST",
+      middlewares: [
+        unlessPath(
+          /.*\/({{#each module.models}}{{this.plural}}{{#unless @last}}|{{/unless}}{{/each}})/,
+          validateAndTransformBody(PostAdminUpdate{{toPascalCase module.moduleModel.singular}})
+        ),
+      ]
+    },
+
+    // Create {{module.moduleModel.singular}}
+    {
+      matcher: "/admin/{{toKebabCase module.moduleModel.plural}}",
+      method: "POST",
+      middlewares: [
+        unlessPath(
+          /.*\/({{#each module.models}}{{this.plural}}{{#unless @last}}|{{/unless}}{{/each}})/,
+          validateAndTransformBody(PostAdminCreate{{toPascalCase module.moduleModel.singular}})
+        ),
+      ]
+    },
+
+  ] as const
+}) 
+
+
+{{! FOR LATER
+
+Based on the information provided in the knowledge sources and Medusa's conventions, there isn't a specific documented convention for altering types used in the same endpoint for different operations like POST (create) and PUT/PATCH (update). However, we can infer some best practices from Medusa's approach to API design.
+
+In Medusa, it's common to have different schemas for create and update operations, even if they share the same endpoint. This is typically handled through the request body validation middleware.
+
+Here's a suggested approach that aligns with Medusa's practices:
+
+Keep your separate types for create and update operations:
+Code
+Ask AI
+export type AdminCreateVehicleMakeReq = z.infer<typeof PostAdminCreateVehicleMake>;
+export type AdminUpdateVehicleMakeReq = z.infer<typeof PostAdminUpdateVehicleMake>;
+In your route file, you can use a union type to handle both create and update operations:
+Code
+Ask AI
+type VehicleMakeReqType = AdminCreateVehicleMakeReq | AdminUpdateVehicleMakeReq;
+
+export const POST = async (
+  req: MedusaRequest<VehicleMakeReqType>,
+  res: MedusaResponse
+) => {
+  // Your route logic here
+};
+In your middleware configuration (typically in src/api/middlewares.ts), you can use different validation schemas based on the presence of an ID in the request:
+Code
+Ask AI
+import {
+  validateAndTransformBody,
+  defineMiddlewares,
+} from "@medusajs/framework/http"
+import { PostAdminCreateVehicleMake, PostAdminUpdateVehicleMake } from "./validators"
+
+export default defineMiddlewares({
+  routes: [
+    {
+      matcher: "/admin/vehicles/models",
+      method: "POST",
+      middlewares: [
+        validateAndTransformBody((req) => {
+          // If an ID is present in the body, use the update schema
+          // Otherwise, use the create schema
+          return req.body.id ? PostAdminUpdateVehicleMake : PostAdminCreateVehicleMake
+        }),
+      ],
+    },
+  ],
+})
+
+}}

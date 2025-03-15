@@ -1,0 +1,57 @@
+import {
+  createStep,
+  StepResponse,
+  createWorkflow,
+  WorkflowResponse,
+} from "@medusajs/framework/workflows-sdk";
+import { {{toUpperCase module.plural}}_MODULE } from "../../modules/{{module.plural}}";
+import {{toPascalCase module.plural}}ModuleService from "../../modules/{{module.plural}}/service";
+
+export type Update{{toPascalCase model.name}}StepInput = {
+  id: string;
+{{#each model.fields}}
+  {{#if relation}}
+  {{name}}_ids?: string[];
+  {{else}}
+  {{name}}?: {{type}};
+  {{/if}}
+{{/each}}
+};
+
+export const update{{toPascalCase model.name}}Step = createStep(
+  "update-{{toKebabCase model.name}}-step",
+  async (input: Update{{toPascalCase model.name}}StepInput, { container }) => {
+    const {{module.plural}}ModuleService: {{toPascalCase module.plural}}ModuleService = 
+      container.resolve({{toUpperCase module.plural}}_MODULE);
+
+    const {{toCamelCase model.name}} = await {{module.plural}}ModuleService.update{{toPascalCase model.name}}s(input);
+
+    return new StepResponse({{toCamelCase model.name}}, {{toCamelCase model.name}}.id);
+  },
+  async (id: string, { container }) => {
+    const {{module.plural}}ModuleService: {{toPascalCase module.plural}}ModuleService = 
+      container.resolve({{toUpperCase module.plural}}_MODULE);
+
+      // TODO: Rollback logic
+  }
+);
+
+type Update{{toPascalCase model.name}}WorkflowInput = {
+  id: string;
+  {{#each model.fields}}
+  {{#if relation}}
+  {{name}}_ids?: string[];
+  {{else}}
+  {{name}}?: {{type}};
+  {{/if}}
+  {{/each}}
+};
+
+export const update{{toPascalCase model.name}}Workflow = createWorkflow(
+  "update-{{toKebabCase model.name}}-workflow",
+  (input: Update{{toPascalCase model.name}}WorkflowInput) => {
+    const {{toCamelCase model.name}} = update{{toPascalCase model.name}}Step(input);
+
+    return new WorkflowResponse({{toCamelCase model.name}});
+  }
+);

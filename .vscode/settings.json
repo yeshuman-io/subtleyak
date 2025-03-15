@@ -1,2 +1,16 @@
 {
+    "terminal.integrated.profiles.linux": {
+        "wtech-node": {
+            "path": "/bin/bash",
+            "args": ["-i", "-c", "source /home/daryl/repos/wtech/.vscode/shell-init.sh && exec bash -i"],
+            "overrideName": true,
+            "icon": "terminal-bash"
+        }
+    },
+    "terminal.integrated.defaultProfile.linux": "wtech-node",
+    "terminal.integrated.shellIntegration.enabled": true,
+    "terminal.integrated.shellIntegration.decorationsEnabled": "both",
+    "terminal.integrated.enablePersistentSessions": true,
+    "terminal.integrated.persistentSessionReviveProcess": "never",
+    "terminal.integrated.cwd": "${workspaceFolder}"
 }

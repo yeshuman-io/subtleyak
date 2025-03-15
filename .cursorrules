@@ -1,0 +1,96 @@
+# Medusa Module Generation Rules
+
+## Generation Workflow
+```bash
+# 1. Dry Run & Validate
+npx ts-node scripts/dry-run-[module]-[model].ts
+# Fix any template issues in generate-module.ts
+
+# 2. Generate & Test
+npx ts-node scripts/generate-module.ts
+npx medusa develop
+# Test UI forms and CRUD operations
+
+# 3. Version Control
+# If errors found:
+git add scripts/generate-module.ts
+git commit -m "fix: update module generator"
+git checkout -- src/  # Revert generated files
+# Regenerate and retest
+
+# 4. Final Commit
+git add .
+git commit -m "feat: add [module]-[model]"
+```
+
+## File Structure
+- `src/modules/[module]/models/[model].ts` - Model definition
+- `src/modules/[module]/service.ts` - Service registration
+- `src/api/admin/[module]/[model]/route.ts` - List/Create endpoints
+- `src/api/admin/[module]/[model]/[id]/route.ts` - Update endpoint
+- `src/api/admin/[module]/validators.ts` - Zod schemas
+- `src/admin/routes/[module]/[model]/page.tsx` - List page
+- `src/admin/routes/[module]/[model]/create/[model]-create.tsx` - Create form
+- `src/admin/routes/[module]/[model]/edit/[model]-edit.tsx` - Edit form
+- `src/workflows/create-[model].ts` - Create workflow
+- `src/workflows/update-[model].ts` - Update workflow
+
+## Naming Patterns
+- Files/URLs: kebab-case (vehicle-series)
+- Classes/Types: PascalCase (VehicleSeries)
+- Database: snake_case (vehicle_series)
+- Fields: 
+  - Relations: `[model]_id`
+  - Timestamps: `[action]_at`
+  - Display: `name`
+  - Unique: `code`
+
+## Required Patterns
+```typescript
+// Model Definition
+const Model = model.define("model_name", {
+  id: model.id().primaryKey(),
+  // Fields + Relations
+})
+
+// Type Definition
+export type ModelType = {
+  id: string;
+  // Fields
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
+}
+
+// List Response
+export type ListModelTypeRes = {
+  items: ModelType[];
+  count: number;
+  limit: number;
+  offset: number;
+}
+
+// Workflow Pattern
+export const createModelStep = createStep(
+  "create-model-step",
+  async (input, { container }) => {
+    const service = container.resolve("model")
+    const result = await service.create(input)
+    return new StepResponse(result, result.id)
+  },
+  async (id, { container }) => {
+    const service = container.resolve("model")
+    await service.delete(id)
+  }
+)
+```
+
+## Success Criteria
+- Dry run succeeds without errors
+- Development server starts
+- Forms are navigable and functional
+- CRUD operations work end-to-end
+- Relationships work correctly
+- Types are consistent
+- No duplicate code/imports
+- File merging preserves existing code 

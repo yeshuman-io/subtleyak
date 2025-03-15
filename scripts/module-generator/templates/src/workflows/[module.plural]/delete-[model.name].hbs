@@ -1,0 +1,42 @@
+import {
+  createStep,
+  StepResponse,
+  createWorkflow,
+  WorkflowResponse,
+} from "@medusajs/framework/workflows-sdk";
+import { {{toUpperCase module.plural}}_MODULE } from "../../modules/{{module.plural}}";
+import {{toPascalCase module.plural}}ModuleService from "../../modules/{{module.plural}}/service";
+
+export type Delete{{toPascalCase model.name}}StepInput = {
+  id: string;
+};
+
+export const delete{{toPascalCase model.name}}Step = createStep(
+  "delete-{{toKebabCase model.name}}-step",
+  async (input: Delete{{toPascalCase model.name}}StepInput, { container }) => {
+    const {{module.plural}}ModuleService: {{toPascalCase module.plural}}ModuleService = 
+      container.resolve({{toUpperCase module.plural}}_MODULE);
+
+    const original = await {{module.plural}}ModuleService.retrieve{{toPascalCase model.name}}(input.id);
+    await {{module.plural}}ModuleService.delete{{toPascalCase model.name}}s(input.id);
+
+    return new StepResponse(true, { id: input.id, original });
+  },
+  async (context: { id: string; original: Record<string, any> }, { container }) => {
+    const {{module.plural}}ModuleService: {{toPascalCase module.plural}}ModuleService = 
+      container.resolve({{toUpperCase module.plural}}_MODULE);
+
+    await {{module.plural}}ModuleService.create{{toPascalCase model.name}}s(context.original);
+  }
+);
+
+type Delete{{toPascalCase model.name}}WorkflowInput = Delete{{toPascalCase model.name}}StepInput;
+
+export const delete{{toPascalCase model.name}}Workflow = createWorkflow(
+  "delete-{{toKebabCase model.name}}-workflow",
+  (input: Delete{{toPascalCase model.name}}WorkflowInput) => {
+    const result = delete{{toPascalCase model.name}}Step(input);
+
+    return new WorkflowResponse(result);
+  }
+);

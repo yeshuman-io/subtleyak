@@ -1,33 +1,51 @@
 import { z } from "zod";
 import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
-import { createVehicleMakeWorkflow } from "../../../../workflows/create-vehicle-make";
+import { createVehicleMakeWorkflow } from "../../../../workflows/vehicles/create-vehicle-make";
 import { PostAdminCreateVehicleMake } from "./validators";
+
+type QueryResponse = {
+  data: any[];
+  metadata: {
+    count: number;
+    take: number;
+    skip: number;
+  };
+};
 
 export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
   const query = req.scope.resolve("query");
+    
+    const queryOptions = {
+      entity: "vehicle_make",
+      ...req.queryConfig,
+      filters: {
+        ...req.queryConfig?.filters,
+      },
+    };
 
-  const {
-    data: vehicle_makes,
-    metadata: { count, take, skip },
-  } = await query.graph({
-    entity: "vehicle_make",
-    ...req.queryConfig,
-  });
+  try {
+    const { data: makes, metadata } = (await query.graph(
+      queryOptions
+    )) as QueryResponse;
 
-  res.json({
-    vehicle_makes,
-    count,
-    limit: take,
-    offset: skip,
-  });
+    res.json({
+      makes,
+      count: metadata.count,
+      limit: metadata.take,
+      offset: metadata.skip,
+    });
+  } catch (error) {
+    console.error("Error fetching Vehicle Makes:", error);
+    res.status(500).json({ error: "An error occurred while fetching Vehicle Makes" });
+  }
 };
 
-type PostAdminCreateVehicleMakeType = z.infer<
+type PostAdminCreateVehicleMakeReq = z.infer<
   typeof PostAdminCreateVehicleMake
 >;
 
 export const POST = async (
-  req: MedusaRequest<PostAdminCreateVehicleMakeType>,
+  req: MedusaRequest<PostAdminCreateVehicleMakeReq>,
   res: MedusaResponse
 ) => {
   const { result } = await createVehicleMakeWorkflow(req.scope).run({
@@ -36,3 +54,4 @@ export const POST = async (
 
   res.json({ vehicleMake: result });
 };
+

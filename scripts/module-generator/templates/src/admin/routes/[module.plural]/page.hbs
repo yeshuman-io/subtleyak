@@ -1,0 +1,117 @@
+import { defineRouteConfig } from "@medusajs/admin-sdk";
+import { Pencil{{#if module.moduleModel.icon}}, {{module.moduleModel.icon}}{{/if}} } from "@medusajs/icons";
+import { createDataTableColumnHelper, FocusModal, Drawer } from "@medusajs/ui";
+import { {{toPascalCase module.singular}} } from "../../types";
+import { DataTablePage } from "../../components/data-table-page";
+import { ActionMenu } from "../../components/action-menu";
+import { {{toPascalCase module.moduleModel.singular}}Create } from "./create/{{toKebabCase module.moduleModel.singular}}-create";
+import { {{toPascalCase module.moduleModel.singular}}Edit } from "./edit/{{toKebabCase module.moduleModel.singular}}-edit";
+import { useState } from "react";
+
+const columnHelper = createDataTableColumnHelper<{{toPascalCase module.moduleModel.singular}}>();
+
+const {{toPascalCase module.plural}}Page = () => {
+  const [showCreate, setShowCreate] = useState(false);
+  const [editing{{toPascalCase module.moduleModel.singular}}, setEditing{{toPascalCase module.moduleModel.singular}}] = useState<{{toPascalCase module.moduleModel.singular}} | null>(null);
+  const columns = [
+    columnHelper.accessor("id", {
+      header: "ID",
+    }),
+    {{#each module.moduleModel.fields}}
+    {{#if (eq relation.type "belongsTo")}}
+    columnHelper.accessor("{{toSnakeCase name}}.name", {
+      cell: ({ row }) => row.original.{{toSnakeCase name}}?.name || "-",
+    {{else if (eq relation.type "hasMany")}}
+    columnHelper.accessor("{{toSnakeCase name}}", {
+      cell: ({ row }) => row.original.{{toSnakeCase name}}?.length || 0,
+    {{else}}
+    columnHelper.accessor("{{toSnakeCase name}}", {
+    {{/if}}
+      header: "{{toTitleCase name}}",
+      enableSorting: true,
+    }),
+    {{/each}}
+    columnHelper.accessor("actions", {
+      header: "",
+      cell: ({ row }) => {
+        const model = row.original;
+        return (
+          <ActionMenu
+            groups={[
+              {
+                actions: [
+                  {
+                    label: "Edit",
+                    icon: <Pencil />,
+                    onClick: () => setEditing{{toPascalCase module.moduleModel.singular}}(model),
+                  },
+                ],
+              },
+            ]}
+          />
+        );
+      },
+    }),
+  ];
+  return (
+    <>
+      <DataTablePage<{{toPascalCase module.singular}}>
+        title="{{toTitleCase module.plural}}"
+        subtitle="Manage your {{toLowerCase module.plural}}"
+        endpoint="/admin/{{toKebabCase module.plural}}"
+        columns={columns}
+        queryKey="{{toSnakeCase module.plural}}"
+        dataKey="{{toSnakeCase module.plural}}"
+        actions={[
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Export",
+              disabled: true,
+            },
+          },
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Import",
+              disabled: true,
+            },
+          },
+          {
+            type: "button",
+            props: {
+              variant: "secondary",
+              size: "small",
+              children: "Create",
+              onClick: () => setShowCreate(true),
+            },
+          },
+        ]}
+      />
+      {showCreate && (
+        <FocusModal open={showCreate} onOpenChange={setShowCreate}>
+          <{{toPascalCase module.moduleModel.singular}}Create onClose={() => setShowCreate(false)} />
+        </FocusModal>
+      )}
+      {editing{{toPascalCase module.moduleModel.singular}} && (
+        <Drawer open onOpenChange={() => setEditing{{toPascalCase module.moduleModel.singular}}(null)}>
+          <{{toPascalCase module.moduleModel.singular}}Edit 
+            {{module.moduleModel.singular}}={{jsx-expr "editing{{toPascalCase module.moduleModel.singular}}"}}
+            onClose={() => setEditing{{toPascalCase module.moduleModel.singular}}(null)}
+          />
+        </Drawer>
+      )}
+    </>
+  );
+};
+
+export const config = defineRouteConfig({
+  label: "{{toTitleCase module.plural}}",
+  {{#if module.moduleModel.icon}}icon: {{module.moduleModel.icon}}{{/if}}
+});//asdf
+
+export default {{toPascalCase module.plural}}Page; 

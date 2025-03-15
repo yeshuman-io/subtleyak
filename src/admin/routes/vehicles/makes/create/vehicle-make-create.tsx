@@ -1,25 +1,16 @@
-import * as zod from "zod"
-import { 
-  FocusModal,
-  Heading,
-  Label,
-  Input,
-  Button,
-} from "@medusajs/ui"
-import { 
-  FormProvider,
-  Controller,
-  useForm,
-} from "react-hook-form"
-import { PostAdminCreateVehicleMake } from "../../../../../api/admin/vehicles/makes/validators"
-import { sdk } from "../../../../lib/sdk"
-import { useNavigate } from "react-router-dom"
-import { zodResolver } from "@hookform/resolvers/zod"
-import { InputField } from "../../../../components/form/input-field"
-import { FormLayout } from "../../../../components/form/form-layout"
-import { ModalForm } from "../../../../components/form/modal-form"
+import * as zod from "zod";
+import { FormProvider, useForm } from "react-hook-form";
+import { PostAdminCreateVehicleMake } from "../../../../../api/admin/vehicles/makes/validators";
+import { sdk } from "../../../../lib/sdk";
+import { useNavigate } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { SelectField } from "../../../../components/form/select-field";
+import { InputField } from "../../../../components/form/input-field";
+import { FormLayout } from "../../../../components/form/form-layout";
+import { ModalForm } from "../../../../components/form/modal-form";
 
-// We can reuse our existing validator schema
+
 const schema = PostAdminCreateVehicleMake;
 type CreateVehicleMakeFormData = zod.infer<typeof schema>;
 
@@ -28,8 +19,8 @@ type VehicleMakeCreateProps = {
 };
 
 export function VehicleMakeCreate({ onClose }: VehicleMakeCreateProps) {
-  const navigate = useNavigate()
-
+  const navigate = useNavigate();
+  
   const form = useForm<CreateVehicleMakeFormData>({
     defaultValues: {
       name: "",
@@ -37,18 +28,18 @@ export function VehicleMakeCreate({ onClose }: VehicleMakeCreateProps) {
     resolver: zodResolver(schema),
   });
 
+
   const handleSubmit = form.handleSubmit(async (data) => {
     try {
       await sdk.client.fetch("/admin/vehicles/makes", {
         method: "POST",
-        body: data
+        body: data,
       });
       
-      // Close modal and refresh page
-      onClose()
-      navigate("/vehicles/makes")
+      onClose();
+      navigate("/vehicles/makes");
     } catch (error) {
-      console.error("Failed to create make:", error)
+      console.error("Failed to create Vehicle Make:", error);
     }
   });
 
@@ -63,7 +54,9 @@ export function VehicleMakeCreate({ onClose }: VehicleMakeCreateProps) {
           <InputField
             name="name"
             control={form.control}
-            label="Make Name"
+            label="Name"
+            
+            
           />
         </FormLayout>
       </ModalForm>

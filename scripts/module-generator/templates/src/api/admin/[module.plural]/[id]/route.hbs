@@ -1,0 +1,22 @@
+import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { z } from "zod";
+import { update{{toPascalCase module.moduleModel.singular}}Workflow } from "../../../../workflows/{{module.plural}}/update-{{toKebabCase module.moduleModel.singular}}";
+import { PostAdminUpdate{{toPascalCase module.moduleModel.singular}} } from "../validators";
+
+type PostAdminUpdate{{toPascalCase module.moduleModel.singular}}Type = z.infer<
+  typeof PostAdminUpdate{{toPascalCase module.moduleModel.singular}}
+>;
+
+export const POST = async (
+  req: MedusaRequest<PostAdminUpdate{{toPascalCase module.moduleModel.singular}}Type>,
+  res: MedusaResponse
+) => {
+  const { result } = await update{{toPascalCase module.moduleModel.singular}}Workflow(req.scope).run({
+    input: {
+      id: req.params.id,
+      ...req.validatedBody,
+    },
+  });
+
+  res.json({ {{toSnakeCase module.moduleModel.plural}}: result });
+};

@@ -1,0 +1,107 @@
+import { z } from "zod";
+import { MedusaRequest, MedusaResponse } from "@medusajs/framework/http";
+import { create{{toPascalCase model.name}}Workflow } from "../../../../workflows/{{module.plural}}/create-{{toKebabCase model.name}}";
+import { PostAdminCreate{{toPascalCase model.name}} } from "./validators";
+
+type QueryResponse = {
+  data: any[];
+  metadata: {
+    count: number;
+    take: number;
+    skip: number;
+  };
+};
+
+export const GET = async (req: MedusaRequest, res: MedusaResponse) => {
+  const query = req.scope.resolve("query");
+    
+    const queryOptions = {
+      entity: "{{toSnakeCase model.name}}",
+      ...req.queryConfig,
+      filters: {
+        ...req.queryConfig?.filters,
+      },
+    };
+
+  try {
+    const { data: {{toSnakeCase model.plural}}, metadata } = (await query.graph(
+      queryOptions
+    )) as QueryResponse;
+
+    res.json({
+      {{toSnakeCase model.plural}},
+      count: metadata.count,
+      limit: metadata.take,
+      offset: metadata.skip,
+    });
+  } catch (error) {
+    console.error("Error fetching {{toSentenceCase model.name}}s:", error);
+    res.status(500).json({ error: "An error occurred while fetching {{toSentenceCase model.name}}s" });
+  }
+};
+
+type PostAdminCreate{{toPascalCase model.name}}Req = z.infer<
+  typeof PostAdminCreate{{toPascalCase model.name}}
+>;
+
+export const POST = async (
+  req: MedusaRequest<PostAdminCreate{{toPascalCase model.name}}Req>,
+  res: MedusaResponse
+) => {
+  const { result } = await create{{toPascalCase model.name}}Workflow(req.scope).run({
+    input: req.validatedBody,
+  });
+
+  res.json({ {{toCamelCase model.name}}: result });
+};
+
+{{! FOR LATER
+
+Based on the information provided in the knowledge sources and Medusa's conventions, there isn't a specific documented convention for altering types used in the same endpoint for different operations like POST (create) and PUT/PATCH (update). However, we can infer some best practices from Medusa's approach to API design.
+
+In Medusa, it's common to have different schemas for create and update operations, even if they share the same endpoint. This is typically handled through the request body validation middleware.
+
+Here's a suggested approach that aligns with Medusa's practices:
+
+Keep your separate types for create and update operations:
+Code
+Ask AI
+export type AdminCreateVehicleMakeReq = z.infer<typeof PostAdminCreateVehicleMake>;
+export type AdminUpdateVehicleMakeReq = z.infer<typeof PostAdminUpdateVehicleMake>;
+In your route file, you can use a union type to handle both create and update operations:
+Code
+Ask AI
+type VehicleMakeReqType = AdminCreateVehicleMakeReq | AdminUpdateVehicleMakeReq;
+
+export const POST = async (
+  req: MedusaRequest<VehicleMakeReqType>,
+  res: MedusaResponse
+) => {
+  // Your route logic here
+};
+In your middleware configuration (typically in src/api/middlewares.ts), you can use different validation schemas based on the presence of an ID in the request:
+Code
+Ask AI
+import {
+  validateAndTransformBody,
+  defineMiddlewares,
+} from "@medusajs/framework/http"
+import { PostAdminCreateVehicleMake, PostAdminUpdateVehicleMake } from "./validators"
+
+export default defineMiddlewares({
+  routes: [
+    {
+      matcher: "/admin/vehicles/models",
+      method: "POST",
+      middlewares: [
+        validateAndTransformBody((req) => {
+          // If an ID is present in the body, use the update schema
+          // Otherwise, use the create schema
+          return req.body.id ? PostAdminUpdateVehicleMake : PostAdminCreateVehicleMake
+        }),
+      ],
+    },
+  ],
+})
+
+}}

@@ -1,0 +1,15 @@
+import { model } from "@medusajs/framework/utils";
+{{#each model.fields}}
+{{#if relation}}
+import {{toPascalCase relation.model}} from "./{{toKebabCase relation.model}}";
+{{/if}}
+{{/each}}
+
+const {{toPascalCase model.name}} = model.define("{{toSnakeCase model.name}}", {
+  id: model.id().primaryKey(),
+  {{#each model.fields}}
+  {{processField this}}{{#unless @last}},{{/unless}}
+  {{/each}}
+});
+
+export default {{toPascalCase model.name}};//sdfasadf
