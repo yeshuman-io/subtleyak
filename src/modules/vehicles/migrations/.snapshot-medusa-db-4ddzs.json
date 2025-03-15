@@ -277,8 +277,8 @@
     },
     {
       "columns": {
-        "model_id": {
-          "name": "model_id",
+        "vehicle_body_id": {
+          "name": "vehicle_body_id",
           "type": "text",
           "unsigned": false,
           "autoincrement": false,
@@ -286,8 +286,8 @@
           "nullable": false,
           "mappedType": "text"
         },
-        "body_id": {
-          "name": "body_id",
+        "vehicle_model_id": {
+          "name": "vehicle_model_id",
           "type": "text",
           "unsigned": false,
           "autoincrement": false,
@@ -296,14 +296,14 @@
           "mappedType": "text"
         }
       },
-      "name": "vehicle_model_body",
+      "name": "vehicle_body_vehicle_models",
       "schema": "public",
       "indexes": [
         {
-          "keyName": "vehicle_model_body_pkey",
+          "keyName": "vehicle_body_vehicle_models_pkey",
           "columnNames": [
-            "model_id",
-            "body_id"
+            "vehicle_body_id",
+            "vehicle_model_id"
           ],
           "composite": true,
           "constraint": true,
@@ -313,29 +313,29 @@
       ],
       "checks": [],
       "foreignKeys": {
-        "vehicle_model_body_model_id_foreign": {
-          "constraintName": "vehicle_model_body_model_id_foreign",
+        "vehicle_body_vehicle_models_vehicle_body_id_foreign": {
+          "constraintName": "vehicle_body_vehicle_models_vehicle_body_id_foreign",
           "columnNames": [
-            "model_id"
+            "vehicle_body_id"
           ],
-          "localTableName": "public.vehicle_model_body",
-          "referencedColumnNames": [
-            "id"
-          ],
-          "referencedTableName": "public.vehicle_model",
-          "deleteRule": "cascade",
-          "updateRule": "cascade"
-        },
-        "vehicle_model_body_body_id_foreign": {
-          "constraintName": "vehicle_model_body_body_id_foreign",
-          "columnNames": [
-            "body_id"
-          ],
-          "localTableName": "public.vehicle_model_body",
+          "localTableName": "public.vehicle_body_vehicle_models",
           "referencedColumnNames": [
             "id"
           ],
           "referencedTableName": "public.vehicle_body",
+          "deleteRule": "cascade",
+          "updateRule": "cascade"
+        },
+        "vehicle_body_vehicle_models_vehicle_model_id_foreign": {
+          "constraintName": "vehicle_body_vehicle_models_vehicle_model_id_foreign",
+          "columnNames": [
+            "vehicle_model_id"
+          ],
+          "localTableName": "public.vehicle_body_vehicle_models",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "public.vehicle_model",
           "deleteRule": "cascade",
           "updateRule": "cascade"
         }
@@ -370,26 +370,6 @@
           "primary": false,
           "nullable": false,
           "mappedType": "text"
-        },
-        "start_year": {
-          "name": "start_year",
-          "type": "integer",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "default": "2000",
-          "mappedType": "integer"
-        },
-        "end_year": {
-          "name": "end_year",
-          "type": "integer",
-          "unsigned": false,
-          "autoincrement": false,
-          "primary": false,
-          "nullable": false,
-          "default": "2001",
-          "mappedType": "integer"
         },
         "created_at": {
           "name": "created_at",
@@ -485,6 +465,156 @@
             "model_id"
           ],
           "localTableName": "public.vehicle",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "public.vehicle_model",
+          "updateRule": "cascade"
+        }
+      },
+      "nativeEnums": {}
+    },
+    {
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "text"
+        },
+        "start_year": {
+          "name": "start_year",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "integer"
+        },
+        "end_year": {
+          "name": "end_year",
+          "type": "integer",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "integer"
+        },
+        "vehicle_id": {
+          "name": "vehicle_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "text"
+        },
+        "model_id": {
+          "name": "model_id",
+          "type": "text",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "mappedType": "text"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "length": 6,
+          "default": "now()",
+          "mappedType": "datetime"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": false,
+          "length": 6,
+          "default": "now()",
+          "mappedType": "datetime"
+        },
+        "deleted_at": {
+          "name": "deleted_at",
+          "type": "timestamptz",
+          "unsigned": false,
+          "autoincrement": false,
+          "primary": false,
+          "nullable": true,
+          "length": 6,
+          "mappedType": "datetime"
+        }
+      },
+      "name": "vehicle_series",
+      "schema": "public",
+      "indexes": [
+        {
+          "keyName": "IDX_vehicle_series_vehicle_id",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_vehicle_series_vehicle_id\" ON \"vehicle_series\" (vehicle_id) WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_vehicle_series_model_id",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_vehicle_series_model_id\" ON \"vehicle_series\" (model_id) WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "IDX_vehicle_series_deleted_at",
+          "columnNames": [],
+          "composite": false,
+          "constraint": false,
+          "primary": false,
+          "unique": false,
+          "expression": "CREATE INDEX IF NOT EXISTS \"IDX_vehicle_series_deleted_at\" ON \"vehicle_series\" (deleted_at) WHERE deleted_at IS NULL"
+        },
+        {
+          "keyName": "vehicle_series_pkey",
+          "columnNames": [
+            "id"
+          ],
+          "composite": false,
+          "constraint": true,
+          "primary": true,
+          "unique": true
+        }
+      ],
+      "checks": [],
+      "foreignKeys": {
+        "vehicle_series_vehicle_id_foreign": {
+          "constraintName": "vehicle_series_vehicle_id_foreign",
+          "columnNames": [
+            "vehicle_id"
+          ],
+          "localTableName": "public.vehicle_series",
+          "referencedColumnNames": [
+            "id"
+          ],
+          "referencedTableName": "public.vehicle",
+          "updateRule": "cascade"
+        },
+        "vehicle_series_model_id_foreign": {
+          "constraintName": "vehicle_series_model_id_foreign",
+          "columnNames": [
+            "model_id"
+          ],
+          "localTableName": "public.vehicle_series",
           "referencedColumnNames": [
             "id"
           ],
