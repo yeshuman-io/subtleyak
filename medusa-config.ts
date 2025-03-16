@@ -4,7 +4,7 @@ loadEnv(process.env.NODE_ENV || 'development', process.cwd())
 
 module.exports = defineConfig({
   admin: {
-    path: "/app",
+    path: "/nimda",
     disable: process.env.MEDUSA_DISABLE_ADMIN === "true",
     backendUrl: process.env.MEDUSA_BACKEND_URL,
     // vite: (config) => {
