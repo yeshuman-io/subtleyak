@@ -38,6 +38,10 @@ const config = {
     storeCors: process.env.STORE_CORS!,
     jwtSecret: process.env.JWT_SECRET || "supersecret",
     cookieSecret: process.env.COOKIE_SECRET || "supersecret",
+    cors: {
+      origin: [process.env.ADMIN_CORS!, process.env.AUTH_CORS!, process.env.STORE_CORS!].filter(Boolean),
+      credentials: true,
+    },
   },
   modules: [
     {
