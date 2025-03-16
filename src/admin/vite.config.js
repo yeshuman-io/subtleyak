@@ -6,7 +6,8 @@ export default {
     hmr: {
       clientPort: 443,
       protocol: 'wss'
-    }
+    },
+    allowedHosts: ['yeshuman-server.up.railway.app']
   },
   build: {
     target: 'esnext',
