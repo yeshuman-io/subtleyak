@@ -33,13 +33,14 @@ const config = {
   },
   workerMode: process.env.MEDUSA_WORKER_MODE as "shared" | "worker" | "server",
   http: {
-    adminCors: process.env.ADMIN_CORS!,
-    authCors: process.env.AUTH_CORS!,
-    storeCors: process.env.STORE_CORS!,
+    // For staging, allow all origins
+    adminCors: process.env.NODE_ENV === 'development' ? '*' : process.env.ADMIN_CORS!,
+    authCors: process.env.NODE_ENV === 'development' ? '*' : process.env.AUTH_CORS!,
+    storeCors: process.env.NODE_ENV === 'development' ? '*' : process.env.STORE_CORS!,
     jwtSecret: process.env.JWT_SECRET || "supersecret",
     cookieSecret: process.env.COOKIE_SECRET || "supersecret",
     cors: {
-      origin: [process.env.ADMIN_CORS!, process.env.AUTH_CORS!, process.env.STORE_CORS!].filter(Boolean),
+      origin: process.env.NODE_ENV === 'development' ? '*' : [process.env.ADMIN_CORS!, process.env.AUTH_CORS!, process.env.STORE_CORS!].filter(Boolean),
       credentials: true,
     },
   },
@@ -91,7 +92,11 @@ console.log('Medusa Config:', {
   http: {
     ...config.http,
     jwtSecret: '[HIDDEN]',
-    cookieSecret: '[HIDDEN]'
+    cookieSecret: '[HIDDEN]',
+    cors: {
+      origin: config.http.cors.origin,
+      credentials: config.http.cors.credentials
+    }
   },
   modules: config.modules.map(m => ({
     resolve: m.resolve,
