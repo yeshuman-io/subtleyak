@@ -7,19 +7,19 @@ module.exports = defineConfig({
     path: "/app",
     disable: process.env.MEDUSA_DISABLE_ADMIN === "true",
     backendUrl: process.env.MEDUSA_BACKEND_URL,
-    vite: (config) => {
-      let host = process.env.MEDUSA_BACKEND_URL;
+    // vite: (config) => {
+    //   let host = process.env.MEDUSA_BACKEND_URL;
 
-      if (host) {
-        if (host.startsWith("http")) {
-          host = new URL(host).hostname;
-        }
+    //   if (host) {
+    //     if (host.startsWith("http")) {
+    //       host = new URL(host).hostname;
+    //     }
 
-        config.server.allowedHosts = [host];
-      }
+    //     config.server.allowedHosts = [host];
+    //   }
 
-      return config;
-    },
+    //   return config;
+    // },
   },
   projectConfig: {
     databaseUrl: process.env.DATABASE_URL,
