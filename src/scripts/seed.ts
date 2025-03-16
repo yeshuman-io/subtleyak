@@ -1,857 +1,722 @@
-import {
-  createApiKeysWorkflow,
-  createInventoryLevelsWorkflow,
-  createProductCategoriesWorkflow,
-  createProductsWorkflow,
-  createRegionsWorkflow,
-  createSalesChannelsWorkflow,
-  createShippingOptionsWorkflow,
-  createShippingProfilesWorkflow,
-  createStockLocationsWorkflow,
-  createTaxRegionsWorkflow,
-  linkSalesChannelsToApiKeyWorkflow,
-  linkSalesChannelsToStockLocationWorkflow,
-  updateStoresWorkflow,
-} from "@medusajs/medusa/core-flows";
-import { CreateInventoryLevelInput, ExecArgs } from "@medusajs/framework/types";
-import {
-  ContainerRegistrationKeys,
-  Modules,
-  ProductStatus,
-} from "@medusajs/framework/utils";
+import { faker } from "@faker-js/faker";
+import { MedusaContainer } from "@medusajs/framework/types"
+import { 
+  Vehicle,
+  VehicleSeries,
+  VehicleMake,
+  VehicleModel,
+  VehicleBody,
+  Wiper,
+  WiperKit,
+  WiperLength,
+  WiperConnector,
+  WiperArm,
+  Fitment,
+} from "../admin/types";
+import { VEHICLES_MODULE } from "../modules/vehicles";
+import VehiclesModuleService from "../modules/vehicles/service";
+import { WIPERS_MODULE } from "../modules/wipers";
+import WipersModuleService from "../modules/wipers/service";
+import { FITMENTS_MODULE } from "../modules/fitments";
+import FitmentsModuleService from "../modules/fitments/service";
 
-export default async function seedDemoData({ container }: ExecArgs) {
-  const logger = container.resolve(ContainerRegistrationKeys.LOGGER);
-  const link = container.resolve(ContainerRegistrationKeys.LINK);
-  const query = container.resolve(ContainerRegistrationKeys.QUERY);
-  const fulfillmentModuleService = container.resolve(Modules.FULFILLMENT);
-  const salesChannelModuleService = container.resolve(Modules.SALES_CHANNEL);
-  const storeModuleService = container.resolve(Modules.STORE);
+// Constants for seeding quantities
+const VEHICLE_COUNT = 10;
+const VEHICLE_VEHICLES_PER_VEHICLE = 2;
+const VEHICLE_SERIES_PER_VEHICLE = 2;
+const VEHICLE_MAKES_PER_VEHICLE = 2;
+const VEHICLE_MODELS_PER_VEHICLE = 2;
+const VEHICLE_BODIES_PER_VEHICLE = 2;
+const WIPER_COUNT = 10;
+const WIPER_WIPERS_PER_WIPER = 2;
+const WIPER_KITS_PER_WIPER = 2;
+const WIPER_LENGTHS_PER_WIPER = 2;
+const WIPER_CONNECTORS_PER_WIPER = 2;
+const WIPER_ARMS_PER_WIPER = 2;
+const FITMENT_COUNT = 10;
+const FITMENT_FITMENTS_PER_FITMENT = 2;
 
-  const countries = ["gb", "de", "dk", "se", "fr", "es", "it"];
+// Define field types
+type Field = {
+  name: string;
+  type: "text" | "number" | "boolean" | "date";
+  relation?: {
+    type: "belongsTo" | "hasMany" | "manyToMany";
+    model: string;
+    mappedBy?: string;
+  };
+};
 
-  logger.info("Seeding store data...");
-  const [store] = await storeModuleService.listStores();
-  let defaultSalesChannel = await salesChannelModuleService.listSalesChannels({
-    name: "Default Sales Channel",
+export default async function seed(
+  { container }: { container: MedusaContainer },
+  quantity: number = 10
+): Promise<void> {
+  console.log("Starting seed process...");
+  const startTime = Date.now();
+  
+  console.log("Inspecting registered modules...");
+  
+  // Log all registrations in the container
+  console.log("Registered modules:", Object.keys(container.registrations));
+
+  // Optionally, you can log more details about each registration
+  Object.entries(container.registrations).forEach(([key, value]) => {
+    console.log(`Module: ${key}`, typeof value);
   });
 
-  if (!defaultSalesChannel.length) {
-    // create the default sales channel
-    const { result: salesChannelResult } = await createSalesChannelsWorkflow(
-      container
-    ).run({
-      input: {
-        salesChannelsData: [
-          {
-            name: "Default Sales Channel",
-          },
-        ],
-      },
-    });
-    defaultSalesChannel = salesChannelResult;
-  }
+  // Resolve services
+  const vehiclesModuleService: VehiclesModuleService = 
+    container.cradle[VEHICLES_MODULE];
+  const wipersModuleService: WipersModuleService = 
+    container.cradle[WIPERS_MODULE];
+  const fitmentsModuleService: FitmentsModuleService = 
+    container.cradle[FITMENTS_MODULE];
 
-  await updateStoresWorkflow(container).run({
-    input: {
-      selector: { id: store.id },
-      update: {
-        supported_currencies: [
-          {
-            currency_code: "eur",
-            is_default: true,
-          },
-          {
-            currency_code: "usd",
-          },
-        ],
-        default_sales_channel_id: defaultSalesChannel[0].id,
-      },
-    },
-  });
-  logger.info("Seeding region data...");
-  const { result: regionResult } = await createRegionsWorkflow(container).run({
-    input: {
-      regions: [
-        {
-          name: "Europe",
-          currency_code: "eur",
-          countries,
-          payment_providers: ["pp_system_default"],
-        },
-      ],
-    },
-  });
-  const region = regionResult[0];
-  logger.info("Finished seeding regions.");
-
-  logger.info("Seeding tax regions...");
-  await createTaxRegionsWorkflow(container).run({
-    input: countries.map((country_code) => ({
-      country_code,
-    })),
-  });
-  logger.info("Finished seeding tax regions.");
-
-  logger.info("Seeding stock location data...");
-  const { result: stockLocationResult } = await createStockLocationsWorkflow(
-    container
-  ).run({
-    input: {
-      locations: [
-        {
-          name: "European Warehouse",
-          address: {
-            city: "Copenhagen",
-            country_code: "DK",
-            address_1: "",
-          },
-        },
-      ],
-    },
-  });
-  const stockLocation = stockLocationResult[0];
-
-  await link.create({
-    [Modules.STOCK_LOCATION]: {
-      stock_location_id: stockLocation.id,
-    },
-    [Modules.FULFILLMENT]: {
-      fulfillment_provider_id: "manual_manual",
-    },
-  });
-
-  logger.info("Seeding fulfillment data...");
-  const shippingProfiles = await fulfillmentModuleService.listShippingProfiles({
-    type: "default"
-  })
-  let shippingProfile = shippingProfiles.length ? shippingProfiles[0] : null
-
-  if (!shippingProfile) {
-    const { result: shippingProfileResult } =
-    await createShippingProfilesWorkflow(container).run({
-      input: {
-        data: [
-          {
-            name: "Default Shipping Profile",
-            type: "default",
-          },
-        ],
-      },
-    });
-    shippingProfile = shippingProfileResult[0];
-  }
-
-  const fulfillmentSet = await fulfillmentModuleService.createFulfillmentSets({
-    name: "European Warehouse delivery",
-    type: "shipping",
-    service_zones: [
+  try {
+    console.log("\nSeeding Vehicles module...");
+    
+    // Sort models by dependency level
+    const vehicleModels = [
       {
-        name: "Europe",
-        geo_zones: [
-          {
-            country_code: "gb",
-            type: "country",
-          },
-          {
-            country_code: "de",
-            type: "country",
-          },
-          {
-            country_code: "dk",
-            type: "country",
-          },
-          {
-            country_code: "se",
-            type: "country",
-          },
-          {
-            country_code: "fr",
-            type: "country",
-          },
-          {
-            country_code: "es",
-            type: "country",
-          },
-          {
-            country_code: "it",
-            type: "country",
-          },
+        name: "VehicleMake",
+        modelNamePlural: "VehicleMakes",
+        service: vehiclesModuleService,
+        dependencies: [
         ],
-      },
-    ],
-  });
-
-  await link.create({
-    [Modules.STOCK_LOCATION]: {
-      stock_location_id: stockLocation.id,
-    },
-    [Modules.FULFILLMENT]: {
-      fulfillment_set_id: fulfillmentSet.id,
-    },
-  });
-
-  await createShippingOptionsWorkflow(container).run({
-    input: [
-      {
-        name: "Standard Shipping",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Standard",
-          description: "Ship in 2-3 days.",
-          code: "standard",
-        },
-        prices: [
-          {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
-          },
-          {
-            region_id: region.id,
-            amount: 10,
-          },
-        ],
-        rules: [
-          {
-            attribute: "enabled_in_store",
-            value: "true",
-            operator: "eq",
-          },
-          {
-            attribute: "is_return",
-            value: "false",
-            operator: "eq",
-          },
-        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "name",
+              type: "false" as const,
+            },
+            {
+              name: "models",
+              type: "false" as const,
+              relation: {
+                type: "hasMany" as const,
+                model: "VehicleModel",
+                mappedBy: "make",
+              },
+            },
+            {
+              name: "vehicles",
+              type: "false" as const,
+              relation: {
+                type: "hasMany" as const,
+                model: "Vehicle",
+                mappedBy: "make",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "name": "vehicle.manufacturer",
+            }
+          }
+        }
       },
       {
-        name: "Express Shipping",
-        price_type: "flat",
-        provider_id: "manual_manual",
-        service_zone_id: fulfillmentSet.service_zones[0].id,
-        shipping_profile_id: shippingProfile.id,
-        type: {
-          label: "Express",
-          description: "Ship in 24 hours.",
-          code: "express",
-        },
-        prices: [
-          {
-            currency_code: "usd",
-            amount: 10,
-          },
-          {
-            currency_code: "eur",
-            amount: 10,
-          },
-          {
-            region_id: region.id,
-            amount: 10,
-          },
+        name: "VehicleBody",
+        modelNamePlural: "VehicleBodies",
+        service: vehiclesModuleService,
+        dependencies: [
         ],
-        rules: [
-          {
-            attribute: "enabled_in_store",
-            value: "true",
-            operator: "eq",
-          },
-          {
-            attribute: "is_return",
-            value: "false",
-            operator: "eq",
-          },
-        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "name",
+              type: "false" as const,
+            },
+            {
+              name: "models",
+              type: "false" as const,
+              relation: {
+                type: "manyToMany" as const,
+                model: "VehicleModel",
+                mappedBy: "bodies",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "name": "vehicle.type",
+            }
+          }
+        }
       },
-    ],
-  });
-  logger.info("Finished seeding fulfillment data.");
+      {
+        name: "VehicleModel",
+        modelNamePlural: "VehicleModels",
+        service: vehiclesModuleService,
+        dependencies: [
+          "VehicleMake",
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "name",
+              type: "false" as const,
+            },
+            {
+              name: "make",
+              type: "false" as const,
+              relation: {
+                type: "belongsTo" as const,
+                model: "VehicleMake",
+              },
+            },
+            {
+              name: "vehicles",
+              type: "false" as const,
+              relation: {
+                type: "hasMany" as const,
+                model: "Vehicle",
+                mappedBy: "model",
+              },
+            },
+            {
+              name: "bodies",
+              type: "false" as const,
+              relation: {
+                type: "manyToMany" as const,
+                model: "VehicleBody",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "name": "vehicle.model",
+            }
+          }
+        }
+      },
+      {
+        name: "Vehicle",
+        modelNamePlural: "Vehicles",
+        service: vehiclesModuleService,
+        dependencies: [
+          "VehicleMake",
+          "VehicleModel",
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "make",
+              type: "false" as const,
+              relation: {
+                type: "belongsTo" as const,
+                model: "VehicleMake",
+                mappedBy: "vehicles",
+              },
+            },
+            {
+              name: "model",
+              type: "false" as const,
+              relation: {
+                type: "belongsTo" as const,
+                model: "VehicleModel",
+                mappedBy: "vehicles",
+              },
+            },
+            {
+              name: "series",
+              type: "false" as const,
+              relation: {
+                type: "hasMany" as const,
+                model: "VehicleSeries",
+                mappedBy: "vehicle",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "name": "vehicle.model",
+              "type": "vehicle.type",
+              "manufacturer": "vehicle.manufacturer",
+              "vin": "vehicle.vin",
+              "color": "vehicle.color",
+            }
+          }
+        }
+      },
+      {
+        name: "VehicleSeries",
+        modelNamePlural: "VehicleSeries",
+        service: vehiclesModuleService,
+        dependencies: [
+          "Vehicle",
+          "VehicleModel",
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "start_year",
+              type: "false" as const,
+            },
+            {
+              name: "end_year",
+              type: "false" as const,
+            },
+            {
+              name: "vehicle",
+              type: "false" as const,
+              relation: {
+                type: "belongsTo" as const,
+                model: "Vehicle",
+                mappedBy: "series",
+              },
+            },
+            {
+              name: "model",
+              type: "false" as const,
+              relation: {
+                type: "belongsTo" as const,
+                model: "VehicleModel",
+                mappedBy: "series",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "start_year": "number.int({ min: 1950, max: 2020 })",
+              "end_year": "number.int({ min: 2021, max: 2024 })",
+            }
+          }
+        }
+      },
+    ];
 
-  await linkSalesChannelsToStockLocationWorkflow(container).run({
-    input: {
-      id: stockLocation.id,
-      add: [defaultSalesChannel[0].id],
-    },
-  });
-  logger.info("Finished seeding stock location data.");
+    // Create records for each model in dependency order
+    for (const model of vehicleModels) {
+      console.log(`\nCreating ${model.count} ${model.name} records...`);
+      
+      for (let i = 0; i < model.count; i++) {
+        // Generate data for the record
+        const data: Record<string, any> = {};
+        
+        for (const field of model.config.fields as unknown as Field[]) {
+          if ('relation' in field && field.relation) {
+            if (field.relation.type === "belongsTo") {
+              // Get a random related record ID
+              const moduleService = field.relation.model.toLowerCase().includes('vehicle') 
+                ? vehiclesModuleService 
+                : null;
+              
+              if (!moduleService) {
+                console.warn(`No module service found for model ${field.relation.model}`);
+                continue;
+              }
 
-  logger.info("Seeding publishable API key data...");
-  const { result: publishableApiKeyResult } = await createApiKeysWorkflow(
-    container
-  ).run({
-    input: {
-      api_keys: [
-        {
-          title: "Webshop",
-          type: "publishable",
-          created_by: "",
-        },
-      ],
-    },
-  });
-  const publishableApiKey = publishableApiKeyResult[0];
+              const relatedRecords = await moduleService[`list${field.relation.model}s`](
+                {},  // Empty filter object
+                { 
+                  take: 1,
+                  select: ['id']
+                }
+              );
+              
+              if (relatedRecords.length > 0) {
+                data[`${field.name}_id`] = relatedRecords[0].id;
+              }
+            }
+          } else {
+            // Generate data using faker
+            const fakerMethod = 
+              model.config.faker.fields[field.name] || 
+              {
+                text: "lorem.word",
+                number: "number.int({ min: 1, max: 100 })",
+                boolean: "datatype.boolean",
+                date: "date.recent"
+              }[field.type] || "lorem.word";
+            
+            // Evaluate faker method
+            const [namespace, method] = fakerMethod.split(".");
+            if (namespace === 'number' && method.startsWith('int')) {
+              const argsMatch = method.match(/\{(.+)\}/);
+              if (argsMatch) {
+                const options = argsMatch[1].split(',').reduce((obj, pair) => {
+                  const [key, value] = pair.trim().split(':').map(s => s.trim());
+                  obj[key] = Number(value);
+                  return obj;
+                }, {} as Record<string, number>);
+                data[field.name] = faker.number.int(options);
+              } else {
+                data[field.name] = faker.number.int();
+              }
+            } else {
+              const methodName = method.split('(')[0];
+              data[field.name] = faker[namespace][methodName]();
+            }
+          }
+        }
 
-  await linkSalesChannelsToApiKeyWorkflow(container).run({
-    input: {
-      id: publishableApiKey.id,
-      add: [defaultSalesChannel[0].id],
-    },
-  });
-  logger.info("Finished seeding publishable API key data.");
+        // Create the record using the module service with the current model name
+        const record = await vehiclesModuleService[`create${model.modelNamePlural}`](data);
+        console.log(`Created ${model.name} ${i + 1}/${model.count}`);
+      }
+    }
+    console.log("\nSeeding Wipers module...");
+    
+    // Sort models by dependency level
+    const wiperModels = [
+      {
+        name: "Wiper",
+        modelNamePlural: "Wipers",
+        service: wipersModuleService,
+        dependencies: [
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "name",
+              type: "false" as const,
+            },
+            {
+              name: "code",
+              type: "false" as const,
+            },
+            {
+              name: "kits",
+              type: "false" as const,
+              relation: {
+                type: "hasMany" as const,
+                model: "WiperKit",
+                mappedBy: "wiper",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "name": "commerce.productName",
+              "code": "string.alphanumeric(10)",
+            }
+          }
+        }
+      },
+      {
+        name: "WiperKit",
+        modelNamePlural: "WiperKits",
+        service: wipersModuleService,
+        dependencies: [
+          "Wiper",
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "name",
+              type: "false" as const,
+            },
+            {
+              name: "code",
+              type: "false" as const,
+            },
+            {
+              name: "wiper",
+              type: "false" as const,
+              relation: {
+                type: "belongsTo" as const,
+                model: "Wiper",
+                mappedBy: "kits",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "name": "commerce.productName",
+              "code": "string.alphanumeric(12)",
+            }
+          }
+        }
+      },
+      {
+        name: "WiperLength",
+        modelNamePlural: "WiperLengths",
+        service: wipersModuleService,
+        dependencies: [
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "value",
+              type: "false" as const,
+            },
+            {
+              name: "unit",
+              type: "false" as const,
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "value": "number.int({ min: 300, max: 800 })",
+              "unit": "science.unit().symbol",
+            }
+          }
+        }
+      },
+      {
+        name: "WiperConnector",
+        modelNamePlural: "WiperConnectors",
+        service: wipersModuleService,
+        dependencies: [
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "name",
+              type: "false" as const,
+            },
+            {
+              name: "code",
+              type: "false" as const,
+            },
+            {
+              name: "type",
+              type: "false" as const,
+            },
+            {
+              name: "media_url",
+              type: "false" as const,
+            },
+            {
+              name: "arms",
+              type: "false" as const,
+              relation: {
+                type: "hasMany" as const,
+                model: "WiperArm",
+                mappedBy: "connector",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "name": "commerce.productName",
+              "code": "string.alphanumeric(8)",
+              "type": "word.sample([&#x27;image&#x27;, &#x27;video&#x27;])",
+            }
+          }
+        }
+      },
+      {
+        name: "WiperArm",
+        modelNamePlural: "WiperArms",
+        service: wipersModuleService,
+        dependencies: [
+          "WiperConnector",
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
+            {
+              name: "name",
+              type: "false" as const,
+            },
+            {
+              name: "code",
+              type: "false" as const,
+            },
+            {
+              name: "connector",
+              type: "false" as const,
+              relation: {
+                type: "belongsTo" as const,
+                model: "WiperConnector",
+                mappedBy: "arms",
+              },
+            },
+          ] as const,
+          faker: {
+            fields: {
+              "name": "commerce.productName",
+              "code": "string.alphanumeric(8)",
+            }
+          }
+        }
+      },
+    ];
 
-  logger.info("Seeding product data...");
+    // Create records for each model in dependency order
+    for (const model of wiperModels) {
+      console.log(`\nCreating ${model.count} ${model.name} records...`);
+      
+      for (let i = 0; i < model.count; i++) {
+        // Generate data for the record
+        const data: Record<string, any> = {};
+        
+        for (const field of model.config.fields as unknown as Field[]) {
+          if ('relation' in field && field.relation) {
+            if (field.relation.type === "belongsTo") {
+              // Get a random related record ID
+              const moduleService = field.relation.model.toLowerCase().includes('wiper') 
+                ? wipersModuleService 
+                : null;
+              
+              if (!moduleService) {
+                console.warn(`No module service found for model ${field.relation.model}`);
+                continue;
+              }
 
-  const { result: categoryResult } = await createProductCategoriesWorkflow(
-    container
-  ).run({
-    input: {
-      product_categories: [
-        {
-          name: "Shirts",
-          is_active: true,
-        },
-        {
-          name: "Sweatshirts",
-          is_active: true,
-        },
-        {
-          name: "Pants",
-          is_active: true,
-        },
-        {
-          name: "Merch",
-          is_active: true,
-        },
-      ],
-    },
-  });
+              const relatedRecords = await moduleService[`list${field.relation.model}s`](
+                {},  // Empty filter object
+                { 
+                  take: 1,
+                  select: ['id']
+                }
+              );
+              
+              if (relatedRecords.length > 0) {
+                data[`${field.name}_id`] = relatedRecords[0].id;
+              }
+            }
+          } else {
+            // Generate data using faker
+            const fakerMethod = 
+              model.config.faker.fields[field.name] || 
+              {
+                text: "lorem.word",
+                number: "number.int({ min: 1, max: 100 })",
+                boolean: "datatype.boolean",
+                date: "date.recent"
+              }[field.type] || "lorem.word";
+            
+            // Evaluate faker method
+            const [namespace, method] = fakerMethod.split(".");
+            if (namespace === 'number' && method.startsWith('int')) {
+              const argsMatch = method.match(/\{(.+)\}/);
+              if (argsMatch) {
+                const options = argsMatch[1].split(',').reduce((obj, pair) => {
+                  const [key, value] = pair.trim().split(':').map(s => s.trim());
+                  obj[key] = Number(value);
+                  return obj;
+                }, {} as Record<string, number>);
+                data[field.name] = faker.number.int(options);
+              } else {
+                data[field.name] = faker.number.int();
+              }
+            } else {
+              const methodName = method.split('(')[0];
+              data[field.name] = faker[namespace][methodName]();
+            }
+          }
+        }
 
-  await createProductsWorkflow(container).run({
-    input: {
-      products: [
-        {
-          title: "Medusa T-Shirt",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Shirts")!.id,
-          ],
-          description:
-            "Reimagine the feeling of a classic T-shirt. With our cotton T-shirts, everyday essentials no longer have to be ordinary.",
-          handle: "t-shirt",
-          weight: 400,
-          status: ProductStatus.PUBLISHED,
-          shipping_profile_id: shippingProfile.id,
-          images: [
+        // Create the record using the module service with the current model name
+        const record = await wipersModuleService[`create${model.modelNamePlural}`](data);
+        console.log(`Created ${model.name} ${i + 1}/${model.count}`);
+      }
+    }
+    console.log("\nSeeding Fitments module...");
+    
+    // Sort models by dependency level
+    const fitmentModels = [
+      {
+        name: "Fitment",
+        modelNamePlural: "Fitments",
+        service: fitmentsModuleService,
+        dependencies: [
+        ],
+        count: quantity * 2,
+        config: {
+          fields: [
             {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-front.png",
+              name: "code",
+              type: "false" as const,
             },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-black-back.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/tee-white-back.png",
-            },
-          ],
-          options: [
-            {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
-            },
-            {
-              title: "Color",
-              values: ["Black", "White"],
-            },
-          ],
-          variants: [
-            {
-              title: "S / Black",
-              sku: "SHIRT-S-BLACK",
-              options: {
-                Size: "S",
-                Color: "Black",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "S / White",
-              sku: "SHIRT-S-WHITE",
-              options: {
-                Size: "S",
-                Color: "White",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M / Black",
-              sku: "SHIRT-M-BLACK",
-              options: {
-                Size: "M",
-                Color: "Black",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M / White",
-              sku: "SHIRT-M-WHITE",
-              options: {
-                Size: "M",
-                Color: "White",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L / Black",
-              sku: "SHIRT-L-BLACK",
-              options: {
-                Size: "L",
-                Color: "Black",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L / White",
-              sku: "SHIRT-L-WHITE",
-              options: {
-                Size: "L",
-                Color: "White",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL / Black",
-              sku: "SHIRT-XL-BLACK",
-              options: {
-                Size: "XL",
-                Color: "Black",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL / White",
-              sku: "SHIRT-XL-WHITE",
-              options: {
-                Size: "XL",
-                Color: "White",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
-        },
-        {
-          title: "Medusa Sweatshirt",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Sweatshirts")!.id,
-          ],
-          description:
-            "Reimagine the feeling of a classic sweatshirt. With our cotton sweatshirt, everyday essentials no longer have to be ordinary.",
-          handle: "sweatshirt",
-          weight: 400,
-          status: ProductStatus.PUBLISHED,
-          shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatshirt-vintage-back.png",
-            },
-          ],
-          options: [
-            {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
-            },
-          ],
-          variants: [
-            {
-              title: "S",
-              sku: "SWEATSHIRT-S",
-              options: {
-                Size: "S",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M",
-              sku: "SWEATSHIRT-M",
-              options: {
-                Size: "M",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L",
-              sku: "SWEATSHIRT-L",
-              options: {
-                Size: "L",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL",
-              sku: "SWEATSHIRT-XL",
-              options: {
-                Size: "XL",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
-        },
-        {
-          title: "Medusa Sweatpants",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Pants")!.id,
-          ],
-          description:
-            "Reimagine the feeling of classic sweatpants. With our cotton sweatpants, everyday essentials no longer have to be ordinary.",
-          handle: "sweatpants",
-          weight: 400,
-          status: ProductStatus.PUBLISHED,
-          shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/sweatpants-gray-back.png",
-            },
-          ],
-          options: [
-            {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
-            },
-          ],
-          variants: [
-            {
-              title: "S",
-              sku: "SWEATPANTS-S",
-              options: {
-                Size: "S",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M",
-              sku: "SWEATPANTS-M",
-              options: {
-                Size: "M",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L",
-              sku: "SWEATPANTS-L",
-              options: {
-                Size: "L",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL",
-              sku: "SWEATPANTS-XL",
-              options: {
-                Size: "XL",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
-        },
-        {
-          title: "Medusa Shorts",
-          category_ids: [
-            categoryResult.find((cat) => cat.name === "Merch")!.id,
-          ],
-          description:
-            "Reimagine the feeling of classic shorts. With our cotton shorts, everyday essentials no longer have to be ordinary.",
-          handle: "shorts",
-          weight: 400,
-          status: ProductStatus.PUBLISHED,
-          shipping_profile_id: shippingProfile.id,
-          images: [
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-front.png",
-            },
-            {
-              url: "https://medusa-public-images.s3.eu-west-1.amazonaws.com/shorts-vintage-back.png",
-            },
-          ],
-          options: [
-            {
-              title: "Size",
-              values: ["S", "M", "L", "XL"],
-            },
-          ],
-          variants: [
-            {
-              title: "S",
-              sku: "SHORTS-S",
-              options: {
-                Size: "S",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "M",
-              sku: "SHORTS-M",
-              options: {
-                Size: "M",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "L",
-              sku: "SHORTS-L",
-              options: {
-                Size: "L",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-            {
-              title: "XL",
-              sku: "SHORTS-XL",
-              options: {
-                Size: "XL",
-              },
-              prices: [
-                {
-                  amount: 10,
-                  currency_code: "eur",
-                },
-                {
-                  amount: 15,
-                  currency_code: "usd",
-                },
-              ],
-            },
-          ],
-          sales_channels: [
-            {
-              id: defaultSalesChannel[0].id,
-            },
-          ],
-        },
-      ],
-    },
-  });
-  logger.info("Finished seeding product data.");
+          ] as const,
+          faker: {
+            fields: {
+              "code": "string.alphanumeric(10)",
+            }
+          }
+        }
+      },
+    ];
 
-  logger.info("Seeding inventory levels.");
+    // Create records for each model in dependency order
+    for (const model of fitmentModels) {
+      console.log(`\nCreating ${model.count} ${model.name} records...`);
+      
+      for (let i = 0; i < model.count; i++) {
+        // Generate data for the record
+        const data: Record<string, any> = {};
+        
+        for (const field of model.config.fields as unknown as Field[]) {
+          if ('relation' in field && field.relation) {
+            if (field.relation.type === "belongsTo") {
+              // Get a random related record ID
+              const moduleService = field.relation.model.toLowerCase().includes('fitment') 
+                ? fitmentsModuleService 
+                : null;
+              
+              if (!moduleService) {
+                console.warn(`No module service found for model ${field.relation.model}`);
+                continue;
+              }
 
-  const { data: inventoryItems } = await query.graph({
-    entity: "inventory_item",
-    fields: ["id"],
-  });
+              const relatedRecords = await moduleService[`list${field.relation.model}s`](
+                {},  // Empty filter object
+                { 
+                  take: 1,
+                  select: ['id']
+                }
+              );
+              
+              if (relatedRecords.length > 0) {
+                data[`${field.name}_id`] = relatedRecords[0].id;
+              }
+            }
+          } else {
+            // Generate data using faker
+            const fakerMethod = 
+              model.config.faker.fields[field.name] || 
+              {
+                text: "lorem.word",
+                number: "number.int({ min: 1, max: 100 })",
+                boolean: "datatype.boolean",
+                date: "date.recent"
+              }[field.type] || "lorem.word";
+            
+            // Evaluate faker method
+            const [namespace, method] = fakerMethod.split(".");
+            if (namespace === 'number' && method.startsWith('int')) {
+              const argsMatch = method.match(/\{(.+)\}/);
+              if (argsMatch) {
+                const options = argsMatch[1].split(',').reduce((obj, pair) => {
+                  const [key, value] = pair.trim().split(':').map(s => s.trim());
+                  obj[key] = Number(value);
+                  return obj;
+                }, {} as Record<string, number>);
+                data[field.name] = faker.number.int(options);
+              } else {
+                data[field.name] = faker.number.int();
+              }
+            } else {
+              const methodName = method.split('(')[0];
+              data[field.name] = faker[namespace][methodName]();
+            }
+          }
+        }
 
-  const inventoryLevels: CreateInventoryLevelInput[] = [];
-  for (const inventoryItem of inventoryItems) {
-    const inventoryLevel = {
-      location_id: stockLocation.id,
-      stocked_quantity: 1000000,
-      inventory_item_id: inventoryItem.id,
-    };
-    inventoryLevels.push(inventoryLevel);
+        // Create the record using the module service with the current model name
+        const record = await fitmentsModuleService[`create${model.modelNamePlural}`](data);
+        console.log(`Created ${model.name} ${i + 1}/${model.count}`);
+      }
+    }
+
+    const endTime = Date.now();
+    console.log(`\nSeed completed in ${(endTime - startTime) / 1000}s`);
+
+  } catch (error) {
+    console.error("Error during seed process:", error);
+    throw error;
   }
-
-  await createInventoryLevelsWorkflow(container).run({
-    input: {
-      inventory_levels: inventoryLevels,
-    },
-  });
-
-  logger.info("Finished seeding inventory levels data.");
-}
+} 

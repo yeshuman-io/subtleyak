@@ -2,12 +2,22 @@ FROM node:current-alpine
 
 WORKDIR /app
 
-COPY package.json ./
+# Copy package files
+COPY package*.json ./
 
+# Install dependencies
 RUN npm install
 
-COPY medusa-config.ts tsconfig.json entrypoint.sh ./
+# Copy configuration files
+COPY medusa-config.ts tsconfig.json ./
+COPY entrypoint.sh ./
+COPY .env* ./
+
+# Copy source code with complete directory structure
 COPY src/ ./src/
+
+# Ensure correct permissions
+RUN chmod +x entrypoint.sh
 
 EXPOSE 9000
 
